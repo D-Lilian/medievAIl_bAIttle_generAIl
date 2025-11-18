@@ -34,8 +34,9 @@ class General:
         # Probleme ici la stratégie est invidivuelle à chaque troupe, on veut faire autrement
         # TODO trouver une strategie de départ qui dépend de l'etat/nombre d'un ou plusieurs autre type de troupes
         # N'est appelé qu'au début
-        for unit in self.MyUnits:
-            self.sT[unit.Type].ApplyOrder(self, unit)
+        self.Ss(self) # On passe le general en paramère de la stratégie
+        #for unit in self.MyUnits:
+        #    self.sT[unit.Type].ApplyOrder(self, unit)
 
 ## On peut s'en servir pour appliquer des stratégies différentes
     def GetNumberOfEnemyType(self, unitType):
@@ -117,7 +118,7 @@ class MoveByStepOrder:
        # self.type = "permanent"
 
     def Try(self, simu):
-        if simu.MoveOneStepTowardsDir(self.unit, self.direction):
+        if simu.MoveOneStepTowardsDir(self.unit, self.direction): # TODO angle
             simu.nbStep -= 1
 
         if self.nbStep == 0:
@@ -140,6 +141,7 @@ class AvoidOrder:
 
         if simu.IsInRange(target, self.Unit): # NOTE l'ordre des arguments ici est inversée
             if simu.MoveOneStepAwayFromTarget(self.unit, self.Target): # Calcule les 4 steps FORWARD BACK LEFT RIGHT, et effectue un pas dans la direction qui se retrouve etre la plus loin de la target
+             #if simu.MoveOneStepTowardsDir(self.unit,self.target, 180): # TODO angle
                 return False
         else:
             return False
@@ -185,6 +187,7 @@ class AttackOrder:
         self.priority = priority
 
     def Try(self, simu):
+        # todo enlever le isinrgange
         if simu.IsInRange(self.unit, self.target):
             killed = simu.Kill(self.unit, self.target)
             if not killed:
@@ -197,12 +200,14 @@ class StayInReachOrder:
         self.unit = unit
         self.target = target
         self.priority = priority
+        self.type = "permanent"
 
     def Try(self, simu):
         if simu.IsInReach(self.unit, self.target):
             return False
 
         simu.MoveUnitClosestTo(self.unit, self.target) # se deplace le plus lioin possible en fonction de la capacité de la troupe
+        #if simu.MoveOneStepTowardsDir(self.unit,self.target, 0): # TODO angle
         return False
 
 
@@ -218,6 +223,7 @@ class AttackOnReachOrder:
             return False
         simu.Kill(self.unit, target)
         return False
+
 class AttackOnSightOrder:
     # Au debut de la partie les unités se "voient" forcément
     # Le AttackOnSightOrder peut toujours etre accompli, cad il ne peut jamais se terminer, cad que l'appel à Try renvoi toujours False
@@ -268,9 +274,11 @@ class isInDangerOrder:
         self.type = "permanent"
 
     def Try(self,simu):
-        if simu.IsInReach(self.friendly, self.typeTarget):
-            simu.MoveUnitClosestTo(self.unit, self.friendly)
+        target = simu.GetNearestTroupInSight(self.friendly, self.typeTarget)
+        if target is None:
+            return False
 
+        simu.MoveUnitClosestTo(self.unit, target)
         return False
 
 
@@ -363,8 +371,18 @@ class StrategieSpikemanSomeIQ(StrategyTroup):
         unit.PushOrder(AttackOnSightOrder, 1) # On push/insere/add un ordre de priorité 0
 
 class StrategieStartSomeIQ(StrategyStart):
-    def applyOrder(self, general, unit):
-        unit.PushOrder(AttackOnSightOrder, 0) # On push/insere/add un ordre de priorité 0
+    def applyOrder(self, general):
+        for unit in general.HistUnits:
+            unit.PushOrder(MoveOneStepFromRef(unit, 10, "WORLD"), 0) # On push/insere/add un ordre de priorité 0
+
+        soufredouleur = general.GetRandomUnit()
+        soufredouleur.PushOrder(SacrificeOrder(soufredouleur), -1)
+
+
+
+
+
+        # Pour chaque
 
 # Mets tout les archers derrière le knight le plus proche d'eux, mets un avoid des range des autres archers
 # Ils ont donc 2 ordres, un attackonsight, et un avoidorder
