@@ -298,8 +298,8 @@ class TerminalView(ViewInterface):
         self.stdscr.nodelay(True)  # Non bloquant pour les inputs
         
         # Initialisation des paires de couleurs
-        curses.init_pair(ColorPair.TEAM1.value, curses.COLOR_CYAN, -1)
-        curses.init_pair(ColorPair.TEAM2.value, curses.COLOR_RED, -1)
+        curses.init_pair(ColorPair.TEAM_A.value, curses.COLOR_CYAN, -1)
+        curses.init_pair(ColorPair.TEAM_B.value, curses.COLOR_RED, -1)
         curses.init_pair(ColorPair.UI.value, curses.COLOR_YELLOW, -1)
         curses.init_pair(ColorPair.DEAD.value, curses.COLOR_BLACK, -1)
         
