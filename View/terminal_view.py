@@ -142,7 +142,7 @@ class Camera:
 
     @param x Camera X position
     @param y Camera Y position
-    @param zoom_level Zoom level (1=normal, 2=zoomed out)
+    @param zoom_level Zoom level (1=normal, 2=zoomed out, 3=very zoomed out)
     @param scroll_speed_normal Normal scroll speed
     @param scroll_speed_fast Fast scroll speed (with Shift)
     """
@@ -151,6 +151,10 @@ class Camera:
     zoom_level: int = 1
     scroll_speed_normal: int = 2
     scroll_speed_fast: int = 5
+    # Smooth following
+    target_x: float = 0.0
+    target_y: float = 0.0
+    follow_smoothing: float = 0.1  # How fast to follow (0.1 = smooth, 1.0 = instant)
     
     def move(self, dx: int, dy: int, fast: bool = False):
         """
@@ -165,10 +169,46 @@ class Camera:
     
     def toggle_zoom(self):
         """
-        @brief Toggle between normal zoom and zoomed-out view
-        @details Alternates between zoom_level 1 (normal) and 2 (zoomed out)
+        @brief Toggle between zoom levels
+        @details Cycles through zoom_level 1 (normal), 2 (zoomed out), 3 (very zoomed out)
         """
-        self.zoom_level = 1 if self.zoom_level == 2 else 2
+        self.zoom_level = (self.zoom_level % 3) + 1
+    
+    def center_on_battle(self, simulation, term_w: int, term_h: int, ui_height: int = 0):
+        """
+        @brief Set target for smooth camera following of the battle area
+        @param simulation Simulation instance
+        @param term_w Terminal width
+        @param term_h Terminal height
+        @param ui_height UI height
+        """
+        units = simulation.board.units
+        if not units:
+            return
+        
+        # Focus on units that are fighting (have a target or are moving)
+        fighting_units = [u for u in units if u.target is not None or u.hp < u.hp_max]
+        if not fighting_units:
+            # If no fighting units, use all units
+            fighting_units = units
+        
+        # Calculate center of mass of fighting units
+        avg_x = sum(u.x for u in fighting_units) / len(fighting_units)
+        avg_y = sum(u.y for u in fighting_units) / len(fighting_units)
+        # Set target position
+        # In rotated view: screen_x = (unit.y - camera.y) / zoom, screen_y = (unit.x - camera.x) / zoom
+        # To center avg_y on screen_x, camera.y = avg_y - (term_w / 2) * zoom
+        # To center avg_x on screen_y, camera.x = avg_x - ((term_h - ui_height) / 2) * zoom
+        self.target_x = avg_x - ((term_h - ui_height) / 2) * self.zoom_level
+        self.target_y = avg_y - (term_w / 2) * self.zoom_level
+    
+    def update_smooth_follow(self):
+        """
+        @brief Update camera position with smooth interpolation towards target
+        """
+        # Interpolate towards target
+        self.x = int(self.x + (self.target_x - self.x) * self.follow_smoothing)
+        self.y = int(self.y + (self.target_y - self.y) * self.follow_smoothing)
     
     def clamp(self, board_width: int, board_height: int, term_w: int, term_h: int, ui_height: int = 0):
         """
@@ -179,10 +219,10 @@ class Camera:
         @param term_h Terminal height
         @param ui_height UI height
         """
-        visible_w = int(term_w * self.zoom_level)
-        visible_h = int((term_h - ui_height) * self.zoom_level)
-        max_x = max(0, board_width - visible_w)
-        max_y = max(0, board_height - visible_h)
+        visible_w = int(term_h * self.zoom_level)  # term_h becomes width in rotated view
+        visible_h = int((term_w - ui_height) * self.zoom_level)  # term_w becomes height
+        max_x = max(0, board_height - visible_w)  # board_height for x (since x controls y)
+        max_y = max(0, board_width - visible_h)  # board_width for y
         self.x = max(0, min(self.x, max_x))
         self.y = max(0, min(self.y, max_y))
 
@@ -230,7 +270,7 @@ class TerminalView(ViewInterface):
         'Wonder': 'W'            ##< Wonder
     }
     
-    def __init__(self, board_width: int, board_height: int, tick_speed: int = 20):
+    def __init__(self, board_width: int, board_height: int, tick_speed: int = 40):
         """
         @brief Initialize the terminal view
 
@@ -245,13 +285,17 @@ class TerminalView(ViewInterface):
         self.board_height = board_height
         self.tick_speed = tick_speed
         
-        # Camera
-        self.camera = Camera()
+        # Camera (initially centered on the board)
+        self.camera = Camera(
+            x=max(0, board_width // 2 - 40),
+            y=max(0, board_height // 2 - 20),
+        )
         
         # View state
         self.paused = False
         self.show_debug = False
         self.show_ui = True
+        self.auto_follow = True  # Auto-follow camera on battle (enabled by default)
         
         # Curses window
         self.stdscr = None
@@ -326,6 +370,7 @@ class TerminalView(ViewInterface):
         @details Processes all keyboard interactions:
         - Navigation: ZQSD, arrow keys (with Shift for faster move)
         - Zoom: M (cycle between zoom levels)
+        - Auto-follow: A (toggle auto-follow camera on battle)
         - Controls: P(pause), +/-(tick speed), TAB(report), F(UI), D(debug)
         - Exit: Escape
 
@@ -356,6 +401,11 @@ class TerminalView(ViewInterface):
         # Zoom
         if key in (ord('m'), ord('M')):
             self.camera.toggle_zoom()
+            return True
+        
+        # Toggle auto-follow
+        if key in (ord('a'), ord('A')):
+            self.auto_follow = not self.auto_follow
             return True
         
         # Debug view
@@ -412,13 +462,10 @@ class TerminalView(ViewInterface):
             color = ColorPair.TEAM_A if unit.team == Team.A else ColorPair.TEAM_B
             char = unit.letter
             attr = curses.color_pair(color.value) | curses.A_BOLD
-        else:
-            # Dead units: 'x' in grey with blinking
-            color = ColorPair.DEAD
-            char = 'x'
-            attr = curses.color_pair(color.value) | curses.A_BLINK
+            return char, color, attr
         
-        return char, color, attr
+        # Dead units are not rendered on the map
+        return ' ', ColorPair.DEAD, curses.A_NORMAL
 
     def _draw_border(self, width: int, height: int):
         """
@@ -600,10 +647,11 @@ class TerminalView(ViewInterface):
         # Direct drawing (no intermediate grid)
         # Keep 1 row/column margin for the border
         for unit in self.units_cache:
-            # Screen position with zoom and camera
-            screen_x = int((unit.x - self.camera.x) / self.camera.zoom_level) + 1  # +1 for border
-            screen_y = int((unit.y - self.camera.y) / self.camera.zoom_level) + 1  # +1 for border
-
+            # Screen position with zoom and camera, rotated 90 degrees
+            # Swap x and y for rotation
+            screen_x = int((unit.y - self.camera.y) / self.camera.zoom_level) + 1  # y becomes x
+            screen_y = int((unit.x - self.camera.x) / self.camera.zoom_level) + 1  # x becomes y
+            
             # Bounds check (taking the border into account)
             if 1 <= screen_x < max_x - 1 and 1 <= screen_y < game_height - 1:
                 # Utilise la même logique que _get_unit_display_attributes
@@ -648,7 +696,7 @@ class TerminalView(ViewInterface):
         
         state_line = (
             f"{'PAUSE' if self.paused else 'PLAY'} | Zoom:x{self.camera.zoom_level} "
-            f"| Cam:({self.camera.x},{self.camera.y}) | Tick:{self.tick_speed}"
+            f"| Cam:({self.camera.x},{self.camera.y}) | {'AUTO' if self.auto_follow else 'MANUAL'} | Tick:{self.tick_speed}"
         )
         try:
             self.stdscr.addstr(ui_start_y + 2, 2, state_line)
@@ -708,6 +756,35 @@ class TerminalView(ViewInterface):
         except curses.error:
             pass
     
+    def draw_pause_overlay(self, max_x: int, max_y: int):
+        """
+        @brief Draw pause overlay when game is paused
+        @param max_x Terminal width
+        @param max_y Terminal height
+        """
+        try:
+            # Draw semi-transparent pause message in center
+            pause_msg = "PAUSED - Press P to resume"
+            msg_len = len(pause_msg)
+            center_x = max_x // 2 - msg_len // 2
+            center_y = max_y // 2
+            
+            # Draw background box
+            box_width = msg_len + 4
+            box_height = 3
+            box_x = center_x - 2
+            box_y = center_y - 1
+            
+            for y in range(box_y, box_y + box_height):
+                for x in range(box_x, box_x + box_width):
+                    if 0 <= x < max_x and 0 <= y < max_y:
+                        self.stdscr.addstr(y, x, ' ', curses.color_pair(ColorPair.UI.value) | curses.A_REVERSE)
+            
+            # Draw message
+            self.stdscr.addstr(center_y, center_x, pause_msg, curses.color_pair(ColorPair.UI.value) | curses.A_BOLD | curses.A_REVERSE)
+        except curses.error:
+            pass
+    
     def update(self, simulation):
         """
         Update the display with the current simulation state.
@@ -719,13 +796,30 @@ class TerminalView(ViewInterface):
         if not self.handle_input():
             return False  # Signal pour quitter
         
+        # Get terminal dimensions
+        max_y, max_x = self.stdscr.getmaxyx()
+        
         # If paused, do not update the cache but still redraw
         if not self.paused:
             self.update_units_cache(simulation)
+            # Auto-follow camera on battle if enabled
+            if self.auto_follow:
+                self.camera.center_on_battle(simulation, max_x, max_y, 5 if self.show_ui else 0)
         
-        self.draw_map()
-        self.draw_ui()
-        self.draw_debug_info()
+            # Update smooth camera following
+            self.camera.update_smooth_follow()
+            # Clamp camera after movement
+            self.camera.clamp(self.board_width, self.board_height, max_x, max_y, 5 if self.show_ui else 0)
+            
+            self.draw_map()
+            self.draw_ui()
+            self.draw_debug_info()
+        else:
+            # When paused, still draw the UI to show pause status
+            self.draw_ui()
+            self.draw_debug_info()
+            # Draw pause overlay
+            self.draw_pause_overlay(max_x, max_y)
         
         # Refresh the screen
         self.stdscr.refresh()
