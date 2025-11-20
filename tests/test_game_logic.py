@@ -7,6 +7,7 @@ Runs a real battle using AOE2-like mechanics.
 
 import sys
 sys.path.insert(0, '../View')
+from collections import Counter
 
 from terminal_view import TerminalView
 from simple_game_logic import create_test_scenario
@@ -32,8 +33,8 @@ def main():
     print(f"Starting scenario: {scenario_type}")
     simulation = create_test_scenario(scenario_type)
     
-    print(f"Team 1: {len(simulation.board.get_alive_units(1))} units")
-    print(f"Team 2: {len(simulation.board.get_alive_units(2))} units")
+    print(f"Team 1 (Cyan): BRAINDEAD strategy - {len(simulation.board.get_alive_units(1))} units")
+    print(f"Team 2 (Red): DAFT strategy - {len(simulation.board.get_alive_units(2))} units")
     print("\nControls:")
     print("  P       : Pause/Resume")
     print("  M       : Zoom")
@@ -46,7 +47,7 @@ def main():
     print("\nStarting simulation...\n")
     
     # Create the view
-    view = TerminalView(120, 120, tick_speed=20)
+    view = TerminalView(120, 120, tick_speed=30)
     
     try:
         view.init_curses()
@@ -56,18 +57,13 @@ def main():
         while running:
             # Update the view
             running = view.update(simulation)
-            
             if not running:
                 break
-            
-            # Advance simulation when not paused
-            if not view.paused:
-                simulation.step()
-                
-                # Check if the battle is finished
-                if simulation.is_finished():
-                    view.paused = True  # Auto-pause when finished
-                    # Winner is visible in stats while still rendering
+            # Advance simulation
+            simulation.step()
+            # Stop immediately if the battle is finished
+            if simulation.is_finished():
+                break
     
     finally:
         view.cleanup()
@@ -81,19 +77,25 @@ def main():
         team1_alive = simulation.board.get_alive_units(1)
         team2_alive = simulation.board.get_alive_units(2)
         
-        print(f"\nTeam 1 (Cyan): {len(team1_alive)} survivors")
-        for u in team1_alive:
-            print(f"  - {type(u).__name__}: {u.hp}/{u.hp_max} HP")
+        print(f"\nTeam 1 (Cyan - BRAINDEAD): {len(team1_alive)} survivors")
+        if team1_alive:
+            unit_counts = Counter(type(u).__name__ for u in team1_alive)
+            for unit_type, count in unit_counts.items():
+                print(f"  - {unit_type}: {count} units")
         
-        print(f"\nTeam 2 (Red): {len(team2_alive)} survivors")
-        for u in team2_alive:
-            print(f"  - {type(u).__name__}: {u.hp}/{u.hp_max} HP")
+        print(f"\nTeam 2 (Red - DAFT): {len(team2_alive)} survivors")
+        if team2_alive:
+            unit_counts = Counter(type(u).__name__ for u in team2_alive)
+            for unit_type, count in unit_counts.items():
+                print(f"  - {unit_type}: {count} units")
         
         if simulation.is_finished():
             if len(team1_alive) > 0:
-                print("\n*** TEAM 1 (Cyan) WINS ***")
+                print("\n*** TEAM 1 (Cyan - BRAINDEAD) WINS ***")
+                print("*** BRAINDEAD STRATEGY (General) WINS ***")
             else:
-                print("\n*** TEAM 2 (Red) WINS ***")
+                print("\n*** TEAM 2 (Red - DAFT) WINS ***")
+                print("*** DAFT STRATEGY (General) WINS ***")
         else:
             print("\nBattle interrupted")
         
