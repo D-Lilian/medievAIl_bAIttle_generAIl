@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Logique de jeu basique pour tester la Vue
-3 unités avec stats AOE2, combat simple
+Basic game logic used to test the View.
+Three units with AOE2-like stats, simple combat system.
 """
 
 import math
@@ -10,10 +10,10 @@ from typing import List, Optional
 
 
 class Unit:
-    """Classe de base pour toutes les unités"""
-    
-    # Taille de collision (rayon du cercle occupé par l'unité)
-    collision_radius = 0.5  # Défaut, redéfini dans les sous-classes
+    """Base class for all units."""
+
+    # Collision size (radius of the circle occupied by the unit)
+    collision_radius = 0.5  # Default, overridden in subclasses
     
     def __init__(self, x: float, y: float, team: int):
         self.x = x
@@ -24,50 +24,50 @@ class Unit:
         self.target: Optional['Unit'] = None
         
     def distance_to(self, other: 'Unit') -> float:
-        """Calcule la distance euclidienne vers une autre unité (centre à centre)"""
+        """Compute Euclidean distance to another unit (center to center)."""
         return math.sqrt((self.x - other.x)**2 + (self.y - other.y)**2)
     
     def collides_with(self, other: 'Unit') -> bool:
-        """Vérifie si cette unité entre en collision avec une autre (cercles)"""
+        """Return True if this unit collides with another (circle vs circle)."""
         distance = self.distance_to(other)
         return distance < (self.collision_radius + other.collision_radius)
     
     def can_attack(self, target: 'Unit') -> bool:
-        """Vérifie si l'unité peut attaquer la cible"""
+        """Check if this unit can attack the target."""
         if self.reload_timer > 0:
             return False
         return self.distance_to(target) <= self.range
     
     def get_damage_against(self, target: 'Unit') -> int:
-        """Calcule les dégâts infligés à la cible selon la formule AOE2"""
+        """Compute damage dealt to the target using the AOE2 formula."""
         total_attack = self.attack
         
-        # Bonus damage (système simplifié)
+        # Bonus damage (simplified system)
         if hasattr(self, 'bonus_vs') and type(target).__name__ in self.bonus_vs:
             total_attack += self.bonus_vs[type(target).__name__]
         
-        # Formule AOE2: max(1, Attack - Armor)
-        # On utilise melee_armor ou pierce_armor selon le type d'attaque
+        # AOE2 formula: max(1, Attack - Armor)
+        # Use melee_armor or pierce_armor depending on attack type
         armor = target.pierce_armor if self.range > 0 else target.melee_armor
         damage = max(1, total_attack - armor)
         
         return damage
     
     def attack_unit(self, target: 'Unit', dt: float):
-        """Attaque une unité cible"""
+        """Attack a target unit if possible and reset reload timer."""
         if self.can_attack(target):
             damage = self.get_damage_against(target)
             target.hp -= damage
             self.reload_timer = self.reload_time
     
     def move_towards(self, target_x: float, target_y: float, dt: float, board: 'Board' = None):
-        """Déplace l'unité vers une position en évitant les collisions"""
+        """Move the unit towards a position while avoiding collisions."""
         dx = target_x - self.x
         dy = target_y - self.y
         distance = math.sqrt(dx**2 + dy**2)
         
         if distance > 0:
-            # Normaliser et appliquer la vitesse
+            # Normalize and apply speed
             dx /= distance
             dy /= distance
             move_distance = self.speed * dt
@@ -76,52 +76,52 @@ class Unit:
                 new_x = self.x + dx * move_distance
                 new_y = self.y + dy * move_distance
                 
-                # Vérifier les collisions avec autres unités (premier arrivé occupe l'espace)
+                # Check collisions with other units (first arrived keeps the space)
                 collision = False
                 if board:
                     for other in board.units:
                         if other is not self and other.hp > 0:
-                            # Distance entre nouvelle position et autre unité
+                            # Distance between new position and the other unit
                             dist_to_other = math.sqrt((new_x - other.x)**2 + (new_y - other.y)**2)
                             if dist_to_other < (self.collision_radius + other.collision_radius):
                                 collision = True
                                 break
                 
-                # Si pas de collision, on se déplace
+                # If no collision, apply movement
                 if not collision:
                     self.x = new_x
                     self.y = new_y
-                # Sinon on reste sur place (l'autre occupe déjà l'espace)
+                # Otherwise stay in place (other unit already occupies space)
             else:
                 self.x = target_x
                 self.y = target_y
     
     def update(self, dt: float):
-        """Met à jour l'état de l'unité"""
+        """Update the unit internal state (reload timer)."""
         if self.reload_timer > 0:
             self.reload_timer = max(0, self.reload_timer - dt)
 
 
 class Knight(Unit):
-    """Knight - Cavalerie lourde, forte contre archers"""
+    """Knight - Heavy cavalry, strong against archers."""
     
     name = "Knight"
     hp_max = 100
     attack = 10
     melee_armor = 2
     pierce_armor = 2
-    range = 0  # Mêlée
+    range = 0  # Melee
     line_of_sight = 4
-    speed = 1.35  # tiles/seconde
-    reload_time = 1.8  # secondes
-    collision_radius = 0.6  # Cavalerie = plus gros
+    speed = 1.35  # tiles/second
+    reload_time = 1.8  # seconds
+    collision_radius = 0.6  # Cavalry = larger
     
     def __init__(self, x: float, y: float, team: int):
         super().__init__(x, y, team)
 
 
 class Pikeman(Unit):
-    """Pikeman - Infanterie anti-cavalerie"""
+    """Pikeman - Anti-cavalry infantry."""
     
     name = "Pikeman"
     hp_max = 55
@@ -132,16 +132,16 @@ class Pikeman(Unit):
     line_of_sight = 4
     speed = 1.0
     reload_time = 3.0
-    collision_radius = 0.45  # Infanterie = taille normale
+    collision_radius = 0.45  # Infantry = normal size
     
     def __init__(self, x: float, y: float, team: int):
         super().__init__(x, y, team)
-        # Bonus massif contre cavalerie
+        # Huge bonus against cavalry
         self.bonus_vs = {'Knight': 22, 'Cavalry Archer': 22}
 
 
 class Crossbowman(Unit):
-    """Crossbowman - Archer à distance, faible en mêlée"""
+    """Crossbowman - Ranged archer, weak in melee."""
     
     name = "Crossbowman"
     hp_max = 35
@@ -152,14 +152,14 @@ class Crossbowman(Unit):
     line_of_sight = 7
     speed = 0.96
     reload_time = 2.0
-    collision_radius = 0.45  # Archers = taille normale
+    collision_radius = 0.45  # Archers = normal size
     
     def __init__(self, x: float, y: float, team: int):
         super().__init__(x, y, team)
 
 
 class Board:
-    """Plateau de jeu contenant toutes les unités"""
+    """Game board containing all units."""
     
     def __init__(self, width: int, height: int):
         self.width = width
@@ -167,19 +167,19 @@ class Board:
         self.units: List[Unit] = []
     
     def add_unit(self, unit: Unit):
-        """Ajoute une unité au plateau"""
+        """Add a unit to the board."""
         self.units.append(unit)
     
     def get_alive_units(self, team: Optional[int] = None) -> List[Unit]:
-        """Retourne les unités vivantes (optionnellement d'une équipe)"""
+        """Return all alive units (optionally filtered by team)."""
         units = [u for u in self.units if u.hp > 0]
         if team is not None:
             units = [u for u in units if u.equipe == team]
         return units
     
     def get_nearest_enemy(self, unit: Unit) -> Optional[Unit]:
-        """Trouve l'ennemi le plus proche d'une unité"""
-        # Convertir 'A'/'B' ou 1/2 vers l'équipe opposée
+        """Find the nearest enemy unit for the given unit."""
+        # Convert 'A'/'B' or 1/2 to the opposite team
         if unit.equipe in ('A', 'a', 1):
             enemy_team = 'B'
         else:
@@ -194,59 +194,59 @@ class Board:
 
 class Simulation:
     """
-    Simulation de bataille en temps réel (pas de tours).
-    
-    Basée sur les specs du prof:
-    - Positions flottantes (x, y) continues
-    - Collision circulaire (rayon par type d'unité)
-    - Line of sight circulaire (distance euclidienne)
-    - Premier arrivé occupe l'espace (pas de priorité de tour)
-    - Le général contrôle toutes ses unités en temps réel
+    Real-time battle simulation (no turns).
+
+    Based on the teacher specifications:
+    - Continuous floating positions (x, y)
+    - Circular collision (radius per unit type)
+    - Circular line of sight (Euclidean distance)
+    - First arrived occupies the space (no turn priority)
+    - General controls all units in real time
     """
     
     def __init__(self, board: Board, ai1_type: str = "DAFT", ai2_type: str = "DAFT"):
         self.board = board
         self.elapsed_time = 0.0  # Temps logique de la simulation
-        self.dt = 0.05  # Delta temps par tick (50ms) - indépendant du framerate
+        self.dt = 0.05  # Time delta per tick (50ms), independent from framerate
         self.ai1_type = ai1_type
         self.ai2_type = ai2_type
     
     def step(self):
-        """Avance la simulation d'un tick"""
-        # IA pour chaque équipe
+        """Advance the simulation by one logical tick."""
+        # AI for each team
         self._run_ai(1, self.ai1_type)
         self._run_ai(2, self.ai2_type)
         
-        # Mise à jour des unités
+        # Update each unit
         for unit in self.board.get_alive_units():
             unit.update(self.dt)
         
         self.elapsed_time += self.dt
     
     def _run_ai(self, team: int, ai_type: str):
-        """Exécute l'IA pour une équipe"""
+        """Run the AI for one team."""
         units = self.board.get_alive_units(team)
         
         if ai_type == "BRAINDEAD":
-            # Ne fait rien - les unités n'attaquent que si en vue
+            # Does nothing - units only attack when in range
             pass
         
         elif ai_type == "DAFT":
-            # Attaque l'ennemi le plus proche sans réfléchir
+            # Attack the nearest enemy without any strategy
             for unit in units:
                 nearest_enemy = self.board.get_nearest_enemy(unit)
                 if nearest_enemy:
-                    # Si à portée, attaque
+                    # If in range, attack
                     if unit.can_attack(nearest_enemy):
                         unit.attack_unit(nearest_enemy, self.dt)
                     else:
-                        # Sinon, se rapproche
-                        # Pour archers, se rapprocher jusqu'à portée optimale
+                        # Otherwise, move closer
+                        # For archers, get to optimal range
                         distance = unit.distance_to(nearest_enemy)
                         if distance > unit.range:
                             unit.move_towards(nearest_enemy.x, nearest_enemy.y, self.dt, self.board)
-                        elif distance < unit.range * 0.8:  # Trop proche pour archer
-                            # Reculer un peu
+                        elif distance < unit.range * 0.8:  # Too close for an archer
+                            # Step back a little
                             dx = unit.x - nearest_enemy.x
                             dy = unit.y - nearest_enemy.y
                             dist = math.sqrt(dx**2 + dy**2)
@@ -259,7 +259,7 @@ class Simulation:
                                 )
     
     def is_finished(self) -> bool:
-        """Vérifie si la bataille est terminée"""
+        """Check whether the battle is finished."""
         team_a_alive = len(self.board.get_alive_units('A'))
         team_b_alive = len(self.board.get_alive_units('B'))
         return team_a_alive == 0 or team_b_alive == 0
@@ -267,18 +267,18 @@ class Simulation:
 
 def create_test_scenario(scenario_type: str = "mirror") -> Simulation:
     """
-    Crée un scénario de test pour la simulation de bataille.
-    
+    Create a test scenario for the battle simulation.
+
     Args:
-        scenario_type: Type de scénario ("mirror", "lanchester", "counter_demo")
-    
+        scenario_type: Scenario type ("mirror", "lanchester", "counter_demo")
+
     Returns:
-        Simulation: Instance de simulation configurée avec le scénario choisi
+        Simulation: Configured simulation instance for the chosen scenario
     """
     board = Board(120, 120)
     
     if scenario_type == "mirror":
-        # Formations miroir face à face - TRÈS RAPPROCHÉES pour combat immédiat
+        # Face-to-face mirror formations - very close for immediate combat
         formations = [
             (Knight, 3),
             (Pikeman, 5),
@@ -287,34 +287,34 @@ def create_test_scenario(scenario_type: str = "mirror") -> Simulation:
         
         y_pos = 40
         for unit_class, count in formations:
-            # Équipe A (gauche) - position 50
+            # Team A (left) - position x = 50
             for i in range(count):
                 board.add_unit(unit_class(50, y_pos + i*2, 'A'))
             
-            # Équipe B (droite) - position 70 (distance = 20 tiles)
+            # Team B (right) - position x = 70 (distance = 20 tiles)
             for i in range(count):
                 board.add_unit(unit_class(70, y_pos + i*2, 'B'))
             
             y_pos += count * 2 + 3
     
     elif scenario_type == "lanchester":
-        # Test lois de Lanchester - compositions identiques
+        # Lanchester's law test - identical compositions on both sides
         N = 8
         
-        # N Knights équipe A
+        # N Knights for team A
         for i in range(N):
             board.add_unit(Knight(45, 35 + i*3, 'A'))
         
-        # N Knights équipe B (même nombre!)
+        # N Knights for team B (same number!)
         for i in range(N):
             board.add_unit(Knight(75, 35 + i*3, 'B'))
     
     elif scenario_type == "counter_demo":
-        # Démonstration du système de counters avec compositions identiques
-        # Chaque équipe a: 3 Knights, 5 Pikemen, 4 Crossbowmen
-        # Mais positionnement différent pour tester les tactiques
-        
-        # Équipe A: Formation classique mixte
+        # Demonstration of the counter system with identical compositions.
+        # Each team has: 3 Knights, 5 Pikemen, 4 Crossbowmen
+        # But different positioning to test tactics.
+
+        # Team A: mixed classic formation
         y = 35
         for i in range(3):
             board.add_unit(Knight(42, y + i*2, 'A'))
@@ -325,7 +325,7 @@ def create_test_scenario(scenario_type: str = "mirror") -> Simulation:
         for i in range(4):
             board.add_unit(Crossbowman(42, y + i*2, 'A'))
         
-        # Équipe B: Même composition, formation miroir
+        # Team B: same composition, mirrored formation
         y = 35
         for i in range(3):
             board.add_unit(Knight(78, y + i*2, 'B'))
@@ -340,40 +340,40 @@ def create_test_scenario(scenario_type: str = "mirror") -> Simulation:
 
 
 if __name__ == "__main__":
-    # Test rapide avec vérification des specs
+    # Quick test with spec verification
     sim = create_test_scenario("mirror")
     
-    print("=== Test de la simulation ===")
-    print(f"Unités équipe A: {len(sim.board.get_alive_units('A'))}")
-    print(f"Unités équipe B: {len(sim.board.get_alive_units('B'))}")
-    
-    # Vérification specs prof
-    print("\n--- Vérification spécifications ---")
+    print("=== Simulation test ===")
+    print(f"Units team A: {len(sim.board.get_alive_units('A'))}")
+    print(f"Units team B: {len(sim.board.get_alive_units('B'))}")
+
+    # Check teacher specifications
+    print("\n--- Specs verification ---")
     u = sim.board.units[0]
-    print(f"Position flottante: ({u.x}, {u.y}) - Type: {type(u.x).__name__}")
+    print(f"Floating position: ({u.x}, {u.y}) - Type: {type(u.x).__name__}")
     print(f"Collision radius: {u.collision_radius}")
-    print(f"Line of sight: {u.line_of_sight} (circulaire)")
-    
-    # Simule jusqu'à bataille complète (max 1000 ticks)
-    print("\n--- Simulation de bataille ---")
+    print(f"Line of sight: {u.line_of_sight} (circular)")
+
+    # Simulate until battle is over (max 1000 ticks)
+    print("\n--- Battle simulation ---")
     for i in range(1000):
         sim.step()
         if i % 200 == 0:
             t_a = len(sim.board.get_alive_units('A'))
             t_b = len(sim.board.get_alive_units('B'))
-            print(f"t={sim.elapsed_time:5.1f}s: ÉquipeA={t_a:2} vs ÉquipeB={t_b:2}")
+            print(f"t={sim.elapsed_time:5.1f}s: TeamA={t_a:2} vs TeamB={t_b:2}")
         if sim.is_finished():
-            print(f"  Bataille terminée au tick {i}")
+            print(f"  Battle finished at tick {i}")
             break
     
-    print(f"\nRésultat après {sim.elapsed_time:.2f}s:")
+    print(f"\nResult after {sim.elapsed_time:.2f}s:")
     t_a_alive = len(sim.board.get_alive_units('A'))
     t_b_alive = len(sim.board.get_alive_units('B'))
-    print(f"Unités équipe A: {t_a_alive}")
-    print(f"Unités équipe B: {t_b_alive}")
-    
+    print(f"Units team A: {t_a_alive}")
+    print(f"Units team B: {t_b_alive}")
+
     if sim.is_finished():
         winner = 'A' if t_a_alive > 0 else 'B'
-        print(f"\nVICTOIRE: Équipe {winner}")
+        print(f"\nVICTORY: Team {winner}")
     else:
-        print("\nSimulation arrêtée (limite de ticks atteinte)")
+        print("\nSimulation stopped (tick limit reached)")

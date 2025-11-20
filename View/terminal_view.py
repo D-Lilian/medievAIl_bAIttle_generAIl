@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 @file terminal_view.py
-@brief Terminal View - Vue curses pour bataille médiévale
+@brief Terminal View - curses-based medieval battle viewer
 
 @details
-Implémentation MVC : affiche l'état du Model sans le modifier
-- Mode interactif (curses)  
-- Mode headless (tests)
-- Compatible équipes A/B
+MVC implementation: displays the Model state without modifying it
+- Interactive mode (curses)
+- Headless mode (tests)
 
 @author Marie
 @date 2025
@@ -30,43 +29,43 @@ import sys
 
 class Team(Enum):
     """
-    @brief Énumération des équipes possibles
-    
-    @details Définit les identifiants d'équipe pour le jeu.
-    Compatible avec la nomenclature des collègues (A/B).
+    @brief Enumeration of possible teams
+
+    @details Defines team identifiers for the game.
+    Compatible with the A/B naming convention used by the team.
     """
-    A = 1  ##< Équipe A (cyan)
-    B = 2  ##< Équipe B (rouge)
+    A = 1  ##< Team A (cyan)
+    B = 2  ##< Team B (red)
 
 
 class UnitStatus(Enum):
     """
-    @brief Statut d'une unité dans le jeu
-    
-    @details Indique si une unité est vivante ou morte,
-    utilisé pour l'affichage et la logique de jeu.
+    @brief Status of a unit in the game
+
+    @details Indicates whether a unit is alive or dead,
+    used for rendering and basic game logic.
     """
-    ALIVE = auto()  ##< Unité vivante
-    DEAD = auto()   ##< Unité morte
+    ALIVE = auto()  ##< Alive unit
+    DEAD = auto()   ##< Dead unit
 
 
 @dataclass
 class UniteRepr:
     """
-    @brief Représentation d'une unité pour l'affichage
-    
-    @details Structure de données contenant toutes les informations
-    nécessaires à l'affichage d'une unité dans la vue terminal.
-    Sépare clairement les données Model des données View.
-    
-    @param type Nom du type d'unité (Knight, Pikeman, etc.)
-    @param team Équipe de l'unité (Team.A ou Team.B)
-    @param letter Caractère d'affichage de l'unité
-    @param x Position X (coordonnée flottante)
-    @param y Position Y (coordonnée flottante)
-    @param hp Points de vie actuels
-    @param hp_max Points de vie maximum
-    @param status Statut de l'unité (ALIVE/DEAD)
+    @brief Representation of a unit for rendering
+
+    @details Data structure containing all information needed
+    to render a unit in the terminal view.
+    Clearly separates Model data from View data.
+
+    @param type Unit type name (Knight, Pikeman, etc.)
+    @param team Unit team (Team.A or Team.B)
+    @param letter Character used to render the unit
+    @param x X position (float coordinate)
+    @param y Y position (float coordinate)
+    @param hp Current hit points
+    @param hp_max Maximum hit points
+    @param status Unit status (ALIVE/DEAD)
     """
     type: str
     team: Team
@@ -80,72 +79,72 @@ class UniteRepr:
     @property
     def alive(self) -> bool:
         """
-        @brief Vérifie si l'unité est vivante
-        @return True si l'unité est vivante, False sinon
+        @brief Check whether the unit is alive
+        @return True if the unit is alive, False otherwise
         """
         return self.status == UnitStatus.ALIVE
     
     @property
     def hp_percent(self) -> float:
         """
-        @brief Calcule le pourcentage de HP restants
-        @return Pourcentage de HP (0-100)
+        @brief Compute remaining HP percentage
+        @return HP percentage (0-100)
         """
         return (self.hp / self.hp_max * 100) if self.hp_max > 0 else 0.0
 
 
 class ViewInterface(ABC):
     """
-    @brief Interface abstraite pour toutes les vues
-    
-    @details Définit le contrat que toutes les vues doivent respecter
-    dans l'architecture MVC. Garantit la séparation entre View et Model.
+    @brief Abstract interface for all views
+
+    @details Defines the contract that all views must respect
+    in the MVC architecture. Guarantees separation between View and Model.
     """
     
     @abstractmethod
     def update(self, simulation):
         """
-        @brief Met à jour l'affichage avec l'état actuel de la simulation
-        @param simulation Instance de simulation contenant l'état du jeu
-        @return bool True pour continuer, False pour quitter
+        @brief Update display with the current simulation state
+        @param simulation Simulation instance containing the game state
+        @return bool True to continue, False to quit
         """
         pass
     
     @abstractmethod
     def cleanup(self):
         """
-        @brief Nettoie les ressources de la vue
-        @details Libère les ressources (curses, fichiers, etc.)
+        @brief Clean up view resources
+        @details Releases resources (curses, files, etc.)
         """
         pass
 
 
 class ColorPair(Enum):
     """
-    @brief Paires de couleurs pour l'affichage curses
-    
-    @details Définit les couleurs utilisées pour différencier
-    les équipes et éléments d'interface.
+    @brief Color pairs for curses rendering
+
+    @details Defines colors used to distinguish
+    teams and UI elements.
     """
-    TEAM_A = 1   ##< Cyan pour équipe A
-    TEAM_B = 2   ##< Rouge pour équipe B
-    UI = 3       ##< Jaune pour l'interface
-    DEAD = 4     ##< Gris pour les unités mortes
+    TEAM_A = 1   ##< Cyan for team A
+    TEAM_B = 2   ##< Red for team B
+    UI = 3       ##< Yellow for the UI
+    DEAD = 4     ##< Dark/grey for dead units
 
 
 @dataclass
 class Camera:
     """
-    @brief Gestion de la position et du zoom de la caméra
-    
-    @details Encapsule toute la logique de déplacement et zoom de la caméra.
-    Applique le principe de responsabilité unique (SOLID).
-    
-    @param x Position X de la caméra
-    @param y Position Y de la caméra  
-    @param zoom_level Niveau de zoom (1=normal, 2=zoom out)
-    @param scroll_speed_normal Vitesse de défilement normale
-    @param scroll_speed_fast Vitesse de défilement rapide (Shift)
+    @brief Manage camera position and zoom
+
+    @details Encapsulates all camera movement and zoom logic.
+    Applies the Single Responsibility Principle (SOLID).
+
+    @param x Camera X position
+    @param y Camera Y position
+    @param zoom_level Zoom level (1=normal, 2=zoomed out)
+    @param scroll_speed_normal Normal scroll speed
+    @param scroll_speed_fast Fast scroll speed (with Shift)
     """
     x: int = 0
     y: int = 0
@@ -155,10 +154,10 @@ class Camera:
     
     def move(self, dx: int, dy: int, fast: bool = False):
         """
-        @brief Déplace la caméra
-        @param dx Déplacement en X (-1, 0, 1)
-        @param dy Déplacement en Y (-1, 0, 1) 
-        @param fast True pour déplacement rapide (Shift pressé)
+        @brief Move the camera
+        @param dx Movement on X axis (-1, 0, 1)
+        @param dy Movement on Y axis (-1, 0, 1)
+        @param fast True for faster movement (when Shift is pressed)
         """
         speed = self.scroll_speed_fast if fast else self.scroll_speed_normal
         self.x += dx * speed
@@ -166,19 +165,19 @@ class Camera:
     
     def toggle_zoom(self):
         """
-        @brief Bascule entre zoom normal et zoom out
-        @details Alterne entre zoom_level 1 (normal) et 2 (zoom out)
+        @brief Toggle between normal zoom and zoomed-out view
+        @details Alternates between zoom_level 1 (normal) and 2 (zoomed out)
         """
         self.zoom_level = 1 if self.zoom_level == 2 else 2
     
     def clamp(self, board_width: int, board_height: int, term_w: int, term_h: int, ui_height: int = 0):
         """
-        @brief Contraint la caméra aux limites du plateau
-        @param board_width Largeur du plateau de jeu
-        @param board_height Hauteur du plateau de jeu
-        @param term_w Largeur du terminal
-        @param term_h Hauteur du terminal
-        @param ui_height Hauteur de l'interface utilisateur
+        @brief Clamp the camera inside the board limits
+        @param board_width Game board width
+        @param board_height Game board height
+        @param term_w Terminal width
+        @param term_h Terminal height
+        @param ui_height UI height
         """
         visible_w = int(term_w * self.zoom_level)
         visible_h = int((term_h - ui_height) * self.zoom_level)
@@ -190,75 +189,75 @@ class Camera:
 
 class TerminalView(ViewInterface):
     """
-    @brief Vue Terminal utilisant curses pour afficher la bataille
-    
-    @details Implémentation principale de la vue dans l'architecture MVC.
-    Fournit un affichage terminal avec curses pour visualiser les batailles
-    en temps réel. Supporte les modes interactif et headless.
-    
+    @brief Terminal View using curses to display the battle
+
+    @details Main view implementation in the MVC architecture.
+    Provides a curses-based terminal display to visualize battles
+    in real time. Supports both interactive and headless modes.
+
     @features
-    - Affichage coloré des unités par équipe
-    - Contrôles clavier (pause, zoom, scroll)
-    - Mode headless pour tests automatisés
-    - Génération de rapports HTML
-    - Compatible équipes A/B
-    
+    - Colored rendering of units by team
+    - Keyboard controls (pause, zoom, scroll)
+    - Headless mode for automated tests
+    - HTML report generation
+    - Compatible with A/B teams
+
     @controls
     - P: Pause/Resume
     - M: Toggle zoom
-    - ZQSD/Flèches: Déplacement caméra
-    - +/-: Ajuster vitesse
-    - TAB: Générer rapport HTML
-    - ESC: Quitter
+    - ZQSD/Arrows: Move camera
+    - +/-: Adjust tick speed
+    - TAB: Generate HTML report
+    - ESC: Quit
     """
     
-    ##< @brief Mapping des types d'unités vers leurs lettres d'affichage
+    ##< @brief Mapping from unit types to display letters
     UNIT_LETTERS = {
-        'Knight': 'K',           ##< Chevalier
-        'Pikeman': 'P',          ##< Piquier  
-        'Crossbowman': 'C',      ##< Arbalétrier
-        'Long Swordsman': 'L',   ##< Épéiste
-        'Elite Skirmisher': 'S', ##< Éclaireur d'élite
-        'Cavalry Archer': 'A',   ##< Archer à cheval
-        'Onager': 'O',           ##< Onagre
-        'Light Cavalry': 'V',    ##< Cavalerie légère
+        'Knight': 'K',           ##< Knight
+        'Pikeman': 'P',          ##< Pikeman
+        'Crossbowman': 'C',      ##< Crossbowman
+        'Long Swordsman': 'L',   ##< Long Swordsman
+        'Elite Skirmisher': 'S', ##< Elite Skirmisher
+        'Cavalry Archer': 'A',   ##< Cavalry Archer
+        'Onager': 'O',           ##< Onager
+        'Light Cavalry': 'V',    ##< Light Cavalry
         'Scorpion': 'R',         ##< Scorpion
-        'Capped Ram': 'M',       ##< Bélier
-        'Trebuchet': 'T',        ##< Trébuchet
-        'Elite War Elephant': 'E', ##< Éléphant de guerre d'élite
-        'Monk': 'N',             ##< Moine
-        'Castle': '#',           ##< Château
-        'Wonder': 'W'            ##< Merveille
+        'Capped Ram': 'M',       ##< Capped Ram
+        'Trebuchet': 'T',        ##< Trebuchet
+        'Elite War Elephant': 'E', ##< Elite War Elephant
+        'Monk': 'N',             ##< Monk
+        'Castle': '#',           ##< Castle
+        'Wonder': 'W'            ##< Wonder
     }
     
     def __init__(self, board_width: int, board_height: int, tick_speed: int = 20):
         """
-        @brief Initialise la vue terminal
-        
-        @param board_width Largeur du plateau de jeu
-        @param board_height Hauteur du plateau de jeu  
-        @param tick_speed Nombre de ticks par seconde (framerate)
-        
-        @details Configure tous les paramètres nécessaires à l'affichage:
-        caméra, état de la vue, cache des unités, statistiques.
+        @brief Initialize the terminal view
+
+        @param board_width Game board width
+        @param board_height Game board height
+        @param tick_speed Number of ticks per second (framerate)
+
+        @details Configures all parameters required for rendering:
+        camera, view state, unit cache, and statistics.
         """
         self.board_width = board_width
         self.board_height = board_height
         self.tick_speed = tick_speed
         
-        # Caméra
+        # Camera
         self.camera = Camera()
         
-        # État de la vue
+        # View state
         self.paused = False
         self.show_debug = False
         self.show_ui = True
         
-        # Fenêtre curses
+        # Curses window
         self.stdscr = None
         self.windows = {}
         
-        # Cache pour les unités
+        # Unit cache
         self.units_cache: List[UniteRepr] = []
         
         # Stats
@@ -279,23 +278,23 @@ class TerminalView(ViewInterface):
         
     def init_curses(self):
         """
-        @brief Initialise l'environnement curses
-        
-        @details Configure curses pour l'affichage terminal:
-        - Initialise l'écran et les couleurs
-        - Configure l'entrée clavier non-bloquante
-        - Définit les paires de couleurs pour les équipes
-        
-        @note À appeler avant toute utilisation de l'affichage curses
+        @brief Initialize the curses environment
+
+        @details Configure curses for terminal rendering:
+        - Initialize the screen and colors
+        - Configure non-blocking keyboard input
+        - Define color pairs for teams and UI
+
+        @note Must be called before any curses-based rendering
         """
         self.stdscr = curses.initscr()
         curses.start_color()
         curses.use_default_colors()
         curses.noecho()
         curses.cbreak()
-        curses.curs_set(0)  # Cache le curseur
+        curses.curs_set(0)  # Hide cursor
         self.stdscr.keypad(True)
-        self.stdscr.nodelay(True)  # Non bloquant pour les inputs
+        self.stdscr.nodelay(True)  # Non-blocking input
         
         # Initialisation des paires de couleurs
         curses.init_pair(ColorPair.TEAM_A.value, curses.COLOR_CYAN, -1)
@@ -305,14 +304,14 @@ class TerminalView(ViewInterface):
         
     def cleanup(self):
         """
-        @brief Nettoie et restaure l'environnement terminal
-        
-        @details Restaure le terminal à son état normal:
-        - Désactive l'écho clavier
-        - Restaure le mode canonique
-        - Libère l'écran curses
-        
-        @note À appeler impérativement en fin de programme
+        @brief Clean up and restore the terminal environment
+
+        @details Restores the terminal to its normal state:
+        - Disable keypad mode
+        - Restore canonical mode and echo
+        - Release the curses screen
+
+        @note Must always be called at the end of the program
         """
         if self.stdscr:
             self.stdscr.keypad(False)
@@ -322,26 +321,26 @@ class TerminalView(ViewInterface):
     
     def handle_input(self) -> bool:
         """
-        @brief Gère les entrées clavier utilisateur
-        
-        @details Traite toutes les interactions clavier:
-        - Navigation: ZQSD, flèches (avec vitesse Shift)
-        - Zoom: M (cycle entre niveaux)
-        - Contrôles: P(pause), +/-(vitesse), TAB(rapport), F(UI), D(debug)
-        - Sortie: Échap
-        
-        @return bool False pour quitter l'application, True pour continuer
-        @note Utilise getch() non-bloquant pour éviter les freezes
+        @brief Handle user keyboard input
+
+        @details Processes all keyboard interactions:
+        - Navigation: ZQSD, arrow keys (with Shift for faster move)
+        - Zoom: M (cycle between zoom levels)
+        - Controls: P(pause), +/-(tick speed), TAB(report), F(UI), D(debug)
+        - Exit: Escape
+
+        @return bool False to quit the application, True to continue
+        @note Uses non-blocking getch() to avoid freezes
         """
         try:
             key = self.stdscr.getch()
         except (KeyboardInterrupt, curses.error):
             return True
         
-        if key == -1:  # Pas d'entrée
+        if key == -1:  # No input
             return True
         
-        # Ajustement vitesse ticks
+        # Tick speed adjustment
         if key in (ord('+'), ord('=')):
             self.tick_speed = min(240, self.tick_speed + 5)
             return True
@@ -369,16 +368,16 @@ class TerminalView(ViewInterface):
             self.show_ui = not self.show_ui
             return True
         
-        # Génération HTML
+        # HTML report generation
         if key == ord('\t'):  # TAB
             self.generate_html_report()
             return True
         
-        # Quitter
-        if key == 27:  # ESC uniquement
+        # Quit
+        if key == 27:  # ESC only
             return False
         
-        # Scroll avec ZQSD
+        # Scroll with ZQSD
         if key in (ord('z'), ord('Z'), curses.KEY_UP):
             fast = key == ord('Z')
             self.camera.move(0, -1, fast)
@@ -395,26 +394,26 @@ class TerminalView(ViewInterface):
         return True
     
     def _resolve_letter(self, unit_type: str) -> str:
-        """Retourne la lettre pour un type ou '?' par défaut."""
+        """Return the display letter for a type or '?' by default."""
         return self.UNIT_LETTERS.get(unit_type, unit_type[:1].upper() if unit_type else '?')
     
     def _get_unit_display_attributes(self, unit: UniteRepr) -> tuple[str, ColorPair, int]:
         """
-        @brief Détermine les attributs visuels d'affichage d'une unité
-        
-        @param unit Unité à afficher
-        @return tuple Triplet (caractère, couleur, attributs_curses)
-        
-        @details Logique d'affichage:
-        - Unités vivantes: lettre de type + couleur équipe + gras
-        - Unités mortes: 'x' gris + clignotement
+        @brief Determine the visual display attributes of a unit
+
+        @param unit Unit to display
+        @return tuple Triplet (character, color_enum, curses_attributes)
+
+        @details Rendering logic:
+        - Alive units: type letter + team color + bold
+        - Dead units: 'x' in grey with blink
         """
         if unit.alive:
             color = ColorPair.TEAM_A if unit.team == Team.A else ColorPair.TEAM_B
             char = unit.letter
             attr = curses.color_pair(color.value) | curses.A_BOLD
         else:
-            # Unités mortes : 'x' en gris avec clignotement
+            # Dead units: 'x' in grey with blinking
             color = ColorPair.DEAD
             char = 'x'
             attr = curses.color_pair(color.value) | curses.A_BLINK
@@ -423,43 +422,43 @@ class TerminalView(ViewInterface):
 
     def _draw_border(self, width: int, height: int):
         """
-        @brief Dessine un cadre décoratif autour du plateau de jeu
-        
-        @param width Largeur du cadre en caractères
-        @param height Hauteur du cadre en caractères
-        
-        @details Utilise des caractères Unicode pour un rendu professionnel:
-        - Coins: ┌┐└┘  
-        - Bordures: ─ │
-        - Couleur UI distinctive
+        @brief Draw a decorative border around the game board
+
+        @param width Border width in characters
+        @param height Border height in characters
+
+        @details Uses Unicode characters for a nicer look:
+        - Corners: ┌ ┐└ ┘
+        - Borders: ─ │
+        - Uses the UI color pair
         """
         ui_color = curses.color_pair(ColorPair.UI.value)
         try:
-            # Coins
+            # Corners
             self.stdscr.addch(0, 0, '┌', ui_color)
             self.stdscr.addch(0, width - 1, '┐', ui_color)
             self.stdscr.addch(height - 1, 0, '└', ui_color)
             self.stdscr.addch(height - 1, width - 1, '┘', ui_color)
             
-            # Lignes horizontales
+            # Horizontal lines
             for x in range(1, width - 1):
                 self.stdscr.addch(0, x, '─', ui_color)
                 self.stdscr.addch(height - 1, x, '─', ui_color)
             
-            # Lignes verticales
+            # Vertical lines
             for y in range(1, height - 1):
                 self.stdscr.addch(y, 0, '│', ui_color)
                 self.stdscr.addch(y, width - 1, '│', ui_color)
         except curses.error:
-            pass  # Ignore les erreurs si le terminal est trop petit
+            pass  # Ignore errors if terminal is too small
 
     def _extract_unit_fields(self, unit):
-        """Adapte les différences de noms d'attributs du model."""
+        """Adapt to model attribute naming differences."""
         # team/equipe
         team = getattr(unit, 'equipe', getattr(unit, 'team', 1))
         # hp / hp_max
         hp = getattr(unit, 'hp', 0)
-        # hp_max: si absent, mémoriser la première valeur vivante
+        # hp_max: if missing, remember the first non-zero value
         if hasattr(unit, 'hp_max'):
             hp_max = getattr(unit, 'hp_max')
         else:
@@ -474,7 +473,7 @@ class TerminalView(ViewInterface):
         y = getattr(unit, 'y', 0.0)
         # alive()
         alive = hp > 0
-        # stats facultatives
+        # optional stats
         armor = getattr(unit, 'armor', None)
         attack = getattr(unit, 'attack', None)
         rng = getattr(unit, 'range', None)
@@ -489,10 +488,10 @@ class TerminalView(ViewInterface):
 
     def update_units_cache(self, simulation):
         """
-        Met à jour le cache des unités depuis la simulation
-        
+        Update the unit cache from the simulation.
+
         Args:
-            simulation: Instance de la simulation contenant les unités
+            simulation: Simulation instance containing the units
         """
         # self.units_cache.clear()
         self.units_cache.clear()
@@ -503,8 +502,8 @@ class TerminalView(ViewInterface):
         self.type_counts_team1 = {}
         self.type_counts_team2 = {}
         
-        # Récupération des unités depuis la simulation
-        # Adapté selon votre architecture Model
+        # Fetch units from simulation
+        # Adapt depending on your Model architecture
         if hasattr(simulation, 'board') and hasattr(simulation.board, 'units'):
             for unit in simulation.board.units:
                 if not hasattr(unit, 'hp'):
@@ -533,18 +532,18 @@ class TerminalView(ViewInterface):
                 )
                 self.units_cache.append(repr_obj)
 
-                # Enregistrer l'heure de décès pour clignotement temporaire
+                # Record death time for temporary blinking
                 uid = id(repr_obj)
                 if not fields['alive']:
-                    # Si l'unité vient de mourir, mémoriser le temps
+                    # If the unit just died, record the time
                     if uid not in self._death_times:
                         self._death_times[uid] = time.perf_counter()
                 else:
-                    # Si elle est vivante, s'assurer qu'elle n'est pas marquée comme morte
+                    # If still alive, make sure it is not marked as dead
                     if uid in self._death_times:
                         del self._death_times[uid]
                 
-                # Comptages (supporter team = 1/2, 'A'/'B' ou Team enum)
+                # Counts (support team = 1/2, 'A'/'B' or Team enum)
                 team_val = fields['team']
                 if isinstance(team_val, Team):
                     is_team_a = (team_val == Team.A)
@@ -567,65 +566,48 @@ class TerminalView(ViewInterface):
                     else:
                         self.dead_team2 += 1
         
-        # Mise à jour du temps de simulation
+        # Update simulation time
         if hasattr(simulation, 'elapsed_time'):
             self.simulation_time = simulation.elapsed_time
     
     def draw_map(self):
         """
-        @brief Dessine la carte et les unités sur l'écran
-        
-        @details Fonction principale de rendu qui:
-        - Efface l'écran précédent
-        - Calcule la zone d'affichage disponible  
-        - Applique les contraintes de caméra
-        - Dessine le cadre, unités et éléments visuels
-        
-        @note Appelée à chaque frame pour mettre à jour l'affichage
+        @brief Draw the map and units on screen
+
+        @details Main rendering function that:
+        - Clears the previous frame
+        - Computes the available display area
+        - Applies camera constraints
+        - Draws the border, units and visual elements
+
+        @note Called every frame to refresh the display
         """
         max_y, max_x = self.stdscr.getmaxyx()
         
-        # Efface l'écran
+        # Clear screen
         self.stdscr.clear()
         
-        # Zone de jeu (laisse de la place pour l'UI en bas)
+        # Game area (keeps some space at the bottom for the UI)
         game_height = max_y - (5 if self.show_ui else 0)
         
-        # Contrainte caméra
+        # Camera constraints
         ui_height = 5 if self.show_ui else 0
         self.camera.clamp(self.board_width, self.board_height, max_x, max_y, ui_height)
         
-        # Dessine le cadre autour du plateau de jeu
+        # Draw a border around the game area
         self._draw_border(max_x, game_height)
         
-        # Dessin direct (sans grille intermédiaire)
-        # Ajuste pour laisser 1 ligne/colonne pour le cadre
-        now = time.perf_counter()
+        # Direct drawing (no intermediate grid)
+        # Keep 1 row/column margin for the border
         for unit in self.units_cache:
-            # Position sur l'écran avec zoom et caméra
-            screen_x = int((unit.x - self.camera.x) / self.camera.zoom_level) + 1  # +1 pour le cadre
-            screen_y = int((unit.y - self.camera.y) / self.camera.zoom_level) + 1  # +1 pour le cadre
-            
-            # Vérification des limites (en tenant compte du cadre)
+            # Screen position with zoom and camera
+            screen_x = int((unit.x - self.camera.x) / self.camera.zoom_level) + 1  # +1 for border
+            screen_y = int((unit.y - self.camera.y) / self.camera.zoom_level) + 1  # +1 for border
+
+            # Bounds check (taking the border into account)
             if 1 <= screen_x < max_x - 1 and 1 <= screen_y < game_height - 1:
-                # Affichage distinct pour les unités mortes
-                if unit.alive:
-                    color = self.COLOR_TEAM1 if unit.team == 1 else self.COLOR_TEAM2
-                    char = unit.letter
-                    attr = curses.color_pair(color) | curses.A_BOLD
-                else:
-                    # Unités mortes : caractère 'x' en gris
-                    color = self.COLOR_DEAD
-                    char = 'x'
-                    # Clignotement pendant une courte période après la mort
-                    blink = False
-                    uid = id(unit)
-                    death_time = self._death_times.get(uid)
-                    if death_time is not None and (now - death_time) < 2.0:
-                        blink = True
-                    attr = curses.color_pair(color)
-                    if blink:
-                        attr |= curses.A_BLINK
+                # Utilise la même logique que _get_unit_display_attributes
+                char, _color_enum, attr = self._get_unit_display_attributes(unit)
                 try:
                     self.stdscr.addstr(screen_y, screen_x, char, attr)
                 except curses.error:
@@ -633,15 +615,15 @@ class TerminalView(ViewInterface):
     
     def draw_ui(self):
         """
-        @brief Dessine l'interface utilisateur
-        
-        @details Affiche en bas de l'écran:
-        - Ligne de séparation avec la zone de jeu
-        - Statistiques des équipes (unités, santé)
-        - Commandes de contrôle disponibles
-        - Informations de caméra et zoom
-        
-        @note Uniquement si self.show_ui est True
+        @brief Draw the user interface
+
+        @details Displays at the bottom of the screen:
+        - Separator line between game area and UI
+        - Team statistics (units, deaths)
+        - Available control shortcuts
+        - Camera and zoom information
+
+        @note Only if self.show_ui is True
         """
         if not self.show_ui:
             return
@@ -649,15 +631,15 @@ class TerminalView(ViewInterface):
         max_y, max_x = self.stdscr.getmaxyx()
         ui_start_y = max_y - 5
         
-        # Ligne de séparation
+        # Separator line
         try:
             self.stdscr.addstr(ui_start_y, 0, "─" * max_x, curses.color_pair(ColorPair.UI.value))
         except curses.error:
             pass
         
         stats_line = (
-            f"Temps:{self.simulation_time:.1f}s | Éq1 V:{self.team1_units} M:{self.dead_team1} | "
-            f"Éq2 V:{self.team2_units} M:{self.dead_team2} | Total:{len(self.units_cache)} | FPS:{self.fps:.0f}"
+            f"Time:{self.simulation_time:.1f}s | T1 A:{self.team1_units} D:{self.dead_team1} | "
+            f"T2 A:{self.team2_units} D:{self.dead_team2} | Total:{len(self.units_cache)} | FPS:{self.fps:.0f}"
         )
         try:
             self.stdscr.addstr(ui_start_y + 1, 2, stats_line, curses.color_pair(ColorPair.UI.value) | curses.A_BOLD)
@@ -666,14 +648,14 @@ class TerminalView(ViewInterface):
         
         state_line = (
             f"{'PAUSE' if self.paused else 'PLAY'} | Zoom:x{self.camera.zoom_level} "
-            f"| Caméra:({self.camera.x},{self.camera.y}) | Tick:{self.tick_speed}"
+            f"| Cam:({self.camera.x},{self.camera.y}) | Tick:{self.tick_speed}"
         )
         try:
             self.stdscr.addstr(ui_start_y + 2, 2, state_line)
         except curses.error:
             pass
         
-        # Ligne des types principaux (archer/knight/pikeman si présents)
+        # Summary line for main types (Archer/Knight/Pikeman if present)
         summary = []
         for label in ['Archer', 'Knight', 'Pikeman']:
             c1 = self.type_counts_team1.get(label, 0)
@@ -687,7 +669,7 @@ class TerminalView(ViewInterface):
             except curses.error:
                 pass
         
-        # Commandes (décalée si types_line vide ou non)
+        # Commands (shifted depending on whether types_line exists)
         commands_y = ui_start_y + (4 if types_line else 3)
         commands_line = "P:Pause M:Zoom +/-:Tick ZQSD/Flèches:Scroll TAB:Rapport F:UI D:Debug ESC:Quitter"
         try:
@@ -697,21 +679,20 @@ class TerminalView(ViewInterface):
     
     def draw_debug_info(self):
         """
-        @brief Affiche des informations de debug en overlay
-        
-        @details Mode développeur qui affiche:
-        - Détails des 5 premières unités (position, santé, équipe)
-        - Informations système si nécessaire
-        - État interne pour diagnostic
-        
-        @note Uniquement si self.show_debug est True (touche D)
+        @brief Display debug information as an overlay
+
+        @details Developer-oriented mode that shows:
+        - Details of the first units (position, health, team)
+        - Internal state for diagnostics
+
+        @note Only if self.show_debug is True (D key)
         """
         if not self.show_debug:
             return
         
         max_y, max_x = self.stdscr.getmaxyx()
         
-        # Affiche les 5 premières unités avec leurs infos détaillées
+        # Show first units with detailed information
         debug_y = 1
         try:
             self.stdscr.addstr(debug_y, max_x - 48, "═══ DEBUG ═══", curses.color_pair(ColorPair.UI.value) | curses.A_BOLD)
@@ -720,7 +701,7 @@ class TerminalView(ViewInterface):
             for i, unit in enumerate(self.units_cache[:6]):
                 status = "ALV" if unit.alive else "DED"
                 debug_text = f"{status} {unit.type[:10]:10} ({unit.letter}) HP:{unit.hp:3}/{unit.hp_max:3} {unit.hp_percent:3.0f}%"
-                color = ColorPair.TEAM1 if unit.team == Team.TEAM1 else ColorPair.TEAM2
+                color = ColorPair.TEAM_A if unit.team == Team.A else ColorPair.TEAM_B
                 if not unit.alive:
                     color = ColorPair.DEAD
                 self.stdscr.addstr(debug_y + i, max_x - 48, debug_text[:48], curses.color_pair(color.value))
@@ -729,16 +710,16 @@ class TerminalView(ViewInterface):
     
     def update(self, simulation):
         """
-        Met à jour l'affichage avec l'état actuel de la simulation
-        
+        Update the display with the current simulation state.
+
         Args:
-            simulation: Instance de Simulation du Model
+            simulation: Simulation instance from the Model
         """
-        # Gère les entrées utilisateur
+        # Handle user input
         if not self.handle_input():
             return False  # Signal pour quitter
         
-        # Si en pause, on ne met pas à jour le cache mais on redessine
+        # If paused, do not update the cache but still redraw
         if not self.paused:
             self.update_units_cache(simulation)
         
@@ -746,25 +727,25 @@ class TerminalView(ViewInterface):
         self.draw_ui()
         self.draw_debug_info()
         
-        # Rafraîchit l'écran
+        # Refresh the screen
         self.stdscr.refresh()
         
-        # Calcul FPS avant sleep
+        # Compute FPS before sleeping
         now = time.perf_counter()
         dt = now - self._last_frame_time
         if dt > 0:
             self.fps = 1.0 / dt
         self._last_frame_time = now
         
-        # Contrôle du framerate
+        # Framerate control
         time.sleep(max(0.0, 1.0 / self.tick_speed))
         
         return True
     
     def generate_html_report(self):
         """
-        Génère un rapport HTML avec l'état actuel de toutes les unités
-        Appelé avec la touche TAB
+        Generate an HTML report with the current state of all units.
+        Called when the TAB key is pressed.
         """
         import datetime
         import os
@@ -861,23 +842,23 @@ class TerminalView(ViewInterface):
     <h1>Battle Report</h1>
     
     <div class="stats">
-        <h2>Statistiques Générales</h2>
-        <p><strong>Temps de simulation:</strong> {self.simulation_time:.2f} secondes</p>
-        <p><strong>Équipe 1:</strong> <span class="team1">{self.team1_units} unités</span></p>
-        <p><strong>Équipe 2:</strong> <span class="team2">{self.team2_units} unités</span></p>
-        <p><strong>Total:</strong> {len(self.units_cache)} unités actives</p>
+        <h2>Global Statistics</h2>
+        <p><strong>Simulation time:</strong> {self.simulation_time:.2f} seconds</p>
+        <p><strong>Team 1:</strong> <span class="team1">{self.team1_units} units</span></p>
+        <p><strong>Team 2:</strong> <span class="team2">{self.team2_units} units</span></p>
+        <p><strong>Total:</strong> {len(self.units_cache)} active units</p>
     </div>
 """
         
-        # Séparer les unités par équipe
-        team1_units = [u for u in self.units_cache if u.team == Team.TEAM1]
-        team2_units = [u for u in self.units_cache if u.team == Team.TEAM2]
+        # Split units by team
+        team1_units = [u for u in self.units_cache if u.team == Team.A]
+        team2_units = [u for u in self.units_cache if u.team == Team.B]
         
         for team_num, team_units in [(1, team1_units), (2, team2_units)]:
             html_content += f"""
     <div class="team-section">
         <details open>
-            <summary>Équipe {team_num} - {len(team_units)} unités</summary>
+            <summary>Team {team_num} - {len(team_units)} units</summary>
             <div class="unit-list">
 """
             
@@ -908,7 +889,7 @@ class TerminalView(ViewInterface):
         
         html_content += """
     <div class="stats">
-        <h2>Légende des Unités</h2>
+        <h2>Unit Legend</h2>
         <ul>
 """
         
@@ -920,7 +901,7 @@ class TerminalView(ViewInterface):
     </div>
     
     <footer style="text-align: center; margin-top: 40px; color: #666;">
-        <p>Généré le """ + datetime.datetime.now().strftime("%d/%m/%Y à %H:%M:%S") + """</p>
+        <p>Generated on """ + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + """</p>
     </footer>
 </body>
 </html>
@@ -940,7 +921,7 @@ class TerminalView(ViewInterface):
             pass
 
     def debug_snapshot(self) -> dict:
-        """Retourne un snapshot des stats courantes (pour tests)."""
+        """Return a snapshot of current stats (for tests)."""
         return {
             "time": self.simulation_time,
             "team1_alive": self.team1_units,
@@ -953,7 +934,7 @@ class TerminalView(ViewInterface):
         }
 
     def run_headless(self, simulation, ticks: int = 10):
-        """Exécute quelques ticks sans curses pour tests automatisés."""
+        """Run a few ticks without curses for automated tests."""
         for _ in range(ticks):
             if not self.paused:
                 simulation.step() if hasattr(simulation, "step") else None
@@ -962,7 +943,7 @@ class TerminalView(ViewInterface):
 
 
 def create_dummy_simulation():
-    """Fixture de simulation simple pour tests unitaires."""
+    """Simple simulation fixture for unit tests."""
     class DummyUnit:
         def __init__(self, x, y, equipe, unit_type, hp, hp_max):
             self.x = x
@@ -975,18 +956,18 @@ def create_dummy_simulation():
     class DummyBoard:
         def __init__(self):
             self.units = []
-            # Formation miroir : équipe 1 à gauche, équipe 2 à droite
+            # Mirror formation: team 1 on the left, team 2 on the right
             formations = [
                 ('Knight', 100, 100),
                 ('Pikeman', 55, 55),
                 ('Crossbowman', 30, 30),
             ]
             
-            # Équipe A (gauche) - Cyan
+            # Team A (left) - Cyan
             for i, (unit_type, hp, hp_max) in enumerate(formations):
                 self.units.append(DummyUnit(20, 30 + i*5, 'A', unit_type, hp, hp_max))
             
-            # Équipe B (droite) - Rouge - miroir exact
+            # Team B (right) - Red - mirror
             for i, (unit_type, hp, hp_max) in enumerate(formations):
                 self.units.append(DummyUnit(100, 30 + i*5, 'B', unit_type, hp, hp_max))
 
@@ -995,7 +976,7 @@ def create_dummy_simulation():
             self.board = DummyBoard()
             self.elapsed_time = 0.0
         def step(self):
-            # Les deux équipes s'approchent l'une de l'autre
+            # Both teams move towards each other
             for u in self.board.units:
                 if u.hp > 0:
                     u.x += 0.3 if u.equipe == 1 else -0.3
@@ -1004,31 +985,31 @@ def create_dummy_simulation():
     return DummySimulation()
 
 def main_test():
-    """Mode test headless: python terminal_view.py --test"""
+    """Headless test mode: python terminal_view.py --test"""
     sim = create_dummy_simulation()
     view = TerminalView(120, 120)
     
-    print("=== Mode Test Headless ===")
-    print("Simulation: 50 ticks avec dummy data")
+    print("=== Headless Test Mode ===")
+    print("Simulation: 50 ticks with dummy data")
     
     snapshot = view.run_headless(sim, ticks=50)
     
-    print("\nRésultats:")
-    print(f"  Temps simulé: {snapshot['time']:.2f}s")
-    print(f"  Équipe 1: {snapshot['team1_alive']} vivants, {snapshot['team1_dead']} morts")
-    print(f"  Équipe 2: {snapshot['team2_alive']} vivants, {snapshot['team2_dead']} morts")
-    print(f"  Types équipe 1: {snapshot['types_team1']}")
-    print(f"  Types équipe 2: {snapshot['types_team2']}")
-    print(f"  Total unités: {snapshot['total_units_cached']}")
+    print("\nResults:")
+    print(f"  Simulated time: {snapshot['time']:.2f}s")
+    print(f"  Team 1: {snapshot['team1_alive']} alive, {snapshot['team1_dead']} dead")
+    print(f"  Team 2: {snapshot['team2_alive']} alive, {snapshot['team2_dead']} dead")
+    print(f"  Types team 1: {snapshot['types_team1']}")
+    print(f"  Types team 2: {snapshot['types_team2']}")
+    print(f"  Total units: {snapshot['total_units_cached']}")
     
     # Génération facultative du rapport HTML (désactivée par défaut)
     # view.generate_html_report()
     
-    print("\nTest headless: OK")
+    print("\nHeadless test: OK")
 
 
 def main_demo():
-    """Fonction de démonstration de la vue terminal"""
+    """Demo function for the terminal view."""
     
     # Classe factice de simulation pour la démo
     class DummyUnit:
@@ -1043,7 +1024,7 @@ def main_demo():
     class DummyBoard:
         def __init__(self):
             self.units = []
-            # Formations face à face : équipe 1 à gauche, équipe 2 à droite
+            # Face-to-face formations: team 1 on the left, team 2 on the right
             formations = [
                 ('Knight', 100, 100),
                 ('Knight', 100, 100),
@@ -1054,11 +1035,11 @@ def main_demo():
                 ('Long Swordsman', 60, 60),
             ]
             
-            # Équipe A (gauche, cyan)
+            # Team A (left, cyan)
             for i, (unit_type, hp, hp_max) in enumerate(formations):
                 self.units.append(DummyUnit(15, 20 + i*3, 'A', unit_type, hp, hp_max))
             
-            # Équipe B (droite, rouge) - formation miroir
+            # Team B (right, red) - mirrored formation
             for i, (unit_type, hp, hp_max) in enumerate(formations):
                 self.units.append(DummyUnit(105, 20 + i*3, 'B', unit_type, hp, hp_max))
     
@@ -1068,7 +1049,7 @@ def main_demo():
             self.elapsed_time = 0.0
         
         def step(self):
-            # Les deux armées se rapprochent
+            # Both armies move closer to each other
             for unit in self.board.units:
                 if unit.equipe == 1:
                     unit.x += 0.5
@@ -1076,14 +1057,14 @@ def main_demo():
                     unit.x -= 0.5
             self.elapsed_time += 0.05
     
-    # Création de la vue
+    # Create the view
     view = TerminalView(120, 120, tick_speed=20)
     
     try:
         view.init_curses()
         simulation = DummySimulation()
         
-        # Boucle principale
+        # Main loop
         running = True
         while running:
             if not view.paused:

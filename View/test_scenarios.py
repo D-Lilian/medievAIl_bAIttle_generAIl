@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Scénarios de test pour terminal_view.py
-Permet de tester différentes situations sans le Model complet
+Test scenarios for terminal_view.py.
+Allows testing different situations without the full Model.
 """
 
 import sys
 from terminal_view import TerminalView
 
 class DummyUnit:
-    """Unité factice configurable"""
+    """Configurable dummy unit used for scenarios."""
     def __init__(self, x, y, team, unit_type, hp, hp_max):
         self.x = x
         self.y = y
@@ -28,24 +28,24 @@ class DummySimulation:
         self.elapsed_time = 0.0
     
     def step(self):
-        # Simule un mouvement simple
+        # Simulate a simple movement
         for u in self.board.units:
             if u.hp > 0:
                 u.x += 0.5 if u.equipe == 1 else -0.5
-                # Simule des dégâts aléatoires
+                # Simulate simple damage over time
                 if u.hp > 0:
                     u.hp = max(0, u.hp - 1)
         self.elapsed_time += 0.05
 
 
 def scenario_bataille_massive():
-    """Test avec beaucoup d'unités"""
+    """Scenario with many units (large battle)."""
     units = []
-    # Équipe 1 : ligne de 20 knights
+    # Team 1: line of 20 knights
     for i in range(20):
         units.append(DummyUnit(10 + i*2, 10, 1, 'Knight', 100, 100))
     
-    # Équipe 2 : ligne de 20 pikemen
+    # Team 2: line of 20 pikemen
     for i in range(20):
         units.append(DummyUnit(10 + i*2, 50, 2, 'Pikeman', 55, 55))
     
@@ -53,21 +53,21 @@ def scenario_bataille_massive():
 
 
 def scenario_unites_mourantes():
-    """Test avec des unités qui meurent progressivement"""
+    """Scenario where units progressively die."""
     units = [
         DummyUnit(10, 10, 1, 'Knight', 100, 100),
         DummyUnit(12, 10, 1, 'Knight', 50, 100),
         DummyUnit(14, 10, 1, 'Knight', 10, 100),
-        DummyUnit(16, 10, 1, 'Knight', 0, 100),  # Déjà mort
+        DummyUnit(16, 10, 1, 'Knight', 0, 100),  # Already dead
         DummyUnit(50, 50, 2, 'Pikeman', 55, 55),
         DummyUnit(52, 50, 2, 'Pikeman', 20, 55),
-        DummyUnit(54, 50, 2, 'Pikeman', 0, 55),  # Déjà mort
+        DummyUnit(54, 50, 2, 'Pikeman', 0, 55),  # Already dead
     ]
     return DummySimulation(units)
 
 
 def scenario_tous_types():
-    """Test avec tous les types d'unités"""
+    """Scenario using all available unit types."""
     types = ['Knight', 'Pikeman', 'Crossbowman', 'Long Swordsman', 
              'Elite Skirmisher', 'Cavalry Archer', 'Onager', 'Light Cavalry',
              'Scorpion', 'Capped Ram', 'Trebuchet', 'Elite War Elephant', 
@@ -75,63 +75,63 @@ def scenario_tous_types():
     
     units = []
     for i, unit_type in enumerate(types):
-        # Équipe 1
+        # Team 1
         units.append(DummyUnit(10, 10 + i*3, 1, unit_type, 100, 100))
-        # Équipe 2
+        # Team 2
         units.append(DummyUnit(60, 10 + i*3, 2, unit_type, 80, 100))
     
     return DummySimulation(units)
 
 
 def run_scenario(name, scenario_func):
-    """Lance un scénario de test"""
+    """Run a given test scenario."""
     print(f"\n{'='*60}")
-    print(f"Scénario: {name}")
+    print(f"Scenario: {name}")
     print(f"{'='*60}")
     
     sim = scenario_func()
     view = TerminalView(120, 120)
     
-    # Test headless
-    print("Snapshot initial:")
+    # Headless test
+    print("Initial snapshot:")
     snapshot = view.run_headless(sim, ticks=1)
-    print(f"  Équipe 1: {snapshot['team1_alive']} vivants, {snapshot['team1_dead']} morts")
-    print(f"  Équipe 2: {snapshot['team2_alive']} vivants, {snapshot['team2_dead']} morts")
-    print(f"  Types équipe 1: {snapshot['types_team1']}")
-    print(f"  Types équipe 2: {snapshot['types_team2']}")
+    print(f"  Team 1: {snapshot['team1_alive']} alive, {snapshot['team1_dead']} dead")
+    print(f"  Team 2: {snapshot['team2_alive']} alive, {snapshot['team2_dead']} dead")
+    print(f"  Types team 1: {snapshot['types_team1']}")
+    print(f"  Types team 2: {snapshot['types_team2']}")
     
-    # Simule quelques ticks
-    print("\nSimulation de 20 ticks...")
+    # Simulate a few ticks
+    print("\nSimulating 20 ticks...")
     snapshot2 = view.run_headless(sim, ticks=20)
-    print(f"  Équipe 1: {snapshot2['team1_alive']} vivants, {snapshot2['team1_dead']} morts")
-    print(f"  Équipe 2: {snapshot2['team2_alive']} vivants, {snapshot2['team2_dead']} morts")
+    print(f"  Team 1: {snapshot2['team1_alive']} alive, {snapshot2['team1_dead']} dead")
+    print(f"  Team 2: {snapshot2['team2_alive']} alive, {snapshot2['team2_dead']} dead")
     
-    # Option: générer HTML
+    # Option: generate HTML report
     view.update_units_cache(sim)
-    print("\nGénération du rapport HTML...")
+    print("\nGenerating HTML report...")
     view.generate_html_report()
-    print("  Rapport généré et ouvert dans le navigateur")
+    print("  Report generated and opened in the browser")
 
 
 def main():
-    """Menu de test"""
+    """Simple menu to pick and run test scenarios."""
     scenarios = {
-        '1': ('Bataille massive (40 unités)', scenario_bataille_massive),
-        '2': ('Unités mourantes', scenario_unites_mourantes),
-        '3': ('Tous les types d\'unités', scenario_tous_types),
+        '1': ('Massive battle (40 units)', scenario_bataille_massive),
+        '2': ('Dying units', scenario_unites_mourantes),
+        '3': ("All unit types", scenario_tous_types),
     }
     
     if '--all' in sys.argv:
         for name, func in scenarios.values():
             run_scenario(name, func)
     else:
-        print("\nScénarios de test disponibles:")
+        print("\nAvailable test scenarios:")
         for key, (name, _) in scenarios.items():
             print(f"  {key}. {name}")
-        print("\nUtilisation:")
-        print(f"  python {sys.argv[0]} <numéro>")
-        print(f"  python {sys.argv[0]} --all  (lance tous les scénarios)")
-        print("\nExemple:")
+        print("\nUsage:")
+        print(f"  python {sys.argv[0]} <number>")
+        print(f"  python {sys.argv[0]} --all  (run all scenarios)")
+        print("\nExample:")
         print(f"  python {sys.argv[0]} 1")
         
         if len(sys.argv) > 1 and sys.argv[1] in scenarios:

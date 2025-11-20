@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Test de la TerminalView avec la logique de jeu simplifiée
-Lance une vraie bataille avec les mécaniques AOE2
+Test the TerminalView with simplified game logic.
+Runs a real battle using AOE2-like mechanics.
 """
 
 import sys
@@ -13,89 +13,89 @@ from simple_game_logic import create_test_scenario
 
 
 def main():
-    """Lance une bataille avec la vue terminal"""
+    """Run a battle using the terminal view."""
     
-    # Choix du scénario
+    # Scenario selection
     if len(sys.argv) > 1:
         scenario_type = sys.argv[1]
     else:
-        print("Scénarios disponibles:")
-        print("  mirror       - Formations miroir (3K + 5P + 4C identiques)")
-        print("  lanchester   - Test loi de Lanchester (8K vs 8K)")
-        print("  counter_demo - Démo tactiques (3K + 5P + 4C identiques)")
+        print("Available scenarios:")
+        print("  mirror       - Mirror formations (3K + 5P + 4C identical)")
+        print("  lanchester   - Lanchester law test (8K vs 8K)")
+        print("  counter_demo - Tactics demo (3K + 5P + 4C identical)")
         print("\nUsage: python test_game_logic.py [scenario]")
-        print("Par défaut: mirror")
-        print("\nNote: Compositions TOUJOURS identiques - seules les stratégies diffèrent\n")
+        print("Default: mirror")
+        print("\nNote: Compositions are ALWAYS identical - only strategies differ.\n")
         scenario_type = "mirror"
     
-    # Créer la simulation
-    print(f"Lancement du scénario: {scenario_type}")
+    # Create the simulation
+    print(f"Starting scenario: {scenario_type}")
     simulation = create_test_scenario(scenario_type)
     
-    print(f"Équipe 1: {len(simulation.board.get_alive_units(1))} unités")
-    print(f"Équipe 2: {len(simulation.board.get_alive_units(2))} unités")
-    print("\nCommandes:")
+    print(f"Team 1: {len(simulation.board.get_alive_units(1))} units")
+    print(f"Team 2: {len(simulation.board.get_alive_units(2))} units")
+    print("\nControls:")
     print("  P       : Pause/Resume")
     print("  M       : Zoom")
-    print("  +/-     : Vitesse de simulation")
-    print("  ZQSD    : Scroll (Maj pour rapide)")
-    print("  TAB     : Rapport HTML")
+    print("  +/-     : Simulation speed")
+    print("  ZQSD    : Scroll (Shift for faster)")
+    print("  TAB     : HTML report")
     print("  D       : Debug")
-    print("  F       : Masquer UI")
-    print("  ESC     : Quitter")
-    print("\nDémarrage de la simulation...\n")
+    print("  F       : Toggle UI")
+    print("  ESC     : Quit")
+    print("\nStarting simulation...\n")
     
-    # Créer la vue
+    # Create the view
     view = TerminalView(120, 120, tick_speed=20)
     
     try:
         view.init_curses()
         
-        # Boucle principale
+        # Main loop
         running = True
         while running:
-            # Mise à jour de la vue
+            # Update the view
             running = view.update(simulation)
             
             if not running:
                 break
             
-            # Avance la simulation si non en pause
+            # Advance simulation when not paused
             if not view.paused:
                 simulation.step()
                 
-                # Vérifie si la bataille est terminée
+                # Check if the battle is finished
                 if simulation.is_finished():
-                    view.paused = True  # Pause automatique
-                    # Affiche le gagnant dans les stats (on continue d'afficher)
+                    view.paused = True  # Auto-pause when finished
+                    # Winner is visible in stats while still rendering
     
     finally:
         view.cleanup()
         
-        # Affichage final
+        # Final summary in the console
         print("\n" + "="*60)
-        print("RÉSULTATS DE LA BATAILLE")
+        print("BATTLE RESULTS")
         print("="*60)
-        print(f"Temps écoulé: {simulation.elapsed_time:.1f}s")
+        print(f"Elapsed time: {simulation.elapsed_time:.1f}s")
         
         team1_alive = simulation.board.get_alive_units(1)
         team2_alive = simulation.board.get_alive_units(2)
         
-        print(f"\nÉquipe 1 (Cyan): {len(team1_alive)} survivants")
+        print(f"\nTeam 1 (Cyan): {len(team1_alive)} survivors")
         for u in team1_alive:
             print(f"  - {type(u).__name__}: {u.hp}/{u.hp_max} HP")
         
-        print(f"\nÉquipe 2 (Rouge): {len(team2_alive)} survivants")
+        print(f"\nTeam 2 (Red): {len(team2_alive)} survivors")
         for u in team2_alive:
             print(f"  - {type(u).__name__}: {u.hp}/{u.hp_max} HP")
         
         if simulation.is_finished():
             if len(team1_alive) > 0:
-                print("\n*** VICTOIRE ÉQUIPE 1 (Cyan) ***")
+                print("\n*** TEAM 1 (Cyan) WINS ***")
             else:
-                print("\n*** VICTOIRE ÉQUIPE 2 (Rouge) ***")
+                print("\n*** TEAM 2 (Red) WINS ***")
         else:
-            print("\nBataille interrompue")
+            print("\nBattle interrupted")
         
         print("="*60 + "\n")
 
