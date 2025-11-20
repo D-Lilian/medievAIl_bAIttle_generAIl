@@ -1,3 +1,4 @@
+from lxml.proxy import fixThreadDictNamesForDtd
 from mesonbuild.build import InvalidArguments
 
 
@@ -6,23 +7,23 @@ class WrongArguments(Exception):
 class GameEngineError(Exception):
     pass
 # Le general ne se préocupe pas de savoir "ou" sont les troupes, il n'a pas logique de réprésentation "logique" du jeu
-# si il veut qu'uune de ses troupes attaquent l'unité la plus proche, alors il le demande, il ne va pas aller chercher l'unité la plus proche
+# si il veut qu'une de ses troupes attaquent l'unité la plus proche, alors il le demande, il ne va pas aller chercher l'unité la plus proche
 
 class General:
     # Il lui faut un moyen de detecter les différents etats du jeu adverse:
     # -il n'ya plus d'archers
     # -il ya + d'archers que de knights
     # etc
-    def __init__(self, unitsA, unitsB, sS, **sT):
+    def __init__(self, unitsA, unitsB, sS, **sT, watch_archers, watch_knights, watch_spikemen): #sS: Strategie start
         # Set UNits
-        if(len(unitsB) != len(unitsA) != 200):
+        if(len(unitsB) != len(unitsA) != 200): #vérification de la longueur des unités
             raise WrongArguments("Not enough arguments")
         self.MyUnits = unitsA
         self.HistUnits = unitsB
 
         # Set Orders
         for unit in self.MyUnits:
-            unit.Orders = []
+            unit.Orders = [] #On vide les ordres
 
         # Set strategie
         self.sT = sT
@@ -30,7 +31,45 @@ class General:
 
         return
 
-    def BeginStrategy(self):
+    self.subscriptions = {}
+    if watch_archers:
+        fn = self.sT.get("archer")
+        if callable(fn):
+            self.subscriptions["archer"] = fn
+    if watch_knights:
+        fn = self.sT.get("knight")
+        if callable(fn):
+            self.subscriptions["knight"] = fn
+    if watch_spikemen:
+        fn = self.sT.get("spikeman")
+        if callable(fn):
+            self.subscriptions["spikeman"] = fn
+
+
+def notify(self, type_troupe: str):
+    """À appeler quand `type_troupe` vient de tomber à 0."""
+    fn = self.subscriptions.get(type_troupe)
+    if callable(fn):
+        fn()
+
+
+
+        """Comportement spécifique quand il n'y a plus d'archers"""
+        print("Plus d'archers ! Changement de formation")
+        # Logique spécifique aux archers
+
+    def on_knights_depleted(self):
+        """Comportement spécifique quand il n'y a plus de knights"""
+        print("Plus de knights ! Attaque frontale")
+        # Logique spécifique aux knights
+
+    def on_spikemen_depleted(self):
+        """Comportement spécifique quand il n'y a plus d'infanterie"""
+
+        # Logique spécifique à l'infanterie
+        # Logique spécifique aux knights
+
+    def BeginStrategy(self): #appliquer la stratégie associée à son type
         # Probleme ici la stratégie est invidivuelle à chaque troupe, on veut faire autrement
         # TODO trouver une strategie de départ qui dépend de l'etat/nombre d'un ou plusieurs autre type de troupes
         # N'est appelé qu'au début
@@ -39,15 +78,15 @@ class General:
         #    self.sT[unit.Type].ApplyOrder(self, unit)
 
 ## On peut s'en servir pour appliquer des stratégies différentes
-    def GetNumberOfEnemyType(self, unitType):
+    def GetNumberOfEnemyType(self, unitType): # récuperer le nbre des unités d'un type spécifique
         c = 0
         for u in self.HistUnits:
             if u == unitType:
                 c+=1
         return c
 
-    def CreateOrders(self):
-        # Est appelé à chaque tou
+    def CreateOrders(self): # réappliquer la stratégie par type sur chaque unité
+        # Est appelé à chaque tour
 
         for unit in self.MyUnits:
             # Pour chaque unité, on appli la stratégie lié à son type
@@ -62,6 +101,7 @@ class StrategyStart:
 
     def ApplyOrder(self, unit):
         # Ici donne a une troupe random par exemple le fait de se déplacer a l'autre bout de la map
+        self.unit = unit
         raise NotImplemented
 
 class StrategyTroup:
@@ -77,6 +117,7 @@ class StrategyTroup:
         pass
 
     def ApplyOrder(self, unit):
+        self.unit = unit
         raise NotImplemented
 
 
@@ -107,6 +148,9 @@ class SacrificeOrder:
     def Try(self, simu):
         raise NotImplemented
     # Fait la meme chose que avoid, + se déplace vers un coin opposé à la map
+
+
+
 
 
 
@@ -154,7 +198,7 @@ class StayInFriendlySpaceOrder:
         self.type = "permanent"
 
     def Try(self, simu):
-        raise NotImplemented
+        raise NotImplemented #il faut que le knight se rend cpte s'il sera trop loin des archers et revenir
 
 class GetBehindOrder:
     def __init__(self, unit, target, priority):
@@ -309,7 +353,7 @@ class StrategieSpikemanDAFT(StrategyTroup):
         pass
 
 class StrategieStartDAFT(StrategyStart):
-    def applyOrder(self, general, unit):
+    def applyOrder(self, general, units):
         unit.PushOrder(AttackOnSightOrder, 0) # On push/insere/add un ordre de priorité 0
 
 # ----------------------
