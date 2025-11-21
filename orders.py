@@ -198,3 +198,122 @@ class isInDangerOrder(Order):
 
         simu.MoveUnitClosestTo(self.unit, target)
         return False
+
+
+
+class _Node:
+    def __init__(self, order):
+        self.order = order
+        self.prev = None
+        self.next = None
+
+
+class OrderManager:
+    def __init__(self):
+        self._head = None
+        self._tail = None
+        self._by_priority = {}
+        self._by_order = {}
+
+    def Add(self, order, priority):
+        if priority in self._by_priority:
+            raise ValueError("Priority already used")
+        node = _Node(order)
+        self._by_priority[priority] = node
+        self._by_order[order] = priority
+
+        if self._head is None:
+            self._head = self._tail = node
+            return
+
+        keys = [p for p in self._by_priority if p < priority]
+        if not keys:
+            node.next = self._head
+            self._head.prev = node
+            self._head = node
+            return
+
+        insert_after = max(keys) # on prend la priorité maximale
+        ref = self._by_priority[insert_after]
+        node.next = ref.next
+        node.prev = ref
+        ref.next = node
+        if node.next:
+            node.next.prev = node
+        else:
+            self._tail = node
+
+    def TryOrder(self, simu, order):
+        if -1 in self._by_priority:
+            if self._by_order[order] == -1:
+                return order.Try(simu)
+            else:
+                return False # Tout les autres ordres ne sont pas effectué
+
+        return order.Try(simu)
+        #print("Trying order")
+        #order.Try(simu)
+
+    def Get(self, priority):
+        n = self._by_priority.get(priority)
+        return n.order if n else None
+
+    def Remove(self, order):
+        if order not in self._by_order:
+            return False
+        priority = self._by_order.pop(order)
+        node = self._by_priority.pop(priority)
+
+        if node.prev:
+            node.prev.next = node.next
+        else:
+            self._head = node.next
+        if node.next:
+            node.next.prev = node.prev
+        else:
+            self._tail = node.prev
+        return True
+
+    def RemoveOrderAtPriority(self, priority):
+        n = self._by_priority.get(priority)
+        if not n:
+            return False
+        return self.Remove(n.order)
+
+    def __iter__(self):
+        cur = self._head
+        while cur:
+            yield cur.order
+            cur = cur.next
+
+    def __len__(self):
+        return len(self._by_priority)
+
+    def __repr__(self):
+        cur = self._head
+        s = []
+        while cur:
+            p = self._by_order[cur.order]
+            s.append(f"{cur.order.__class__.__name__}(p={p})")
+            cur = cur.next
+        if not s:
+            return "OrderManager(empty)"
+        return f"OrderManager([{', '.join(s)}])"
+
+    # TODO implémenter l'addition d'un ordre qui prend le dessus sur tout les ordres, (le ordre enforcing)
+
+
+
+if __name__ == "__main__":
+    u1 = "Archer"
+    om = OrderManager()
+    om.Add(MoveByStepOrder(u1, 10, 0), 0);
+    om.Add(MoveByStepOrder(u1, 2, 0), 1);
+    om.Add(MoveByStepOrder(u1, 3, 0), 2);
+    om.Add(MoveByStepOrder(u1, 4, 0), 3);
+
+    for order in om:
+        om.TryOrder("", order)
+        om.Remove(order)
+
+
