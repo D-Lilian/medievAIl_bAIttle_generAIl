@@ -1,9 +1,11 @@
 import math
 import random
+from enum import Enum
 
 class Unit:
     
-    def __init__(self, name, team, hp, armor, attack, range, size, sight, speed, accuracy, reload, reload_time, x, y, Order_Manager, bonus_attack):
+    def __init__(self, unit_type, name, team, hp, armor, attack, range, size, sight, speed, accuracy, reload, reload_time, x, y, Order_Manager, bonus_attack):
+        self.unit_type = unit_type
         self.name =name 
         self.hp = hp                        # =0 si l'unite est morte
         self.team = team                    # choix de l'equipe
@@ -36,16 +38,19 @@ class Unit:
         else :
             self.reload -= t # !!! verifier la valeur selon le nb de tics par seconde !!!
 
+class UnitType(Enum):
+    ARCHER = "Archer"
+    KNIGHT = "Knight"
+    PIKEMAN = "Pikeman"
 
 class Archer(Unit):
     def __init__(self, team, x, y):
-        super().__init__(name = "Archer", team = team, hp = 30, armor = 0, attack = 4, range = 4, size = 1, sight = 6, speed = 0.96, accuracy = 0.8, reload_time = 2.0, x = x, y = y, bonus_attack={"Spearmen":3 , "Base Pierce":4})
+        super().__init__(unit_type=UnitType.ARCHER , name = "Archer", team = team, hp = 30, armor = 0, attack = 4, range = 4, size = 1, sight = 6, speed = 0.96, accuracy = 0.8, reload_time = 2.0, x = x, y = y, bonus_attack={"Spearmen":3 , "Base Pierce":4})
 
 class Knight(Unit):
     def __init__(self, team, x, y):
-        super().__init__(name = "Knight", team = team, hp = 100, armor = 2, attack = 10, range = 0, size = 1, sight = 4, speed = 1.35, accuracy = 1.0, reload_time = 1.8, x = x, y = y, bonus_attack={"Base Melee":10 , "Cavalry Resistance":-3})
+        super().__init__(unit_type=UnitType.KNIGHT , name = "Knight", team = team, hp = 100, armor = 2, attack = 10, range = 0, size = 1, sight = 4, speed = 1.35, accuracy = 1.0, reload_time = 1.8, x = x, y = y, bonus_attack={"Base Melee":10 , "Cavalry Resistance":-3})
 
 class Pikeman(Unit):
     def __init__(self, team, x, y):
-        super().__init__(name = "Pikeman", team = team, hp = 55, armor = 0, attack = 4, range = 0, size = 1, sight = 4, speed = 1.0, accuracy = 1.0, reload_time = 3.0, x = x, y = y, bonus_attack={"Shock Infantry":1 , "Base Melee":4 , "Mounted Units":22})
-
+        super().__init__(unit_type=UnitType.PIKEMAN , name = "Pikeman", team = team, hp = 55, armor = 0, attack = 4, range = 0, size = 1, sight = 4, speed = 1.0, accuracy = 1.0, reload_time = 3.0, x = x, y = y, bonus_attack={"Shock Infantry":1 , "Base Melee":4 , "Mounted Units":22})
