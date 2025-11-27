@@ -5,7 +5,7 @@ class StrategyStart:
     def ApplyOrder(self, unit):
         # Ici donne a une troupe random par exemple le fait de se déplacer a l'autre bout de la map
         self.unit = unit
-        raise NotImplemented#attaquer tout le monde par défaut pas sure
+        raise NotImplemented #attaquer tout le monde par défaut pas sure
 
 class StrategyTroup:
     def __init__(self, general, favoriteTroup, hatedTroup):
@@ -90,7 +90,7 @@ class StrategieStartBrainDead(StrategyStart):
 # ----------------------
 class StrategieArcherSomeIQ(StrategyTroup): #focus Spikeman (faibles au tir), évitent les Knights, restent groupés
     def __init__(self):
-        super().__init__(None, "SpikeMan", "Knight")
+        super().__init__(None, "PikeMan", "Knight")
 
     def applyOrder(self, general, unit):
         unit.PushOrder(AvoidOrder(unit,"knight"),0)  #éviter les knights
@@ -103,14 +103,14 @@ class StrategieArcherSomeIQ(StrategyTroup): #focus Spikeman (faibles au tir), é
 
 class StrategieKnightSomeIQ(StrategyTroup):
     def __init__(self):
-        super().__init__(None, "Archer", "SpikeMan") #PIIIKEEMAAANN
+        super().__init__(None, "Archer", "SpikeMan") 
     
     def applyOrder(self, general, unit):
         unit.PushOrder(AttackOnSightOrder("archer"), 0) # j'ai ajouté archer
+#les autres
 
 
-
-class StrategieSpikemanSomeIQFausse(StrategyTroup):
+class StrategieSpikemanSomeIQ(StrategyTroup):
     def __init__(self):
         super().__init__(None, "Knight", "Archer")
 
@@ -118,28 +118,18 @@ class StrategieSpikemanSomeIQFausse(StrategyTroup):
         unit.PushOrder(StayInReachOrder(unit, "Archer"), 0)
         unit.PushOrder(AttackOnSightOrder, 1) # On push/insere/add un ordre de priorité 0
        # stay in friendly zone a cote des archers et attaquer
-    for archer in [u for u in general.MyUnits if u.Type == "archer"]:
-        unit.PushOrder(StayInFriendlySpaceOrder(unit, archer), 0)
-        # Attaque automatique des ennemis visibles
+    """for archer in [u for u in general.MyUnits if u.Type == "archer"]:
+        unit.PushOrder(StayInFriendlySpaceOrder(unit, "Archer"), 0)
+        # Attaque automatique des ennemis visibles"""
     unit.PushOrder(AttackOnSightOrder, 1)
 
 
 #rester collés des archers pour les défendre et attaquer
-class StrategieSpikemanSomeIQ(StrategyTroup):
-    def __init__(self):
-        super().__init__(None, "Knight", "Archer")
-
-    def apply_order(self, general, unit):
-        archers = [u for u in general.MyUnits if u.type == "archer"]
-        for archer in archers:
-            unit.PushOrder(StayInFriendlySpaceOrder(unit, archer), 0)
-
-        unit.PushOrder(AttackOnSightOrder("knight"), 1)
 
 
 class StrategieStartSomeIQ(StrategyStart):
     def apply_order(self, general):
-        for unit in general.MyUnits: #prq t'as mis ici HitsUnits
+        for unit in general.MyUnits: #prq t'as mis ici Hit
             unit.PushOrder(MoveOneStepFromRef(unit, 10, "WORLD"), 0)
 
         soufredouleur = general.GetRandomUnit()
@@ -225,3 +215,4 @@ class StrategieNoSpikemanFallback(StrategyTroup):
 
 
 
+#DIVISER LES TROUPES EN EQUIPES
