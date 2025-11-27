@@ -18,8 +18,8 @@ class Unit:
         self.reload_time = reload_time      # temps pour recharger
         self.x = x                          # coordonnee en X
         self.y = y                          # coordonnee en Y
-        self.Order_Manager = Order_Manager                  # ordres donnees par le gerenal
-        self.bonus_attack = bonus_attack   # bonnus d'ataque selon l'unite attaquee
+        self.Order_Manager = Order_Manager  # ordres donnees par le gerenal
+        self.bonus_attack = bonus_attack    # bonnus d'ataque selon l'unite attaquee
 
     def alive(self):
         return (self.hp > 0)
@@ -48,3 +48,4 @@ class Knight(Unit):
 class Pikeman(Unit):
     def __init__(self, team, x, y):
         super().__init__(name = "Pikeman", team = team, hp = 55, armor = 0, attack = 4, range = 0, size = 1, sight = 4, speed = 1.0, accuracy = 1.0, reload_time = 3.0, x = x, y = y, bonus_attack={"Shock Infantry":1 , "Base Melee":4 , "Mounted Units":22})
+
