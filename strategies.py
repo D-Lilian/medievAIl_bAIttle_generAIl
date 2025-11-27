@@ -95,23 +95,25 @@ class StrategieArcherSomeIQ(StrategyTroup): #focus Spikeman (faibles au tir), é
     def applyOrder(self, general, unit):
         unit.PushOrder(AvoidOrder(unit,"knight"),0)  #éviter les knights
 
-        if self.favorite_troup is not None:
-            unit.PushOrder(AttackOnSightOrder(self.favorite_troup.lower()), 1)
+        if self.favoriteTroup is not None:
+            unit.PushOrder(AttackOnSightOrder(self.favoriteTroup), 1) # attaquer en priorité les Spikemen
         else:
-            unit.PushOrder(AttackOnSightOrder(), 1)
+            unit.PushOrder(AttackOnSightOrder("All"), 1)
 
 
 class StrategieKnightSomeIQ(StrategyTroup):
     def __init__(self):
         super().__init__(None, "Archer", "SpikeMan") #PIIIKEEMAAANN
+    
     def applyOrder(self, general, unit):
-        unit.PushOrder(AttackOnSightOrder, 0) # On push/insere/add un ordre de priorité 0
+        unit.PushOrder(AttackOnSightOrder("archer"), 0) # j'ai ajouté archer
 
 
 
-class StrategieSpikemanSomeIQ(StrategyTroup):
+class StrategieSpikemanSomeIQFausse(StrategyTroup):
     def __init__(self):
         super().__init__(None, "Knight", "Archer")
+
     def applyOrder(self, general, unit):
         unit.PushOrder(StayInReachOrder(unit, "Archer"), 0)
         unit.PushOrder(AttackOnSightOrder, 1) # On push/insere/add un ordre de priorité 0
@@ -122,15 +124,27 @@ class StrategieSpikemanSomeIQ(StrategyTroup):
     unit.PushOrder(AttackOnSightOrder, 1)
 
 
+#rester collés des archers pour les défendre et attaquer
+class StrategieSpikemanSomeIQ(StrategyTroup):
+    def __init__(self):
+        super().__init__(None, "Knight", "Archer")
+
+    def apply_order(self, general, unit):
+        archers = [u for u in general.MyUnits if u.type == "archer"]
+        for archer in archers:
+            unit.PushOrder(StayInFriendlySpaceOrder(unit, archer), 0)
+
+        unit.PushOrder(AttackOnSightOrder("knight"), 1)
+
 
 class StrategieStartSomeIQ(StrategyStart):
-    def applyOrder(self, general):
-        for unit in general.HistUnits:
-            unit.PushOrder(MoveOneStepFromRef(unit, 10, "WORLD"), 0) # On push/insere/add un ordre de priorité 0
+    def apply_order(self, general):
+        for unit in general.MyUnits: #prq t'as mis ici HitsUnits
+            unit.PushOrder(MoveOneStepFromRef(unit, 10, "WORLD"), 0)
 
         soufredouleur = general.GetRandomUnit()
-        soufredouleur.PushOrder(SacrificeOrder(soufredouleur), -1)
-
+        if soufredouleur is not None:
+            soufredouleur.PushOrder(SacrificeOrder(soufredouleur), -1) 
 
 
 
@@ -169,5 +183,45 @@ class StrategieArcherFallbackSomeIQ(StrategyTroup):
         elif unit.type == "spikeman":
             # spikeman → focus les knights ennemis
             unit.PushOrder(AttackOnSightOrder("knight"), 0)
+
+
+class StrategieNoKnightFallbackSomeIQ(StrategyTroup):
+    """Quand il ne reste aucun knight vivant."""
+
+    def __init__(self):
+        super().__init__(None, "All", "None")
+
+    def applyOrder(self, general, unit):
+
+        if unit.type == "Archer":
+            #les archers restent en arrière et focus ce qui s'avance
+            unit.PushOrder(AttackOnSightOrder(), 0)
+
+        elif unit.type == "Spikeman":
+            # Les spikemen se mettent en garde du corps des archers et tapent tout
+            archers = [u for u in general.MyUnits if u.type == "archer"]
+            for archer in archers:
+                unit.PushOrder(StayInFriendlySpaceOrder(unit, archer), 0)
+            unit.PushOrder(AttackOnSightOrder(), 1)
+
+
+class StrategieNoSpikemanFallback(StrategyTroup):
+    """Quand il ne reste aucun spikeman vivant."""
+
+    def __init__(self):
+        super().__init__(None, "All", "None")
+
+    def applyOrder(self, general, unit):
+
+        if unit.type == "Knight":
+            #les knights jouent le rôle de frontline
+            unit.PushOrder(AttackOnSightOrder(), 0)
+
+        elif unit.type == "Archer":
+            # Les archers restent à distance et focus surtout les unités de mêlée
+            unit.PushOrder(AvoidOrder(unit, "knight"), 0)
+            unit.PushOrder(AttackOnSightOrder(), 1)
+
+
 
 
