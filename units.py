@@ -1,5 +1,3 @@
-import math
-import random
 from enum import Enum
 
 class Unit:
@@ -54,3 +52,4 @@ class Knight(Unit):
 class Pikeman(Unit):
     def __init__(self, team, x, y):
         super().__init__(unit_type=UnitType.PIKEMAN , name = "Pikeman", team = team, hp = 55, armor = 0, attack = 4, range = 0, size = 1, sight = 4, speed = 1.0, accuracy = 1.0, reload_time = 3.0, x = x, y = y, bonus_attack={"Shock Infantry":1 , "Base Melee":4 , "Mounted Units":22})
+
