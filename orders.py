@@ -306,11 +306,14 @@ class OrderManager:
 
 if __name__ == "__main__":
     u1 = "Archer"
+    u1 = Unit()
     om = OrderManager()
-    om.Add(MoveByStepOrder(u1, 10, 0), 0);
-    om.Add(MoveByStepOrder(u1, 2, 0), 1);
-    om.Add(MoveByStepOrder(u1, 3, 0), 2);
-    om.Add(MoveByStepOrder(u1, 4, 0), 3);
+    u1.om = om
+
+    u1.om.Add(MoveByStepOrder(u1, 10, 0), 0);
+    u1.om.Add(MoveByStepOrder(u1, 2, 0), 1);
+    u1.om.Add(MoveByStepOrder(u1, 3, 0), 2);
+    u1.om.Add(MoveByStepOrder(u1, 4, 0), 3);
 
     for order in om:
         om.TryOrder("", order)
