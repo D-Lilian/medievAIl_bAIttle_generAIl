@@ -1,3 +1,5 @@
+from operator import truediv
+
 from lxml.proxy import fixThreadDictNamesForDtd
 from mesonbuild.build import InvalidArguments
 
@@ -14,13 +16,18 @@ class General:
     # -il n'ya plus d'archers
     # -il ya + d'archers que de knights
     # etc
-    def __init__(self, unitsA, unitsB, sS, **sT, watch_archers, watch_knights, watch_spikemen): #sS: Strategie start
+    def __init__(self, unitsA, unitsB, sS, **sT,are_archers_left=true,are_knights_left=true,are_spikemen_left=true,archer_depleted=None,knights_depleted=None,spikemen_depleted=None): #sS: Strategie start
         # Set UNits
         if(len(unitsB) != len(unitsA) != 200): #vérification de la longueur des unités
             raise WrongArguments("Not enough arguments")
         self.MyUnits = unitsA
         self.HistUnits = unitsB
-
+        self.are_archers_left = are_archers_left
+        self.are_knights_left = are_knights_left
+        self.are_spikemen_left = are_spikemen_left
+        self.archer_depleted = archer_depleted
+        self.knigts_depleted = knigts_depleted
+        self.spikemen_depleted = spikemen_depleted
         # Set Orders
         for unit in self.MyUnits:
             unit.Orders = [] #On vide les ordres
@@ -31,32 +38,18 @@ class General:
 
         return
 
-    self.subscriptions = {}
-    if watch_archers:
-        fn = self.sT.get("archer")
-        if callable(fn):
-            self.subscriptions["archer"] = fn
-    if watch_knights:
-        fn = self.sT.get("knight")
-        if callable(fn):
-            self.subscriptions["knight"] = fn
-    if watch_spikemen:
-        fn = self.sT.get("spikeman")
-        if callable(fn):
-            self.subscriptions["spikeman"] = fn
 
 
 def notify(self, type_troupe: str):
     """À appeler quand `type_troupe` vient de tomber à 0."""
-    fn = self.subscriptions.get(type_troupe)
-    if callable(fn):
-        fn()
+    if type_troupe == "archer":
+        self.are_archers_left = False
+    if type_troupe == "knight":
+        self.are_knights_left = False
+    if type_troupe == "spikeman":
+        self.are_spikemen_left = False
 
 
-
-        """Comportement spécifique quand il n'y a plus d'archers"""
-        print("Plus d'archers ! Changement de formation")
-        # Logique spécifique aux archers
 
     def on_knights_depleted(self):
         """Comportement spécifique quand il n'y a plus de knights"""
@@ -91,12 +84,20 @@ def notify(self, type_troupe: str):
         for unit in self.MyUnits:
             # Pour chaque unité, on appli la stratégie lié à son type
             self.sT[unit.Type].ApplyOrder(self, unit)
+            if self.
             # Ex
             # self.St["archer"].Applyorder(self, a1)
             # ici ça applicuqe la stratégie du général sur les troupes de type archer
-
-
-# 1. On appel simu pour effectuer notre action, simu nous appelle et se passe en paramètre. Depuis try, on renvoi True si l'ordre a reussi
+        if self.are_archers_left == false and self.archers_depleted is not None:
+            self.archers_depleted()
+            self.check_archers = true
+        if self.are_knights_left == false and self.knigts_depleted is not None:
+            self.knights_depleted()
+            self.check_knights = true
+        if self.are_spikemen_left == false  and self.spikemen_depleted is not None:
+            self.spikemen_depleted()
+            self.check_spikemen = true
+# # Cert# 1. On appel simu pour effectuer notre action, simu nous appelle et se passe en paramètre. Depuis try, on renvoi True si l'ordre a reussi
 # et false si non.
 
 # Certains ordres sont incompatibles, par ex: on ne peut pas Formation et un movetogether
