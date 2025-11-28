@@ -5,7 +5,7 @@ class Unit:
     def __init__(self, unit_type, name, team, hp, armor, attack, range, size, sight, speed, accuracy, reload, reload_time, x, y, Order_Manager, bonus_attack):
         self.unit_type = unit_type
         self.name =name 
-        self.hp = hp                        # =0 si l'unite est morte
+        self.hp = hp                        # <=0 si l'unite est morte
         self.team = team                    # choix de l'equipe
         self.armor = armor                  # valeur de l'armure
         self.attack = attack                # nombre de degats infliges
@@ -20,21 +20,22 @@ class Unit:
         self.y = y                          # coordonnee en Y
         self.Order_Manager = Order_Manager  # ordres donnees par le gerenal
         self.bonus_attack = bonus_attack    # bonnus d'ataque selon l'unite attaquee
-
-    def alive(self):
-        return (self.hp > 0)
     
     def can_attack(self):
-        if self.reload == 0:
-            self.attack()
-        else :
-            self.update_reload()
+        """Check if the unit can perform an attack."""
+        return self.reload <= 0
+
+    def attach(self):
+        """Perform an attack if the unit can attack. Resets reload timer."""
+        if self.can_attack():
+            self.reload = self.reload_time
+            return True
+        return False
     
     def update_reload(self, t):
-        if self.reload == 0:
-            return None
-        else :
-            self.reload -= t # !!! verifier la valeur selon le nb de tics par seconde !!!
+        """Decrease reload timer by t simulated seconds."""
+        if not self.can_attack():
+            self.reload -= t
 
 class UnitType(Enum):
     ARCHER = "Archer"
