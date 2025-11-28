@@ -18,9 +18,6 @@ Une troupe ne peut avoir 2 ordres de la même priorité
 ## MoveUnitClosestToXY(self.unit, self.x, self.y) # l'appel peut echouer ou pas, c pas grave on reessayera au prochain tick
 > Déplace l'unité de sa capacité de déplacement maximale vers les coordonnées X et T
 
-## MoveUnitClosestTo(self.unit, target)
-> se deplace le plus lioin possible en fonction de la capacité de la troupe
-
 ## DoFormation(typeFormation, self.units) # renvoi trrue ou false en fonction
 > Déplace les unités ensemble, attire donc chaque unité l'une vers l'autre pour faire une formation ROND
 > typeFormation est de type ROND toujours
@@ -37,9 +34,9 @@ Une troupe ne peut avoir 2 ordres de la même priorité
 ## IsInReach(self.unit, self.target):
 > Regarde si l'unité self.unit est dans la reach de l'unité self.target
 ## GetNearestTroupInSight(self.unit, typeTarget=self.typeTarget)
-> Renvoie une liste des unités de type typeTarget qui sont dans la sight de self.unit
+> Renvoie une unité de type typeTarget qui sont dans la sight de self.unit
 ## GetNearestTroupInReach(self.unit, typeTarget=self.typeTarget)
-> Renvoie une liste des unités de type typeTarget qui sont dans la reach de self.unit
+> Renvoie une unité de type typeTarget qui sont dans la reach de self.unit
 ## Kill(self.unit, target)
 > Demande a la simulation de tuer target à l'aide de self.unit
 
