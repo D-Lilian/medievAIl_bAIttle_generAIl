@@ -4,7 +4,7 @@ from enum import Enum
 class Unit:
 
     def __init__(self, unit_type, name, team, hp, armor, attack, range, size, sight, speed, accuracy, reload,
-                 reload_time, x, y, Order_Manager):
+                 reload_time, x, y, order_manager):
         self.unit_type = unit_type
         self.name = name
         self.hp = hp                        # <=0 si l'unite est morte
@@ -26,7 +26,7 @@ class Unit:
         """Check if the unit can perform an attack."""
         return self.reload <= 0
 
-    def attach(self):
+    def attack(self):
         """Perform an attack if the unit can attack. Resets reload timer."""
         if self.can_attack():
             self.reload = self.reload_time
