@@ -1,10 +1,12 @@
 from enum import Enum
 
+
 class Unit:
-    
-    def __init__(self, unit_type, name, team, hp, armor, attack, range, size, sight, speed, accuracy, reload, reload_time, x, y, Order_Manager, bonus_attack):
+
+    def __init__(self, unit_type, name, team, hp, armor, attack, range, size, sight, speed, accuracy, reload,
+                 reload_time, x, y, Order_Manager):
         self.unit_type = unit_type
-        self.name =name 
+        self.name = name
         self.hp = hp                        # <=0 si l'unite est morte
         self.team = team                    # choix de l'equipe
         self.armor = armor                  # valeur de l'armure
@@ -19,8 +21,7 @@ class Unit:
         self.x = x                          # coordonnee en X
         self.y = y                          # coordonnee en Y
         self.Order_Manager = Order_Manager  # ordres donnees par le gerenal
-        self.bonus_attack = bonus_attack    # bonnus d'ataque selon l'unite attaquee
-    
+
     def can_attack(self):
         """Check if the unit can perform an attack."""
         return self.reload <= 0
@@ -31,26 +32,77 @@ class Unit:
             self.reload = self.reload_time
             return True
         return False
-    
+
     def update_reload(self, t):
         """Decrease reload timer by t simulated seconds."""
         if not self.can_attack():
             self.reload -= t
 
+
 class UnitType(Enum):
-    ARCHER = "Archer"
+    CROSSBOWMAN = "Crossbowman"
     KNIGHT = "Knight"
     PIKEMAN = "Pikeman"
 
-class Archer(Unit):
+
+class Crossbowman(Unit):
     def __init__(self, team, x, y):
-        super().__init__(unit_type=UnitType.ARCHER , name = "Archer", team = team, hp = 30, armor = 0, attack = 4, range = 4, size = 1, sight = 6, speed = 0.96, accuracy = 0.8, reload_time = 2.0, x = x, y = y, bonus_attack={"Spearmen":3 , "Base Pierce":4})
+        super().__init__(unit_type=UnitType.CROSSBOWMAN, name="Crossbowman", team=team, hp=35, range=5, size=1,
+                         sight=5, speed=0.96, accuracy=0.85, reload_time=2.0, x=x, y=y,
+                         attack={
+                             "Base Pierce": 5,
+                             "Spearmen": 3,
+                             "Rams": 0,
+                             "Standard Buildings": 0,
+                             "Stone Defense": 0
+                         },
+                         armor={
+                             "Base Melee": 0,
+                             "Base Pierce": 0,
+                             "Archers": 0,
+                             "Ignore Armor": 0
+                         })
+
 
 class Knight(Unit):
     def __init__(self, team, x, y):
-        super().__init__(unit_type=UnitType.KNIGHT , name = "Knight", team = team, hp = 100, armor = 2, attack = 10, range = 0, size = 1, sight = 4, speed = 1.35, accuracy = 1.0, reload_time = 1.8, x = x, y = y, bonus_attack={"Base Melee":10 , "Cavalry Resistance":-3})
+        super().__init__(unit_type=UnitType.KNIGHT, name="Knight", team=team, hp=100, range=0, size=1, sight=4,
+                         speed=1.35, accuracy=1.0, reload_time=1.8, x=x, y=y,
+                         attack={
+                             "Base Melee": 10,
+                             "Archers": 0,
+                             "Standard Buildings": 0,
+                             "All Buildings": 0,
+                             "Skirmishers": 0,
+                             "Mounted Unit Resistance": -3
+                         },
+                         armor={
+                             "Base Melee": 2,
+                             "Base Pierce": 2,
+                             "Cavalry": 0,
+                             "Ignore Armor": 0
+                         })
+
 
 class Pikeman(Unit):
     def __init__(self, team, x, y):
-        super().__init__(unit_type=UnitType.PIKEMAN , name = "Pikeman", team = team, hp = 55, armor = 0, attack = 4, range = 0, size = 1, sight = 4, speed = 1.0, accuracy = 1.0, reload_time = 3.0, x = x, y = y, bonus_attack={"Shock Infantry":1 , "Base Melee":4 , "Mounted Units":22})
-
+        super().__init__(unit_type=UnitType.PIKEMAN, name="Pikeman", team=team, hp=55, range=0, size=1, sight=4,
+                         speed=1.0, accuracy=1.0, reload_time=3.0, x=x, y=y,
+                         attack={
+                             "Base Melee": 4,
+                             "Eagle Warriors": 1,
+                             "Cavalry": 22,
+                             "Camel Riders": 18,
+                             "Mamelukes": 11,
+                             "Elephants": 25,
+                             "Ships": 16,
+                             "Fishing ships": 16,
+                             "Standard Buildings": 1
+                         },
+                         armor={
+                             "Base Melee": 0,
+                             "Base Pierce": 0,
+                             "Infantry": 0,
+                             "Spearmen": 0,
+                             "Ignore Armor": 0
+                         })
