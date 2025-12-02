@@ -217,6 +217,27 @@ class OrderManager:
         self._by_priority = {}
         self._by_order = {}
 
+    def AddMaxPriority(self, order):
+        node = _Node(order) # Create a new node for the order
+        keys = [p for p in self._by_priority]
+        prio_max = max(keys) + 1 if keys else 0
+
+        self._by_priority[prio_max] = node
+        self._by_order[order] = prio_max
+
+        # La liste est vide
+        if self._head is None:
+            self._head = self._tail = node
+            return
+
+        self._tail.next = node
+        node.prev = self._tail
+        self._tail = node
+
+        self._by_priority[prio_max] = node
+
+
+
     def Add(self, order, priority):
         if priority in self._by_priority:
             raise ValueError("Priority already used")
