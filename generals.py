@@ -105,6 +105,14 @@ def notify(self, type_troupe: str):
 # Si un role est en Enforce(priorité -1), il est le seul a etre executé, tant qu'il ne reussit pas, aucun autre ordre n'est appelé.
 
 
+def get_units_by_type(self, unit_type): #Retourne toutes mes unités d’un type donné
+        return [u for u in self.MyUnits if u.type.lower() == unit_type.lower()]
+
+
+def get_squad(self, unit_type, count):# Sélectionne jusqu’à count unités.retourne moins si pas assez d’unités
+
+        units = self.get_units_by_type(unit_type)
+        return units[:count]
 
 
 if __name__ == '__main__':
