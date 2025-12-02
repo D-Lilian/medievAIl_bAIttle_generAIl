@@ -27,7 +27,14 @@ class StrategyTroup:
 # ----------------------
 # Aucune hated troup
 # Aucune favorite troup
+class StrategieDAFT(StrategyTroup):
+    def __init__(self, general):
+        super().__init__(general, "All", "None")
 
+    def applyOrder(self, general, unit):
+        pass
+
+## Deprecated
 class StrategieArcherDAFT(StrategyTroup):
     def __init__(self, general):
         super().__init__(general, "All", "None")
@@ -60,6 +67,16 @@ class StrategieStartDAFT(StrategyStart):
 # ----------------------
 # Aucune hated troup
 # Aucune favorite troup
+
+class StrategieBrainDead(StrategyTroup):
+    def __init__(self, general):
+        super().__init__(general, "All", "None")
+
+    def applyOrder(self, general, unit):
+        pass
+
+
+## DEPRECATED
 class StrategieArcherBrainDead(StrategyTroup):
     def __init__(self, general):
         super().__init__(general, "All", "None")
