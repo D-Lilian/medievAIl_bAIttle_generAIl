@@ -3,7 +3,7 @@ import random
 import math
 
 import Model.Units as Units
-
+from Model.Scenario import Scenario
 
 # boucle sur les ordres de orderManager, chaque ordre appelant une fonction de simulation
 # une fois par tick un seul mouvement et une seule attaque par unite
@@ -308,14 +308,18 @@ if __name__ == "__main__":
 
     start_time = time.perf_counter()
 
+    scenario = Scenario(
+        units=units,
+        units_a=units_a,
+        units_b=units_b,
+        general_a=None,
+        general_b=None,
+        size_x=200,
+        size_y=200
+    )
+
     sim = Simulation(
-        scenario=type('BattleMap', (object,), {
-            'units': units,
-            'units_a': units_a,
-            'units_b': units_b,
-            'size_x': 200,
-            'size_y': 200
-        })(),
+        scenario=scenario,
         tick_speed=5,
         unlocked=True,
         paused=False

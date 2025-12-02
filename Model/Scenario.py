@@ -1,6 +1,6 @@
 class Scenario:
 
-    def __init__(self, units, units_a, units_b, general_a, general_b, size_x=200, size_y=200):
+    def __init__(self, units, units_a, units_b, general_a, general_b, size_x=120, size_y=120):
         self.units = units
 
         self.units_a = units_a
