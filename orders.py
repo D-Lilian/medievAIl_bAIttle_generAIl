@@ -111,6 +111,37 @@ class MoveTowardEnemyWithSpecificAttribute(Order):
         raise NotImplemented
 
 
+class MoveTowardEnemyWithSpecificAttribute(Order):
+    def __init__(self, unit, attribute_name, attribute_value, fixed=False):
+        super().__init__(unit)
+        self.attribute_name = attribute_name
+        self.attribute_value = attribute_value
+        self.fixed = fixed
+        self.target = None
+
+    def Try(self, simu):
+        current_target = None
+
+        if self.fixed and self.target:
+            if simu.IsUnitValid(self.target):
+                current_target = self.target
+            else:
+                self.target = None
+                return False
+
+        if current_target is None:
+            current_target = simu.GetNearestEnemyWithAttribute( # TODO
+                self.unit, self.attribute_name, self.attribute_value
+            )
+
+            if self.fixed and current_target:
+                self.target = current_target
+
+        if current_target:
+            simu.move_unit_closest_to(self.unit, current_target)
+
+        return False
+
 class AttackOrder(Order):
     "On assume ici que la target est forcément dans la list des troupes adverses"
     def __init__(self, unit, target):
