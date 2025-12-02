@@ -88,16 +88,17 @@ class StayInFriendlySpaceOrder(Order):
     def Try(self, simu):
         raise NotImplemented #il faut que le knight se rend cpte s'il sera trop loin des archers et revenir
 
-class GetBehindOrder(Order):
-    def __init__(self, unit, target):
-        super().__init__(unit)
-        self.unit = unit
-        self.target = target
-
-    def Try(self, simu):
-        #TODO
-        # Obsolète, meme chose que stayinfriendlyspace
-        raise NotImplemented
+# OBSOLETE
+# class GetBehindOrder(Order):
+#     def __init__(self, unit, target):
+#         super().__init__(unit)
+#         self.unit = unit
+#         self.target = target
+#
+#     def Try(self, simu):
+#         #TODO
+#         # Obsolète, meme chose que stayinfriendlyspace
+#         raise NotImplemented
 
 class MoveTowardEnemyWithSpecificAttribute(Order):
     def __init__(self, unit, attribute_name, attribute_value, fixed=False):
