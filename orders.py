@@ -78,37 +78,23 @@ class AvoidOrder(Order):
 
 # Ici c'est un ordre qui vérifie systématiquement que l'unité n'est pas toute seule, cad que dans sa ligne of sight il ya au moins un allié, sinon, elle se dirige vers l'allié le plus proche
 class StayInFriendlySpaceOrder(Order):
-    def __init__(self, unit):
+    def __init__(self, unit, typeUnits):
         super().__init__(unit)
         self.unit = unit
-
+        self.typeUnits = typeUnits
         #self.type = "permanent"
 
 
     def Try(self, simu):
-        raise NotImplemented #il faut que le knight se rend cpte s'il sera trop loin des archers et revenir
+        friendly = simu.get_nearest_friendly_in_sight(self.unit, type_units=self.typeUnits)
+        if friendly is None:
+            return False # Il ya aucune enemy nearby
 
-# OBSOLETE
-# class GetBehindOrder(Order):
-#     def __init__(self, unit, target):
-#         super().__init__(unit)
-#         self.unit = unit
-#         self.target = target
-#
-#     def Try(self, simu):
-#         #TODO
-#         # Obsolète, meme chose que stayinfriendlyspace
-#         raise NotImplemented
-
-class MoveTowardEnemyWithSpecificAttribute(Order):
-    def __init__(self, unit, attribute_name, attribute_value, fixed=False):
-        super().__init__(unit)
-        self.attribute_name = attribute_name
-        self.attribute_value = attribute_value
-
-    def Try(self, simu):
-        #TODO
-        raise NotImplemented
+        if simu.is_in_range(friendly, self.unit): # NOTE l'ordre des arguments ici est inversée
+            if simu.move_unit_closest_to(self.unit,friendly):
+                return False
+        else:
+            return False
 
 
 class MoveTowardEnemyWithSpecificAttribute(Order):
