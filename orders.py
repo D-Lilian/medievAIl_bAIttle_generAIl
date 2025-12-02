@@ -88,16 +88,17 @@ class StayInFriendlySpaceOrder(Order):
     def Try(self, simu):
         raise NotImplemented #il faut que le knight se rend cpte s'il sera trop loin des archers et revenir
 
-class GetBehindOrder(Order):
-    def __init__(self, unit, target):
-        super().__init__(unit)
-        self.unit = unit
-        self.target = target
-
-    def Try(self, simu):
-        #TODO
-        # Obsolète, meme chose que stayinfriendlyspace
-        raise NotImplemented
+# OBSOLETE
+# class GetBehindOrder(Order):
+#     def __init__(self, unit, target):
+#         super().__init__(unit)
+#         self.unit = unit
+#         self.target = target
+#
+#     def Try(self, simu):
+#         #TODO
+#         # Obsolète, meme chose que stayinfriendlyspace
+#         raise NotImplemented
 
 class MoveTowardEnemyWithSpecificAttribute(Order):
     def __init__(self, unit, attribute_name, attribute_value, fixed=False):
@@ -109,6 +110,37 @@ class MoveTowardEnemyWithSpecificAttribute(Order):
         #TODO
         raise NotImplemented
 
+
+class MoveTowardEnemyWithSpecificAttribute(Order):
+    def __init__(self, unit, attribute_name, attribute_value, fixed=False):
+        super().__init__(unit)
+        self.attribute_name = attribute_name
+        self.attribute_value = attribute_value
+        self.fixed = fixed
+        self.target = None
+
+    def Try(self, simu):
+        current_target = None
+
+        if self.fixed and self.target:
+            if simu.IsUnitValid(self.target):
+                current_target = self.target
+            else:
+                self.target = None
+                return False
+
+        if current_target is None:
+            current_target = simu.GetNearestEnemyWithAttribute( # TODO
+                self.unit, self.attribute_name, self.attribute_value
+            )
+
+            if self.fixed and current_target:
+                self.target = current_target
+
+        if current_target:
+            simu.move_unit_closest_to(self.unit, current_target)
+
+        return False
 
 class AttackOrder(Order):
     "On assume ici que la target est forcément dans la list des troupes adverses"
@@ -215,6 +247,27 @@ class OrderManager:
         self._tail = None
         self._by_priority = {}
         self._by_order = {}
+
+    def AddMaxPriority(self, order):
+        node = _Node(order) # Create a new node for the order
+        keys = [p for p in self._by_priority]
+        prio_max = max(keys) + 1 if keys else 0
+
+        self._by_priority[prio_max] = node
+        self._by_order[order] = prio_max
+
+        # La liste est vide
+        if self._head is None:
+            self._head = self._tail = node
+            return
+
+        self._tail.next = node
+        node.prev = self._tail
+        self._tail = node
+
+        self._by_priority[prio_max] = node
+
+
 
     def Add(self, order, priority):
         if priority in self._by_priority:

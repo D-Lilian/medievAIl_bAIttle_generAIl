@@ -1,10 +1,14 @@
 import time
-from orders import OrderManager
+import cProfile
+import random
+import timeit
+import pstats
+from orders import OrderManager,Order
 
 NORDER = 5000
 NTIME = 1.0
 
-class DummyOrder:
+class DummyOrder(Order):
     def __init__(self, x):
         self.x = x
     def Try(self, simu):
@@ -87,19 +91,72 @@ def bench_mix():
     def op():
         nonlocal idx
         om.Add(DummyOrder(idx), idx)
-        order = om.Get(idx)
-        om.TryOrder("simu", order)
-        if idx > 0:
-            om.RemoveOrderAtPriority(idx - 1)
+        _ = om.Get(idx)
+        for order in om:
+            om.TryOrder("simu", order)
+        if idx > 15:
+            om.RemoveOrderAtPriority(random.randint(0,14))
         idx += 1
 
 
     bench("Mix (Add + Try + Remove)", op)
 
 
+def timeit_simu():
+    oms = [None for i in range(200)]
+    for i in range(200):
+        oms[i] =  OrderManager()
+        for j in range(3):
+            oms[i].Add(DummyOrder(i), j)
+
+    for _ in range(30000): # nb de tours
+        for i in range(len(oms)):
+            for order in oms[i]:
+                order = oms[i].TryOrder("simu", order)
+
+
+def bench_simu():
+    oms = [None for i in range(200)]
+    for i in range(200):
+        oms[i] =  OrderManager()
+        for j in range(3):
+            oms[i].Add(DummyOrder(i), j)
+
+    idx = 0
+
+    def op():
+        nonlocal idx
+        for i in range(len(oms)):
+            for order in oms[i]:
+                order = oms[i].TryOrder("simu", order)
+                #if 1 == random.randint(0, 4):
+                #    oms[i].Remove(order)
+
+                #if 1 == random.randint(0, 4):
+                #    oms[i].AddMaxPriority(DummyOrder(i))
+
+
+
+    bench("Simu 10 orders per troups(200)", op)
+
 if __name__ == "__main__":
+    pass
     bench_add()
     bench_get()
     bench_try()
     bench_remove()
     bench_mix()
+
+    #custom
+    bench_simu()
+
+    #timeit
+    execution_time = timeit.timeit(timeit_simu, number=10000)
+    print(f"Execution time: {execution_time:.6f} seconds")
+
+    #cprofile
+    cProfile.run('timeit_simu()',"order_impl_stats")
+    p = pstats.Stats("order_impl_stats")
+    p.sort_stats("cumulative").print_stats()
+    p.print_stats()
+
