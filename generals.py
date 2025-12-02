@@ -108,11 +108,10 @@ def notify(self, type_troupe: str):
 def get_units_by_type(self, unit_type): #Retourne toutes mes unités d’un type donné
         return [u for u in self.MyUnits if u.type.lower() == unit_type.lower()]
 
-
-def get_squad(self, unit_type, count):# Sélectionne jusqu’à count unités.retourne moins si pas assez d’unités
-
+def get_squad(self, unit_type: str, count: int): #Sélectionne jusqu’à count unités retourner moins si pas assez d’unités.
         units = self.get_units_by_type(unit_type)
         return units[:count]
+
 
 
 if __name__ == '__main__':
