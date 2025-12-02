@@ -2,118 +2,119 @@ import time
 import random
 import math
 
-from Units import Knight
+import Model.Units as Units
+
+
+# boucle sur les ordres de orderManager, chaque ordre appelant une fonction de simulation
+# une fois par tick un seul mouvement et une seule attaque par unite
+# chaque tick, on verifie si une unite peut attaquer, sinon elle bouge vers l'ennemi le plus proche
+
+# Number chosen to make simulation fast but realistic
+# So that reload time and tick speed are compatible
+DEFAULT_NUMBER_OF_TICKS_PER_SECOND = 5
 
 class Simulation:
 
-    def __init__(self, units, unitsA, generalA, unitsB, generalB, tickSpeed = 5,size_x = 200, size_y = 200, paused = False, unlocked = False):
-        self.size_x = size_x
-        self.size_y = size_y
+    def __init__(self, battle_map, tick_speed = 5, paused = False, unlocked = False):
+        self.battle_map = battle_map
+        self.reload_units = []
 
-        self.units = units
-
-        self.unitsA = unitsA
-        self.generalA = generalA
-
-        self.unitsB = unitsB
-        self.generalB = generalB
-
-        self.tickSpeed = tickSpeed
+        self.tick_speed = tick_speed
         self.tick = 0
         self.paused = paused
         self.unlocked = unlocked
 
-        self.asUnitMoved = False
-        self.asUnitAttacked = False
+        self.as_unit_moved = False
+        self.as_unit_attacked = False
 
+        self.types_present = self.type_present_in_team()
 
     ## ----------- Simulation functions -------------
 
-    def simulate(self):
+    def simulate(self, output=None):
+        """Run the simulation until a team wins or time runs out."""
         while not self.finished():
-            random.shuffle(self.units)
+            random.shuffle(self.battle_map.units)
 
-            for unit in self.units:
+            for unit in self.battle_map.units:
                 enemy = self.get_nearest_enemy_unit(unit)
                 if enemy is None:
                     continue
-                if self.is_in_reach(unit, enemy) and unit.reload <= 0:
+                if self.is_in_reach(unit, enemy) and unit.can_attack():
+                    # print("Attack : ", unit.name, " at (", unit.x, ",", unit.y, ") attacks ", enemy.name, " at (", enemy.x, ",", enemy.y, ")")
                     self.attack_unit(unit, enemy)
                     unit.reload = unit.reload_time
                 else:
-                    self.move_unit_towards_coordinates(unit, enemy.x, enemy.y)
+                    # self.move_one_step_from_target_in_direction(unit, enemy, 0)
+                    self.move_unit_towards_unit(unit, enemy)
+                    # print("Move : ", unit.name, " at (", unit.x, ",", unit.y, ") moves towards ", enemy.name, " at (", enemy.x, ",", enemy.y, ")")
             self.tick += 1
-            print(self.tick)
+            # print(self.tick)
 
-            if self.tick % 5 == 0:
-                for unit in self.units:
-                    self.reload_unit(unit)
+            for unit in self.reload_units:
+                unit.update_reload(1 / DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
+                if unit.can_attack():
+                    self.reload_units.remove(unit)
 
             if self.paused:
                 while self.paused:
                     time.sleep(0.1)
             elif not self.unlocked:
-                time.sleep(1/self.tickSpeed)
+                time.sleep(1 / self.tick_speed)
+
+
 
     def finished(self):
         """Check if the simulation has finished."""
-        if not self.unitsA or not self.unitsB:
-            print("Ticks : ", self.tick, "Team A units left:", len(self.unitsA), "  | Team B units left:", len(self.unitsB))
+        if not self.battle_map.units_a or not self.battle_map.units_b:
+            print("Ticks : ", self.tick, "Team A units left:", len(self.battle_map.units_a), "  | Team B units left:", len(self.battle_map.units_b))
             return True
-        return self.tick >= self.tickSpeed * 240
-
-    def toggle_pause(self):
-        self.paused = not self.paused
-
-    def increase_tick(self):
-        self.tickSpeed += 1
-
-    def decrease_tick(self):
-        if self.tickSpeed > 1:
-            self.tickSpeed -= 1
+        return self.tick >= self.tick_speed * 240
 
     ## ----------- Movement functions -------------
 
-    def move_unit_towards_unit(self, unit, target):
+    def move_unit_towards_unit(self, attacker_unit, target_unit):
         """Move a unit towards target unit, up to its max distance."""
-        return self.move_unit_towards_coordinates(unit, target.x, target.y)
+        return self.move_unit_towards_coordinates(attacker_unit, target_unit.x, target_unit.y)
 
-
-    def move_one_step_from_target_in_direction(self, unit, target, direction):
+    def move_one_step_from_target_in_direction(self, attacker_unit, target_unit, direction):
         """Move a unit one step in the given direction angle (0-360) relative to the unit in facing the target."""
-        if unit in self.units and target in self.units:
-            angle_to_target = math.atan2(target.y - unit.y, target.x - unit.x)
+        if attacker_unit in self.battle_map.units and target_unit in self.battle_map.units:
+            angle_to_target = math.atan2(target_unit.y - attacker_unit.y, target_unit.x - attacker_unit.x)
             move_angle = angle_to_target + math.radians(direction)
 
-            move_x = math.cos(move_angle) * unit.speed
-            move_y = math.sin(move_angle) * unit.speed
+            move_x = math.cos(move_angle) * attacker_unit.speed
+            move_y = math.sin(move_angle) * attacker_unit.speed
 
-            return self.move_unit_towards_coordinates(unit, unit.x + move_x, unit.y + move_y)
+            return self.move_unit_towards_coordinates(attacker_unit, attacker_unit.x + move_x, attacker_unit.y + move_y)
         return None
 
-
-    def move_unit_towards_coordinates(self, unit, target_x, target_y):
+    def move_unit_towards_coordinates(self, attacker_unit, target_x, target_y):
         """Move a unit towards target coordinates, up to its max distance."""
-        if unit in self.units:
-            distance_to_target = self.distance_between_coordinates(target_x, target_y, unit.x, unit.y)
-            dx = target_x - unit.x
-            dy = target_y - unit.y
+        if attacker_unit in self.battle_map.units:
+
+            final_x = attacker_unit.x
+            final_y = attacker_unit.y
+
+            distance_to_target = self.distance_between_coordinates(target_x, target_y, attacker_unit.x, attacker_unit.y)
+            dx = target_x - attacker_unit.x
+            dy = target_y - attacker_unit.y
 
             if distance_to_target > 0:
-                move_distance = min(unit.speed, distance_to_target)
+                move_distance = min(attacker_unit.speed, distance_to_target)
 
                 move_x = (dx / distance_to_target) * move_distance
                 move_y = (dy / distance_to_target) * move_distance
 
-                new_x = unit.x + move_x
-                new_y = unit.y + move_y
+                new_x = attacker_unit.x + move_x
+                new_y = attacker_unit.y + move_y
 
                 collision_occurred = False
-                for other in self.units:
-                    if other is not unit:
+                for other in self.battle_map.units:
+                    if other is not attacker_unit:
 
                         dist = self.distance_between_coordinates(new_x, new_y, other.x, other.y)
-                        min_distance = unit.size + other.size
+                        min_distance = attacker_unit.size + other.size
 
                         if dist < min_distance:
                             collision_occurred = True
@@ -133,38 +134,38 @@ class Simulation:
                     final_x = new_x
                     final_y = new_y
 
-                final_x = max(0, min(final_x, self.size_x))
-                final_y = max(0, min(final_y, self.size_y))
+                final_x = max(0, min(final_x, self.battle_map.size_x))
+                final_y = max(0, min(final_y, self.battle_map.size_y))
 
-                unit.x = final_x
-                unit.y = final_y
+                attacker_unit.x = final_x
+                attacker_unit.y = final_y
 
-                self.asUnitMoved = True
+                self.as_unit_moved = True
         return False
 
     ## ----------- Combat functions -------------
 
-    def is_in_sight(self, attacker, target):
+    def is_in_sight(self, attacker_unit, target_unit):
         """Check if target is within sight of the attacker."""
-        if attacker in self.units and target in self.units:
-            center_distance = self.distance_between_coordinates(attacker.x, attacker.y, target.x, target.y)
-            surface_distance = center_distance - (attacker.size + target.size)
+        if attacker_unit in self.battle_map.units and target_unit in self.battle_map.units:
+            center_distance = self.distance_between_coordinates(attacker_unit.x, attacker_unit.y, target_unit.x, target_unit.y)
+            surface_distance = center_distance - (attacker_unit.size + target_unit.size)
 
-            return surface_distance <= attacker.sight
+            return surface_distance <= attacker_unit.sight
         return False
 
-    def is_in_reach(self, attacker, target):
+    def is_in_reach(self, attacker_unit, target_unit):
         """Check if target is within range of the attacker."""
-        if attacker in self.units and target in self.units:
-            center_distance = self.distance_between_coordinates(attacker.x, attacker.y, target.x, target.y)
-            surface_distance = center_distance - (attacker.size + target.size)
+        if attacker_unit in self.battle_map.units and target_unit in self.battle_map.units:
+            center_distance = self.distance_between_coordinates(attacker_unit.x, attacker_unit.y, target_unit.x, target_unit.y)
+            surface_distance = center_distance - (attacker_unit.size + target_unit.size)
 
-            return surface_distance <= attacker.range
+            return surface_distance <= attacker_unit.range
         return False
 
     def get_nearest_enemy_unit(self, unit):
         """Return the nearest enemy unit of the given unit."""
-        enemy_units = self.unitsB if unit.team == "A" else self.unitsA
+        enemy_units = self.battle_map.units_b if unit.team == "A" else self.battle_map.units_a
         nearest_unit = None
         nearest_distance = float('inf')
         for enemy in enemy_units:
@@ -174,71 +175,150 @@ class Simulation:
                 nearest_unit = enemy
         return nearest_unit
 
-    def get_nearest_troops_in_sight(self, unit):
-        """Return the nearest enemies units in sight of the given unit."""
-        ennemies_units = self.unitsB if unit.team == "A" else self.unitsA
-        nearest_unit = []
-        for ennemy in ennemies_units:
-            if self.is_in_sight(unit, ennemy):
-                nearest_unit.append(ennemy)
+    def get_nearest_enemy_in_sight(self, unit, typeTarget=None):
+        """Return the nearest enemy unit in sight of the given unit."""
+        enemy_units = self.battle_map.units_b if unit.team == "A" else self.battle_map.units_a
+        nearest_unit = None
+        nearest_distance = float('inf')
+        for enemy in enemy_units:
+            if typeTarget is not None and enemy.unit_type != typeTarget:
+                continue
+            if self.is_in_sight(unit, enemy):
+                distance = self.distance_between_coordinates(unit.x, unit.y, enemy.x, enemy.y)
+                if distance < nearest_distance:
+                    nearest_distance = distance
+                    nearest_unit = enemy
         return nearest_unit
 
-    def attack_unit(self, attacker, target):
-        """Attack a target point if within range. Returns True if attack succeeded."""
-        if self.is_in_reach(attacker, target):
-            target.hp -= attacker.attack
-            self.asUnitAttacked = True
-            if target.hp <= 0:
-                self.units.remove(target)
-                if target.team == "A":
-                    self.unitsA.remove(target)
-                else:
-                    self.unitsB.remove(target)
+    def get_nearest_enemy_in_reach(self, unit, typeTarget=None):
+        """Return the nearest enemy unit in reach of the given unit."""
+        enemy_units = self.battle_map.units_b if unit.team == "A" else self.battle_map.units_a
+        nearest_unit = None
+        nearest_distance = float('inf')
+        for enemy in enemy_units:
+            if typeTarget is not None and enemy.unit_type != typeTarget:
+                continue
+            if self.is_in_reach(unit, enemy):
+                distance = self.distance_between_coordinates(unit.x, unit.y, enemy.x, enemy.y)
+                if distance < nearest_distance:
+                    nearest_distance = distance
+                    nearest_unit = enemy
+        return nearest_unit
+
+    def attack_unit(self,attacker_unit, target_unit):
+        """Perform an attack on a target unit if possible."""
+        if attacker_unit.can_attack() and self.is_in_reach(attacker_unit, target_unit):
+            elevation_modifier = 1.0
+            accuracy_modifier = attacker_unit.accuracy
+            base_damage = 0
+
+            for damage_type, damage_value in attacker_unit.attack.items():
+                if damage_type in target_unit.armor:
+                    base_damage += max(0, damage_value - target_unit.armor.get(damage_type))
+                    # print("Base Damage Type : ", damage_type, " Base Damage : ", damage_value, " Target Armor : ", target_unit.armor.get(damage_type))
+
+            damage = max(1, base_damage * elevation_modifier * accuracy_modifier)
+            target_unit.hp -= damage
+            # print("Damage : ", attacker_unit.name, " at (", attacker_unit.x, ",", attacker_unit.y, ") deals ", (base_damage * elevation_modifier * accuracy_modifier), " to ", target_unit.name, " at (", target_unit.x, ",", target_unit.y, ") (HP left: ", target_unit.hp, ")")
+
+            if target_unit.hp <= 0:
+                self.battle_map.units.remove(target_unit)
+                team_list = self.battle_map.units_a if target_unit.team == "A" else self.battle_map.units_b
+                team_list.remove(target_unit)
+                # print("Dead : ", target_unit.name, " at (", target_unit.x, ",", target_unit.y, ") killed by ", attacker_unit.name, " at (", attacker_unit.x, ",", attacker_unit.y, ")")
+
+            attacker_unit.perform_attack()
+            self.reload_units.append(attacker_unit)
             return True
         return False
 
-    def reload_unit(self, unit):
-        """Reload the unit's weapon."""
-        if unit.reload <= 1:
-            unit.reload = 0
-        else:
-            unit.reload -= 1
+    ## ----------- Strategies functions -------------
+
+    def type_present_in_team(self):
+        """Return the set of unit types present in each team."""
+        types_a = set()
+        types_b = set()
+        for unit in self.battle_map.units_a:
+            types_a.add(unit.unit_type)
+        for unit in self.battle_map.units_b:
+            types_b.add(unit.unit_type)
+        return {'A': types_a, 'B': types_b}
+
+    def is_in_formation(self, unit, units, type_formation='ROND'):
+        """Check if the unit is in the specified formation with the given units."""
+        if type_formation == 'ROND':
+            center_x = sum(u.x for u in units) / len(units)
+            center_y = sum(u.y for u in units) / len(units)
+
+            angle = math.atan2(unit.y - center_y, unit.x - center_x)
+            desired_distance = 5
+
+            target_x = center_x + math.cos(angle) * desired_distance
+            target_y = center_y + math.sin(angle) * desired_distance
+
+            return self.compare_position(unit, target_x, target_y)
+        return False
+
+    def do_formation(self, unit, units, type_formation='ROND'):
+        """Move the unit into the specified formation with the given units."""
+        if type_formation == 'ROND':
+            if not self.is_in_formation(unit, units, type_formation):
+                target_cords = self.distance_for_unit_in_formation(unit, units)
+                
+                self.move_unit_towards_coordinates(unit, target_cords[0], target_cords[1])
 
     ## ----------- Distance functions -------------
 
-    def distance_between_coordinates(self, unit_x, unit_y, other_unit_x, other_unit_y):
+    @staticmethod
+    def distance_between_coordinates(unit_x, unit_y, other_unit_x, other_unit_y):
         return ((unit_x - other_unit_x) ** 2 + (unit_y - other_unit_y) ** 2) ** 0.5
 
-    def compare_position(self, unit, x, y):
-        return math.isclose(unit.x, x, abs_tol=unit.speed) and math.isclose(unit.y, y, abs_tol=unit.speed)
+    @staticmethod
+    def compare_position(unit, x, y):
+        return math.isclose(unit.x, x, abs_tol=(unit.speed/2)) and math.isclose(unit.y, y, abs_tol=(unit.speed/2))
+    
+    @staticmethod
+    def distance_for_unit_in_formation(unit, units):
+        center_x = sum(u.x for u in units) / len(units)
+        center_y = sum(u.y for u in units) / len(units)
 
+        angle = math.atan2(unit.y - center_y, unit.x - center_x)
+        desired_distance = 5
+
+        target_x = center_x + math.cos(angle) * desired_distance
+        target_y = center_y + math.sin(angle) * desired_distance
+
+        return target_x, target_y
 
 # Example usage
 if __name__ == "__main__":
 
-    unitsA = []
-    unitsB = []
+    units_a = []
+    units_b = []
     units = []
     for i in range (0, 100):
-        temp = Knight("A", 20 + i % 20, 10 + i % 5)
-        unitsA.append(temp)
+        temp = Units.Knight("A", 20 + i % 20, 10 + i % 5)
+        units_a.append(temp)
         units.append(temp)
 
-        temp = Knight("B", 20 + i % 20, 50 + i % 5)
-        unitsB.append(temp)
+        temp = Units.Knight("B", 20 + i % 20, 50 + i % 5)
+        units_b.append(temp)
         units.append(temp)
 
 
     start_time = time.perf_counter()
 
     sim = Simulation(
-        units,
-        unitsA,
-        None,
-        unitsB,
-        None,
-        tickSpeed = 5,
-        unlocked = True
+        battle_map=type('BattleMap', (object,), {
+            'units': units,
+            'units_a': units_a,
+            'units_b': units_b,
+            'size_x': 200,
+            'size_y': 200
+        })(),
+        tick_speed=5,
+        unlocked=True,
+        paused=False
     )
 
     sim.simulate()

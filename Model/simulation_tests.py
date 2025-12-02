@@ -32,7 +32,7 @@ class TestSimulationInit(unittest.TestCase):
 
     def test_init_default_values(self):
         sim = Simulation(self.units, self.unitsA, None, self.unitsB, None)
-        self.assertEqual(sim.tickSpeed, 5)
+        self.assertEqual(sim.tick_speed, 5)
         self.assertEqual(sim.size_x, 200)
         self.assertEqual(sim.size_y, 200)
         self.assertFalse(sim.paused)
@@ -41,8 +41,8 @@ class TestSimulationInit(unittest.TestCase):
 
     def test_init_custom_values(self):
         sim = Simulation(self.units, self.unitsA, None, self.unitsB, None,
-                         tickSpeed=10, size_x=300, size_y=400, paused=True, unlocked=True)
-        self.assertEqual(sim.tickSpeed, 10)
+                         tick_speed=10, size_x=300, size_y=400, paused=True, unlocked=True)
+        self.assertEqual(sim.tick_speed, 10)
         self.assertEqual(sim.size_x, 300)
         self.assertEqual(sim.size_y, 400)
         self.assertTrue(sim.paused)
@@ -61,15 +61,15 @@ class TestSimulationState(unittest.TestCase):
         self.sim = Simulation(self.units, self.unitsA, None, self.unitsB, None)
 
     def test_finished_no_units_a(self):
-        self.sim.unitsA = []
+        self.sim.units_a = []
         self.assertTrue(self.sim.finished())
 
     def test_finished_no_units_b(self):
-        self.sim.unitsB = []
+        self.sim.units_b = []
         self.assertTrue(self.sim.finished())
 
     def test_finished_max_ticks(self):
-        self.sim.tick = self.sim.tickSpeed * 240
+        self.sim.tick = self.sim.tick_speed * 240
         self.assertTrue(self.sim.finished())
 
     def test_not_finished(self):
@@ -83,19 +83,19 @@ class TestSimulationState(unittest.TestCase):
         self.assertFalse(self.sim.paused)
 
     def test_increase_tick(self):
-        initial = self.sim.tickSpeed
+        initial = self.sim.tick_speed
         self.sim.increase_tick()
-        self.assertEqual(self.sim.tickSpeed, initial + 1)
+        self.assertEqual(self.sim.tick_speed, initial + 1)
 
     def test_decrease_tick(self):
-        self.sim.tickSpeed = 5
+        self.sim.tick_speed = 5
         self.sim.decrease_tick()
-        self.assertEqual(self.sim.tickSpeed, 4)
+        self.assertEqual(self.sim.tick_speed, 4)
 
     def test_decrease_tick_minimum(self):
-        self.sim.tickSpeed = 1
+        self.sim.tick_speed = 1
         self.sim.decrease_tick()
-        self.assertEqual(self.sim.tickSpeed, 1)
+        self.assertEqual(self.sim.tick_speed, 1)
 
 
 class TestMovementFunctions(unittest.TestCase):
@@ -111,7 +111,7 @@ class TestMovementFunctions(unittest.TestCase):
         self.sim.move_unit_towards_coordinates(self.unitA, 20, 20)
         self.assertGreater(self.unitA.x, 10)
         self.assertGreater(self.unitA.y, 10)
-        self.assertTrue(self.sim.asUnitMoved)
+        self.assertTrue(self.sim.as_unit_moved)
 
     def test_move_unit_towards_unit(self):
         initial_x = self.unitA.x
@@ -190,24 +190,16 @@ class TestCombatFunctions(unittest.TestCase):
     def test_get_nearest_enemy_unit(self):
         unitB2 = MockUnit(15, 15, "B")
         self.sim.units.append(unitB2)
-        self.sim.unitsB.append(unitB2)
+        self.sim.units_b.append(unitB2)
         nearest = self.sim.get_nearest_enemy_unit(self.unitA)
         self.assertEqual(nearest, unitB2)
-
-    def test_get_nearest_troops_in_sight(self):
-        unitB2 = MockUnit(200, 200, "B")
-        self.sim.units.append(unitB2)
-        self.sim.unitsB.append(unitB2)
-        in_sight = self.sim.get_nearest_troops_in_sight(self.unitA)
-        self.assertIn(self.unitB, in_sight)
-        self.assertNotIn(unitB2, in_sight)
 
     def test_attack_unit_success(self):
         initial_hp = self.unitB.hp
         result = self.sim.attack_unit(self.unitA, self.unitB)
         self.assertTrue(result)
         self.assertEqual(self.unitB.hp, initial_hp - self.unitA.attack)
-        self.assertTrue(self.sim.asUnitAttacked)
+        self.assertTrue(self.sim.as_unit_attacked)
 
     def test_attack_unit_out_of_range(self):
         self.unitB.x = 100
@@ -218,17 +210,7 @@ class TestCombatFunctions(unittest.TestCase):
         self.unitB.hp = 10
         self.sim.attack_unit(self.unitA, self.unitB)
         self.assertNotIn(self.unitB, self.sim.units)
-        self.assertNotIn(self.unitB, self.sim.unitsB)
-
-    def test_reload_unit(self):
-        self.unitA.reload = 5
-        self.sim.reload_unit(self.unitA)
-        self.assertEqual(self.unitA.reload, 4)
-
-    def test_reload_unit_to_zero(self):
-        self.unitA.reload = 1
-        self.sim.reload_unit(self.unitA)
-        self.assertEqual(self.unitA.reload, 0)
+        self.assertNotIn(self.unitB, self.sim.units_b)
 
 
 class TestDistanceFunctions(unittest.TestCase):
