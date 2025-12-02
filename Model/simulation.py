@@ -15,8 +15,8 @@ DEFAULT_NUMBER_OF_TICKS_PER_SECOND = 5
 
 class Simulation:
 
-    def __init__(self, battle_map, tick_speed = 5, paused = False, unlocked = False):
-        self.battle_map = battle_map
+    def __init__(self, scenario, tick_speed = 5, paused = False, unlocked = False):
+        self.scenario = scenario
         self.reload_units = []
 
         self.tick_speed = tick_speed
