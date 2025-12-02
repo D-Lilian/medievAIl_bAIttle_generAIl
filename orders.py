@@ -49,9 +49,8 @@ class MoveByStepOrder(Order):
 
 
     def Try(self, simu):
-        if simu.move_one_step_towards_dir(self.unit, self.direction): # TODO angle
+        if simu.move_one_step_from_ref(self.unit, self.direction, "WORLD"): # TODO angle
             simu.nbStep -= 1
-
         if self.nbStep == 0:
             return True
         elif self.nbStep < 0:
