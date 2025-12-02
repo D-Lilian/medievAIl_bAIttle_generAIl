@@ -8,7 +8,7 @@ from orders import OrderManager,Order
 NORDER = 5000
 NTIME = 1.0
 
-class DummyOrder:
+class DummyOrder(Order):
     def __init__(self, x):
         self.x = x
     def Try(self, simu):
