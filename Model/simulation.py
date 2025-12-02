@@ -34,9 +34,9 @@ class Simulation:
     def simulate(self, output=None):
         """Run the simulation until a team wins or time runs out."""
         while not self.finished():
-            random.shuffle(self.battle_map.units)
+            random.shuffle(self.scenario.units)
 
-            for unit in self.battle_map.units:
+            for unit in self.scenario.units:
                 enemy = self.get_nearest_enemy_unit(unit)
                 if enemy is None:
                     continue
@@ -66,8 +66,8 @@ class Simulation:
 
     def finished(self):
         """Check if the simulation has finished."""
-        if not self.battle_map.units_a or not self.battle_map.units_b:
-            print("Ticks : ", self.tick, "Team A units left:", len(self.battle_map.units_a), "  | Team B units left:", len(self.battle_map.units_b))
+        if not self.scenario.units_a or not self.scenario.units_b:
+            print("Ticks : ", self.tick, "Team A units left:", len(self.scenario.units_a), "  | Team B units left:", len(self.scenario.units_b))
             return True
         return self.tick >= self.tick_speed * 240
 
@@ -79,7 +79,7 @@ class Simulation:
 
     def move_one_step_from_target_in_direction(self, attacker_unit, target_unit, direction):
         """Move a unit one step in the given direction angle (0-360) relative to the unit in facing the target."""
-        if attacker_unit in self.battle_map.units and target_unit in self.battle_map.units:
+        if attacker_unit in self.scenario.units and target_unit in self.scenario.units:
             angle_to_target = math.atan2(target_unit.y - attacker_unit.y, target_unit.x - attacker_unit.x)
             move_angle = angle_to_target + math.radians(direction)
 
@@ -91,7 +91,7 @@ class Simulation:
 
     def move_unit_towards_coordinates(self, attacker_unit, target_x, target_y):
         """Move a unit towards target coordinates, up to its max distance."""
-        if attacker_unit in self.battle_map.units:
+        if attacker_unit in self.scenario.units:
 
             final_x = attacker_unit.x
             final_y = attacker_unit.y
@@ -110,7 +110,7 @@ class Simulation:
                 new_y = attacker_unit.y + move_y
 
                 collision_occurred = False
-                for other in self.battle_map.units:
+                for other in self.scenario.units:
                     if other is not attacker_unit:
 
                         dist = self.distance_between_coordinates(new_x, new_y, other.x, other.y)
@@ -134,8 +134,8 @@ class Simulation:
                     final_x = new_x
                     final_y = new_y
 
-                final_x = max(0, min(final_x, self.battle_map.size_x))
-                final_y = max(0, min(final_y, self.battle_map.size_y))
+                final_x = max(0, min(final_x, self.scenario.size_x))
+                final_y = max(0, min(final_y, self.scenario.size_y))
 
                 attacker_unit.x = final_x
                 attacker_unit.y = final_y
@@ -147,7 +147,7 @@ class Simulation:
 
     def is_in_sight(self, attacker_unit, target_unit):
         """Check if target is within sight of the attacker."""
-        if attacker_unit in self.battle_map.units and target_unit in self.battle_map.units:
+        if attacker_unit in self.scenario.units and target_unit in self.scenario.units:
             center_distance = self.distance_between_coordinates(attacker_unit.x, attacker_unit.y, target_unit.x, target_unit.y)
             surface_distance = center_distance - (attacker_unit.size + target_unit.size)
 
@@ -156,7 +156,7 @@ class Simulation:
 
     def is_in_reach(self, attacker_unit, target_unit):
         """Check if target is within range of the attacker."""
-        if attacker_unit in self.battle_map.units and target_unit in self.battle_map.units:
+        if attacker_unit in self.scenario.units and target_unit in self.scenario.units:
             center_distance = self.distance_between_coordinates(attacker_unit.x, attacker_unit.y, target_unit.x, target_unit.y)
             surface_distance = center_distance - (attacker_unit.size + target_unit.size)
 
@@ -165,7 +165,7 @@ class Simulation:
 
     def get_nearest_enemy_unit(self, unit):
         """Return the nearest enemy unit of the given unit."""
-        enemy_units = self.battle_map.units_b if unit.team == "A" else self.battle_map.units_a
+        enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
         nearest_unit = None
         nearest_distance = float('inf')
         for enemy in enemy_units:
@@ -177,7 +177,7 @@ class Simulation:
 
     def get_nearest_enemy_in_sight(self, unit, typeTarget=None):
         """Return the nearest enemy unit in sight of the given unit."""
-        enemy_units = self.battle_map.units_b if unit.team == "A" else self.battle_map.units_a
+        enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
         nearest_unit = None
         nearest_distance = float('inf')
         for enemy in enemy_units:
@@ -192,7 +192,7 @@ class Simulation:
 
     def get_nearest_enemy_in_reach(self, unit, typeTarget=None):
         """Return the nearest enemy unit in reach of the given unit."""
-        enemy_units = self.battle_map.units_b if unit.team == "A" else self.battle_map.units_a
+        enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
         nearest_unit = None
         nearest_distance = float('inf')
         for enemy in enemy_units:
@@ -222,8 +222,8 @@ class Simulation:
             # print("Damage : ", attacker_unit.name, " at (", attacker_unit.x, ",", attacker_unit.y, ") deals ", (base_damage * elevation_modifier * accuracy_modifier), " to ", target_unit.name, " at (", target_unit.x, ",", target_unit.y, ") (HP left: ", target_unit.hp, ")")
 
             if target_unit.hp <= 0:
-                self.battle_map.units.remove(target_unit)
-                team_list = self.battle_map.units_a if target_unit.team == "A" else self.battle_map.units_b
+                self.scenario.units.remove(target_unit)
+                team_list = self.scenario.units_a if target_unit.team == "A" else self.scenario.units_b
                 team_list.remove(target_unit)
                 # print("Dead : ", target_unit.name, " at (", target_unit.x, ",", target_unit.y, ") killed by ", attacker_unit.name, " at (", attacker_unit.x, ",", attacker_unit.y, ")")
 
@@ -238,9 +238,9 @@ class Simulation:
         """Return the set of unit types present in each team."""
         types_a = set()
         types_b = set()
-        for unit in self.battle_map.units_a:
+        for unit in self.scenario.units_a:
             types_a.add(unit.unit_type)
-        for unit in self.battle_map.units_b:
+        for unit in self.scenario.units_b:
             types_b.add(unit.unit_type)
         return {'A': types_a, 'B': types_b}
 
@@ -309,7 +309,7 @@ if __name__ == "__main__":
     start_time = time.perf_counter()
 
     sim = Simulation(
-        battle_map=type('BattleMap', (object,), {
+        scenario=type('BattleMap', (object,), {
             'units': units,
             'units_a': units_a,
             'units_b': units_b,
