@@ -1,3 +1,7 @@
+from errors import WrongArguments
+from orders import AttackOnSightOrder
+
+
 class StrategyStart:
     def __init__(self):
         pass

@@ -1,9 +1,9 @@
 from orders import OrderManager
+from Model.units import Unit, UnitType
+from strategies import StrategyStart,StrategyTroup,StrategieDAFT,StrategiePikemanDAFT,StrategieNoPikemanFallback,StrategiePikemanSomeIQ,StrategieBrainDead,StrategiePikemanBrainDead,StrategieStartDAFT,StrategieArcherDAFT,StrategieKnightDAFT,StrategieStartSomeIQ,StrategieArcherSomeIQ,StrategieKnightSomeIQ,StrategieArcherFallbackSomeIQ,StrategieNoKnightFallbackSomeIQ,StrategieStartBrainDead,StrategieArcherBrainDead,StrategieKnightBrainDead
 
-class WrongArguments(Exception):
-    pass
-class GameEngineError(Exception):
-    pass
+from errors import *
+
 # Le general ne se préocupe pas de savoir "ou" sont les troupes, il n'a pas logique de réprésentation "logique" du jeu
 # si il veut qu'une de ses troupes attaquent l'unité la plus proche, alors il le demande, il ne va pas aller chercher l'unité la plus proche
 
