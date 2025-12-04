@@ -23,9 +23,10 @@ class General:
         # Set UNits
         if(len(unitsB) != len(unitsA) != 200): #vérification de la longueur des unités
             raise WrongArguments("Not enough arguments")
+
         self.MyUnits = unitsA
         self.HistUnits = unitsB
-        self.are_archers_left = True
+        self.are_crossbows_left = True
         self.are_knights_left = True
         self.are_spikemen_left = True
         self.crossbows_depleted = crossbows_depleted
@@ -40,11 +41,11 @@ class General:
 
     def notify(self, type_troupe: str):
         """À appeler quand `type_troupe` vient de tomber à 0."""
-        if type_troupe == "crossbow":
+        if type_troupe == UnitType.CROSSBOW:
             self.are_crossbows_left = False
-        if type_troupe == "knight":
+        if type_troupe == UnitType.KNIGHT:
             self.are_knights_left = False
-        if type_troupe == "spikeman":
+        if type_troupe == UnitType.SPIKEMAN:
             self.are_spikemen_left = False
 
 
@@ -54,8 +55,8 @@ class General:
         # Probleme ici la stratégie est invidivuelle à chaque troupe, on veut faire autrement
         # TODO trouver une strategie de départ qui dépend de l'etat/nombre d'un ou plusieurs autre type de troupes
         # N'est appelé qu'au début
-        if(self.Ss):
-            self.Ss(self) # On passe le general en paramère de la stratégie
+        if(self.sS):
+            self.sS(self) # On passe le general en paramère de la stratégie
         #for unit in self.MyUnits:
         #    self.sT[unit.Type].ApplyOrder(self, unit)
 
@@ -117,16 +118,16 @@ if __name__ == '__main__':
     def __repr__(self):
         return f"Unit({self.Type})"
 
-    unitsA = [MockUnit("Crossbow") for i in range(200)]
-    unitsB = [MockUnit("Crossbow") for i in range(200)]
+    unitsA = [MockUnit(UnitType.CROSSBOW) for i in range(200)]
+    unitsB = [MockUnit(UnitType.CROSSBOW) for i in range(200)]
 
     DAFT1 = General(unitsA,
                     unitsB,
                     sS=None,
                     sT={
-                        "crossbow":StrategieBrainDead("Crossbow"),
-                        "knight":StrategieBrainDead("knight"),
-                        "spikeman":StrategieBrainDead("spikeman")
+                        UnitType.CROSSBOW:StrategieBrainDead(UnitType.CROSSBOW),
+                        UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
+                        UnitType.SPIKEMAN:StrategieBrainDead(UnitType.SPIKEMAN)
                     }
                     )
 
@@ -134,9 +135,9 @@ if __name__ == '__main__':
                     unitsA,
                     sS=None,
                     sT={
-                        "crossbow":StrategieBrainDead("Crossbow"),
-                        "knight":StrategieBrainDead("knight"),
-                        "spikeman":StrategieBrainDead("spikeman")
+                        UnitType.CROSSBOW:StrategieBrainDead(UnitType.CROSSBOW),
+                        UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
+                        UnitType.SPIKEMAN:StrategieBrainDead(UnitType.SPIKEMAN)
                     }
                     )
 
@@ -145,9 +146,9 @@ if __name__ == '__main__':
         unitsB,
         sS=None,
         sT={
-            "crossbow":StrategieDAFT("Crossbow"),
-            "knight":StrategieDAFT("knight"),
-            "spikeman":StrategieDAFT("spikeman")
+            UnitType.CROSSBOW:StrategieBrainDead(UnitType.CROSSBOW),
+            UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
+            UnitType.SPIKEMAN:StrategieBrainDead(UnitType.SPIKEMAN)
         }
     )
     BRAINDEAD2 = General(
@@ -155,12 +156,11 @@ if __name__ == '__main__':
         unitsB,
         sS=None,
         sT={
-            "crossbow":StrategieDAFT("Crossbow"),
-            "knight":StrategieDAFT("knight"),
-            "spikeman":StrategieDAFT("spikeman")
+            UnitType.CROSSBOW:StrategieBrainDead(UnitType.CROSSBOW),
+            UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
+            UnitType.SPIKEMAN:StrategieBrainDead(UnitType.SPIKEMAN)
         }
     )
-
     SOMEIQ = General(
         unitsA,
         unitsB,
@@ -168,11 +168,11 @@ if __name__ == '__main__':
         knights_depleted=StrategieNoKnightFallbackSomeIQ(),
         spikemen_depleted=StrategieNoPikemanFallback(),
 
-        sS=StrategieStartSomeIQ(),
-        sT={
-            "Knight":StrategieKnightSomeIQ(),
-            "Spikeman":StrategieSpikemanSomeIQ(),
-            "CrossBow":StrategieArcherSomeIQ(),
+        sS=None,
+        sT={ # TODO: Fix the strategies to use the enum
+            UnitType.KNIGHT:StrategieKnightSomeIQ(),
+            UnitType.SPIKEMAN:StrategiePikemanSomeIQ(),
+            UnitType.CROSSBOW:StrategieArcherSomeIQ(),
         }
     )
 
@@ -183,13 +183,3 @@ if __name__ == '__main__':
     while(True):
         DAFT1.CreateOrders()
         DAFT2.CreateOrders()
-
-
-
-
-
-
-
-
-
-
