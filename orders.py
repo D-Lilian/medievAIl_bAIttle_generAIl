@@ -1,4 +1,5 @@
 #from generals import GameEngineError,WrongArguments
+
 from Model import simulation
 from Model.units import Unit
 
@@ -185,13 +186,12 @@ class AttackOnSightOrder(Order):
 
         if simu.is_in_range(self.unit, target):
             simu.kill(self.unit, target) # Renvoi faux si la troupe est morte, true sinon
-            return
+            return False
         else:
             #self.unit.PushOrder(MoveOrder(
             simu.move_unit_closest_to(self.unit, target) # se deplace le plus lioin possible en fonction de la capacité de la troupe
             return False
             # Redondant mais besoin pour la clarté du code
-        return False
 
 class FormationOrder(Order):
     def __init__(self, unit, units):
@@ -219,8 +219,6 @@ class isInDangerOrder(Order):
 
         simu.move_unit_closest_to(self.unit, target)
         return False
-
-
 
 class _Node:
     def __init__(self, order):
@@ -255,11 +253,6 @@ class OrderManager:
 
         self._by_priority[prio_max] = node
 
-    def FlushOrders(self):
-        self._head = None
-        self._tail = None
-        self._by_priority = {}
-        self._by_order = {}
 
 
     def Add(self, order, priority):
