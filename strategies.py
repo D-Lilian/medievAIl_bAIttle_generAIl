@@ -38,33 +38,34 @@ class StrategieDAFT(StrategyTroup):
     def __init__(self, general):
         super().__init__(general, "All", "None")
 
-    def applyOrder(self, general, unit):
-        pass
+    def apply_order(self, general, unit):
+        print("Applying order")
+        unit.PushOrder(AttackOnSightOrder(unit, None), 0)
 
 ## Deprecated
 class StrategieArcherDAFT(StrategyTroup):
     def __init__(self, general):
         super().__init__(general, "All", "None")
 
-    def applyOrder(self, general, unit):
+    def apply_order(self, general, unit):
         unit.PushOrder(AttackOnSightOrder(unit, None), 0)
 
 class StrategieKnightDAFT(StrategyTroup):
     def __init__(self, general):
         super().__init__(general, "All", "None")
 
-    def applyOrder(self, general, unit):
+    def apply_order(self, general, unit):
         unit.PushOrder(AttackOnSightOrder(unit, None), 0)
 
 class StrategiePikemanDAFT(StrategyTroup):
     def __init__(self, general):
         super().__init__(general, "All", "None")
 
-    def applyOrder(self, general, unit):
+    def apply_order(self, general, unit):
         unit.PushOrder(AttackOnSightOrder(unit, None), 0)
 
 class StrategieStartDAFT(StrategyStart):
-    def applyOrder(self, general, units):
+    def apply_order(self, general, units):
         units.PushOrder(AttackOnSightOrder, 0) # On push/insere/add un ordre de priorité 0
 
 # ----------------------
@@ -78,8 +79,8 @@ class StrategieBrainDead(StrategyTroup):
     def __init__(self, general):
         super().__init__(general, "All", "None")
 
-    def applyOrder(self, general, unit):
-        pass
+    def apply_order(self, general, unit):
+        unit.order_manager.Add(AttackOnReachOrder(unit, None), 0)
 
 
 ## DEPRECATED
@@ -87,7 +88,7 @@ class StrategieArcherBrainDead(StrategyTroup):
     def __init__(self, general):
         super().__init__(general, "All", "None")
 
-    def applyOrder(self, general, unit):
+    def apply_order(self, general, unit):
         unit.PushOrder(AttackOnReachOrder(unit, None), 0)
 
 class StrategieKnightBrainDead(StrategyTroup):
@@ -100,11 +101,11 @@ class StrategieKnightBrainDead(StrategyTroup):
 class StrategiePikemanBrainDead(StrategyTroup):
     def __init__(self, general):
         super().__init__(general, "All", "None")
-    def applyOrder(self, general, unit):
+    def apply_order(self, general, unit):
         unit.PushOrder(AttackOnReachOrder(unit, None), 0)
 
 class StrategieStartBrainDead(StrategyStart):
-    def applyOrder(self, general, unit):
+    def apply_order(self, general, unit):
         unit.PushOrder(AttackOnReachOrder, 0) # On push/insere/add un ordre de priorité 0
 # ----------------------
 
@@ -115,7 +116,7 @@ class StrategieArcherSomeIQ(StrategyTroup): #focus Pikeman (faibles au tir), év
     def __init__(self):
         super().__init__(None, UnitType.PIKEMAN, UnitType.KNIGHT)
 
-    def applyOrder(self, general, unit):
+    def apply_order(self, general, unit):
         unit.PushOrder(AvoidOrder(unit,UnitType.KNIGHT),0)  #éviter les knights
 
         if self.favoriteTroup is not None:
@@ -128,7 +129,7 @@ class StrategieKnightSomeIQ(StrategyTroup):
     def __init__(self):
         super().__init__(None, UnitType.CROSSBOWMAN, UnitType.PIKEMAN)
     
-    def applyOrder(self, general, unit):
+    def apply_order(self, general, unit):
         unit.PushOrder(AttackOnSightOrder(unit,UnitType.CROSSBOWMAN), 0)
         unit.PushOrder(AttackOnSightOrder(unit,"ALL"), 1) 
 

@@ -1,5 +1,5 @@
 from orders import OrderManager
-from Model.units import Unit, UnitType
+from Model.units import Unit, UnitType, Crossbowman, Knight, Pikeman
 from strategies import StrategyStart,StrategyTroup,StrategieDAFT,StrategiePikemanDAFT,StrategieNoPikemanFallback,StrategiePikemanSomeIQ,StrategieBrainDead,StrategiePikemanBrainDead,StrategieStartDAFT,StrategieArcherDAFT,StrategieKnightDAFT,StrategieStartSomeIQ,StrategieArcherSomeIQ,StrategieKnightSomeIQ,StrategieArcherFallbackSomeIQ,StrategieNoKnightFallbackSomeIQ,StrategieStartBrainDead,StrategieArcherBrainDead,StrategieKnightBrainDead
 
 from errors import *
@@ -58,8 +58,9 @@ class General:
         # N'est appelé qu'au début
         if(self.sS):
             self.sS(self) # On passe le general en paramère de la stratégie
-        #for unit in self.MyUnits:
-        #    self.sT[unit.Type].ApplyOrder(self, unit)
+
+        for unit in self.MyUnits:
+            self.sT[unit.unit_type].apply_order(self,unit)
 
 ## On peut s'en servir pour appliquer des stratégies différentes
     def GetNumberOfEnemyType(self, unitType): # récuperer le nbre des unités d'un type spécifique
@@ -113,15 +114,21 @@ class General:
 
 if __name__ == '__main__':
 
-    class MockUnit:
+    class MockUnit(Unit):
         def __init__(self, unit_type):
             self.Type = unit_type
             self.om = OrderManager()
     def __repr__(self):
         return f"Unit({self.Type})"
 
-    unitsA = [MockUnit(UnitType.CROSSBOWMAN) for i in range(200)] + [MockUnit(UnitType.KNIGHT) for i in range(200)] + [MockUnit(UnitType.PIKEMAN) for i in range(200)]
-    unitsB = [MockUnit(UnitType.CROSSBOWMAN) for i in range(200)] + [MockUnit(UnitType.KNIGHT) for i in range(200)] + [MockUnit(UnitType.PIKEMAN) for i in range(200)]
+    unitsA = [Crossbowman('A', 0, 0) for i in range(200)] + [Knight('A', 0, 0) for i in range(200)] + [Pikeman('A', 0, 0) for i in range(200)]
+    unitsB = [Crossbowman('B', 0, 0) for i in range(200)] + [Knight('B', 0, 0) for i in range(200)] + [Pikeman('B', 0, 0) for i in range(200)]
+
+    for u in unitsA:
+        u.order_manager = OrderManager()
+
+    for u in unitsB:
+        u.order_manager = OrderManager()
 
     DAFT1 = General(unitsA,
                     unitsB,
@@ -143,44 +150,47 @@ if __name__ == '__main__':
                     }
                     )
 
-    BRAINDEAD1 = General(
-        unitsA,
-        unitsB,
-        sS=None,
-        sT={
-            UnitType.CROSSBOWMAN:StrategieBrainDead(UnitType.CROSSBOWMAN),
-            UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
-            UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
-        }
-    )
-    BRAINDEAD2 = General(
-        unitsA,
-        unitsB,
-        sS=None,
-        sT={
-            UnitType.CROSSBOWMAN:StrategieBrainDead(UnitType.CROSSBOWMAN),
-            UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
-            UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
-        _}
-    )
-    SOMEIQ = General(
-        unitsA,
-        unitsB,
-        crossbows_depleted=StrategieArcherFallbackSomeIQ(),
-        knights_depleted=StrategieNoKnightFallbackSomeIQ(),
-        spikemen_depleted=StrategieNoPikemanFallback(),
+    #BRAINDEAD1 = General(
+    #    unitsA,
+    #    unitsB,
+    #    sS=None,
+    #    sT={
+    #        UnitType.CROSSBOWMAN:StrategieBrainDead(#UnitType.CROSSBOWMAN),
+    #        UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
+    #        UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
+    #    }
+    #)
+    #BRAINDEAD2 = General(
+    #    unitsA,
+    #    unitsB,
+    #    sS=None,
+    #    sT={
+    #        UnitType.CROSSBOWMAN:StrategieBrainDead(#UnitType.CROSSBOWMAN),
+    #        UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
+    #        UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
+    #    }
+    #)
+    #SOMEIQ = General(
+    #    unitsA,
+    #    unitsB,
+    #    crossbows_depleted=StrategieArcherFallbackSomeIQ(),
+    #    knights_depleted=StrategieNoKnightFallbackSomeIQ(),
+    #    spikemen_depleted=StrategieNoPikemanFallback(),
 
-        sS=None,
-        sT={ # TODO: Fix the strategies to use the enum
-            UnitType.KNIGHT:StrategieKnightSomeIQ(),
-            UnitType.PIKEMAN:StrategiePikemanSomeIQ(),
-            UnitType.CROSSBOWMAN:StrategieArcherSomeIQ(),
-        }
-    )
+    #    sS=None,
+    #    sT={ # TODO: Fix the strategies to use the enum
+    #        UnitType.KNIGHT:StrategieKnightSomeIQ(),
+    #        UnitType.PIKEMAN:StrategiePikemanSomeIQ(),
+    #        UnitType.CROSSBOWMAN:StrategieArcherSomeIQ(),
+    #    }
+    #)
 
     #SIMU Dumb
     DAFT1.BeginStrategy()
     DAFT2.BeginStrategy()
+    for u in unitsA:
+        for o in u.order_manager:
+            print(o)
 
     #while(True):
     #    DAFT1.CreateOrders()
