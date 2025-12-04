@@ -1,5 +1,5 @@
 from errors import WrongArguments
-from orders import AttackOnSightOrder
+from orders import AttackOnSightOrder, AvoidOrder, AttackOnReachOrder, StayInReachOrder, SacrificeOrder, MoveByStepOrder
 
 
 class StrategyStart:
@@ -149,7 +149,8 @@ class StrategiePikemanSomeIQ(StrategyTroup):
 class StrategieStartSomeIQ(StrategyStart):
     def apply_order(self, general):
         for unit in general.MyUnits: 
-            unit.PushOrder(MoveOneStepFromRef(unit, 10, "WORLD"), 180)
+            #unit.PushOrder(MoveOneStepFromRef(unit, 10, "WORLD"), 180)
+            unit.PushOrder(MoveByStepOrder(unit, 10, 180))
 
         soufredouleur = general.GetRandomUnit()
         if soufredouleur is not None:
