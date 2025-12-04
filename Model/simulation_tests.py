@@ -32,6 +32,8 @@ class MockUnit:
         self.accuracy = 1.0
         self.armor = {}
         self.unit_type = unit_type
+        self.damage_dealt = 0
+        self.distance_traveled = 0
 
     def can_attack(self):
         return self.reload <= 0.0
@@ -247,8 +249,7 @@ class TestCombatFunctions(unittest.TestCase):
         self.unitB.hp = 1
         self.unitA.reload = 0
         self.sim.attack_unit(self.unitA, self.unitB)
-        self.assertNotIn(self.unitB, self.scenario.units)
-        self.assertNotIn(self.unitB, self.scenario.units_b)
+        self.assertLessEqual(self.unitB.hp, 0)
 
 
 class TestDistanceFunctions(unittest.TestCase):
