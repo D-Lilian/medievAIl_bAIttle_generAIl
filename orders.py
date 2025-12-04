@@ -1,5 +1,8 @@
 #from generals import GameEngineError,WrongArguments
 from Model import simulation
+from Model.units import Unit
+
+
 class Order:
     def __init__(self, unit):
         self.unit = unit

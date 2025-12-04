@@ -2,7 +2,7 @@ import time
 import random
 import math
 
-from Units import Knight
+from Model.units  import Knight
 
 class Simulation:
 
