@@ -40,7 +40,7 @@ class StrategieDAFT(StrategyTroup):
 
     def apply_order(self, general, unit):
         print("Applying order")
-        unit.order_manager.Add(AttackOnSightOrder(unit, None), 0)
+        unit.order_manager.Add(AttackOnSightOrder(unit, self.favoriteTroup), 0)
 
 ## Deprecated
 class StrategieArcherDAFT(StrategyTroup):
@@ -80,7 +80,7 @@ class StrategieBrainDead(StrategyTroup):
         super().__init__(general, "All", "None")
 
     def apply_order(self, general, unit):
-        unit.order_manager.Add(AttackOnReachOrder(unit, None), 0)
+        unit.order_manager.Add(AttackOnReachOrder(unit, self.favoriteTroup), 0)
 
 
 ## DEPRECATED
