@@ -1,8 +1,4 @@
-from operator import truediv
-
-from lxml.proxy import fixThreadDictNamesForDtd
-from mesonbuild.build import InvalidArguments
-
+from orders import OrderManager
 
 class WrongArguments(Exception):
     pass
@@ -23,9 +19,6 @@ class General:
                  crossbows_depleted=None,
                  knights_depleted=None,
                  spikemen_depleted=None,
-                 are_crossbows_left=True,
-                 are_knights_left=True,
-                 are_spikemen_left=True,
                  **sT):
         # Set UNits
         if(len(unitsB) != len(unitsA) != 200): #vérification de la longueur des unités
