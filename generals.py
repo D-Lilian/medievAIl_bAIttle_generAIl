@@ -3,6 +3,8 @@ from operator import truediv
 from lxml.proxy import fixThreadDictNamesForDtd
 from mesonbuild.build import InvalidArguments
 
+from order import OrderManager
+
 
 class WrongArguments(Exception):
     pass
@@ -16,7 +18,17 @@ class General:
     # -il n'ya plus d'archers
     # -il ya + d'archers que de knights
     # etc
-    def __init__(self, unitsA, unitsB, sS,crossbows_depleted=None,knights_depleted=None,spikemen_depleted=None,are_crossbows_left=True,are_knights_left=True,are_spikemen_left=True,**sT): #sS: Strategie start
+    def __init__(self,
+                 unitsA,
+                 unitsB,
+                 sS,
+                 crossbows_depleted=None,
+                 knights_depleted=None,
+                 spikemen_depleted=None,
+                 are_crossbows_left=True,
+                 are_knights_left=True,
+                 are_spikemen_left=True,
+                 **sT):
         # Set UNits
         if(len(unitsB) != len(unitsA) != 200): #vérification de la longueur des unités
             raise WrongArguments("Not enough arguments")
@@ -28,15 +40,11 @@ class General:
         self.crossbows_depleted = crossbows_depleted
         self.knigts_depleted = knights_depleted
         self.spikemen_depleted = spikemen_depleted
-        # Set Orders
-        for unit in self.MyUnits:
-            unit.Orders = [] #On vide les ordres
 
         # Set strategie
         self.sT = sT
+        # La clé  correspond au unit.Type des unités.
         self.sS = sS
-
-
 
 
     def notify(self, type_troupe: str):
@@ -55,7 +63,8 @@ class General:
         # Probleme ici la stratégie est invidivuelle à chaque troupe, on veut faire autrement
         # TODO trouver une strategie de départ qui dépend de l'etat/nombre d'un ou plusieurs autre type de troupes
         # N'est appelé qu'au début
-        self.Ss(self) # On passe le general en paramère de la stratégie
+        if(self.Ss):
+            self.Ss(self) # On passe le general en paramère de la stratégie
         #for unit in self.MyUnits:
         #    self.sT[unit.Type].ApplyOrder(self, unit)
 
@@ -70,9 +79,9 @@ class General:
     def CreateOrders(self): # réappliquer la stratégie par type sur chaque unité
         # Est appelé à chaque tour
 
-        for unit in self.MyUnits:
+        #for unit in self.MyUnits:
             # Pour chaque unité, on appli la stratégie lié à son type
-            self.sT[unit.Type].ApplyOrder(self, unit)
+        #    self.sT[unit.Type].ApplyOrder(self, unit)
             # Ex
             # self.St["archer"].Applyorder(self, a1)
             # ici ça applicuqe la stratégie du général sur les troupes de type archer
@@ -92,13 +101,73 @@ class General:
 
 
 
+
+
 if __name__ == '__main__':
-    unitsA = ["archer" for i in range(200)]
-    unitsB = ["archer" for i in range(200)]
 
-    DAFT1 = General(unitsA, unitsB)
-    DAFT2 = General(unitsB, unitsA)
+    class MockUnit:
+        def __init__(self, unit_type):
+            self.Type = unit_type
+            self.om = OrderManager()
+    def __repr__(self):
+        return f"Unit({self.Type})"
 
-    pass
+    unitsA = [MockUnit("Crossbow") for i in range(200)]
+    unitsB = [MockUnit("Crossbow") for i in range(200)]
+
+    DAFT1 = General(unitsA,
+                    unitsB,
+                    sS=None,
+                    crossbow=StrategieBrainDead("Crossbow"),
+                    knight=StrategieBrainDead("knight"),
+                    spikeman=StrategieBrainDead("spikeman")
+                    )
+
+    DAFT2 = General(unitsB,
+                    unitsA,
+                    sS=None,
+                    crossbow=StrategieBrainDead("Crossbow"),
+                    knight=StrategieBrainDead("knight"),
+                    spikeman=StrategieBrainDead("spikeman")
+                    )
+
+    BRAINDEAD1 = General(
+        unitsA,
+        unitsB,
+        sS=None,
+        crossbow=StrategieDaft("Crossbow"),
+        knight=StrategieDaft("knight"),
+        spikeman=StrategieDaft("spikeman")
+    )
+    BRAINDEAD2 = General(
+        unitsA,
+        unitsB,
+        sS=None,
+        crossbow=StrategieDaft("Crossbow"),
+        knight=StrategieDaft("knight"),
+        spikeman=StrategieDaft("spikeman")
+    )
+
+
+    SOMEIQ = General(
+        unitsA,
+        unitsB,
+    )
+
+    #SIMU Dumb
+    DAFT1.BeginStrategy()
+    DAFT2.BeginStrategy()
+
+    while(True):
+        DAFT1.CreateOrders()
+        DAFT2.CreateOrders()
+
+
+
+
+
+
+
+
 
 
