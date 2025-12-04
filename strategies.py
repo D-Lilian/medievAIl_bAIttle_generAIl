@@ -160,7 +160,6 @@ class StrategieStartSomeIQ(StrategyStart):
 
 
 
-
 # Mets tout les archers derrière le knight le plus proche d'eux, mets un avoid des range des autres archers
 # Ils ont donc 2 ordres, un attackonsight, et un avoidorder
 # faire une strtegie de coureur, il va devant les lignes enemis et cours de droite à gauche
@@ -233,7 +232,39 @@ class StrategieNoPikemanFallback(StrategyTroup):
 
 
 
-
 # DIVISER LES TROUPES EN EQUIPES
 
-# 0 archers adversaire 
+class StrategySquad(): #Stratégie pour un squad mixte 
+    
+    def __init__(self, nb_archers=0, nb_knights=0, nb_pikemen=0, squad_id=1):
+        self.nb_archers = nb_archers
+        self.nb_knights = nb_knights
+        self.nb_pikemen = nb_pikemen
+        self.squad_id = squad_id
+        self.units = []
+
+    def build_squad(self, general): #Choisit les unités dans le général, et leur donne squad_id.
+        self.units = []
+
+        if self.nb_knights > 0:
+            self.units += general.get_squad("knight", self.nb_knights, self.squad_id)
+
+        if self.nb_archers > 0:
+            self.units += general.get_squad("archer", self.nb_archers, self.squad_id)
+
+        if self.nb_pikemen > 0:
+            self.units += general.get_squad("pikeman", self.nb_pikemen, self.squad_id)
+
+        return self.units
+
+    def apply_orders(self, general, order_cls, priority, *order_args):# order_cls : classe d'ordre (ex: AttackOnSightOrder) priority , order_args ,
+        for u in self.units:
+            order = order_cls(u, *order_args)   # on cree un ordre pour chaque unité
+            u.om.Add(order, priority) 
+
+    #exemple d'appel squad.apply_orders(general, MoveByStepOrder, 10, "forward")  # MoveByStepOrder(u, 10, "forward")
+
+
+       
+
+
