@@ -90,21 +90,21 @@ class General:
 # Si un role est en Enforce(priorité -1), il est le seul a etre executé, tant qu'il ne reussit pas, aucun autre ordre n'est appelé.
 
 
-def get_units_by_type(self, unit_type): #retourne toutes mes unites d’un type donné
-        return [u for u in self.MyUnits if u.type == unit_type]
+    def get_units_by_type(self, unit_type): #retourne toutes mes unites d’un type donné
+            return [u for u in self.MyUnits if u.type == unit_type]
 
 
 
-def get_squad(self, unit_type: str, count: int, squad_id: int): #selectionne jusqu’à count` unités de type `unit_type`qui ne sont pas encore dans un squad,leur assigne `squad_id`,et les retourne.
-        # les unités sans squad
-        available = [
-            u for u in self.MyUnits
-            if u.type== unit_type and u.squad_id == None # ajouter un None comme troisieme argument s'il ya la possibilté de ne pas avoir l'att id
-        ]
-        squad = available[:count]
-        for u in squad:
-            u.squad_id = squad_id
-        return squad
+    def get_squad(self, unit_type: str, count: int, squad_id: int): #selectionne jusqu’à count` unités de type `unit_type`qui ne sont pas encore dans un squad,leur assigne `squad_id`,et les retourne.
+            # les unités sans squad
+            available = [
+                u for u in self.MyUnits
+                if u.type== unit_type and u.squad_id == None # ajouter un None comme troisieme argument s'il ya la possibilté de ne pas avoir l'att id
+            ]
+            squad = available[:count]
+            for u in squad:
+                u.squad_id = squad_id
+            return squad
 
 
 
