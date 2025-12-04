@@ -231,7 +231,6 @@ class StrategieNoPikemanFallback(StrategyTroup):
 
 
 
-
 # DIVISER LES TROUPES EN EQUIPES
 
 class StrategySquad(): #Stratégie pour un squad mixte 
@@ -257,14 +256,12 @@ class StrategySquad(): #Stratégie pour un squad mixte
 
         return self.units
 
-    def apply_orders(self, general, order_cls, *order_args): #order_cls : classe d'ordre, ex AttackOnSightOrder, MoveByStepOrder order_args : autres arguments (sans l'unité), ex: "archer", 10, "forward", etc.
+    def apply_orders(self, general, order_cls, priority, *order_args):# order_cls : classe d'ordre (ex: AttackOnSightOrder) priority , order_args ,
         for u in self.units:
-            order = order_cls(u, *order_args)  # ordre par unité 
-            u.PushOrder(order, 0)
+            order = order_cls(u, *order_args)   # on cree un ordre pour chaque unité
+            u.om.Add(order, priority) 
 
     #exemple d'appel squad.apply_orders(general, MoveByStepOrder, 10, "forward")  # MoveByStepOrder(u, 10, "forward")
-
-
 
 
        
