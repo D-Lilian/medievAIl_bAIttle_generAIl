@@ -128,7 +128,7 @@ if __name__ == '__main__':
                     sT={
                         UnitType.CROSSBOW:StrategieBrainDead(UnitType.CROSSBOW),
                         UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
-                        UnitType.SPIKEMAN:StrategieBrainDead(UnitType.SPIKEMAN)
+                        UnitType.SPIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
                     }
                     )
 
