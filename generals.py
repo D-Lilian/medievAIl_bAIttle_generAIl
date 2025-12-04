@@ -25,9 +25,9 @@ class General:
             raise WrongArguments("Not enough arguments")
         self.MyUnits = unitsA
         self.HistUnits = unitsB
-        self.are_archers_left = are_crossbows_left
-        self.are_knights_left = are_knights_left
-        self.are_spikemen_left = are_spikemen_left
+        self.are_archers_left = True
+        self.are_knights_left = True
+        self.are_spikemen_left = True
         self.crossbows_depleted = crossbows_depleted
         self.knigts_depleted = knights_depleted
         self.spikemen_depleted = spikemen_depleted
