@@ -123,40 +123,57 @@ if __name__ == '__main__':
     DAFT1 = General(unitsA,
                     unitsB,
                     sS=None,
-                    crossbow=StrategieBrainDead("Crossbow"),
-                    knight=StrategieBrainDead("knight"),
-                    spikeman=StrategieBrainDead("spikeman")
+                    sT={
+                        "crossbow":StrategieBrainDead("Crossbow"),
+                        "knight":StrategieBrainDead("knight"),
+                        "spikeman":StrategieBrainDead("spikeman")
+                    }
                     )
 
     DAFT2 = General(unitsB,
                     unitsA,
                     sS=None,
-                    crossbow=StrategieBrainDead("Crossbow"),
-                    knight=StrategieBrainDead("knight"),
-                    spikeman=StrategieBrainDead("spikeman")
+                    sT={
+                        "crossbow":StrategieBrainDead("Crossbow"),
+                        "knight":StrategieBrainDead("knight"),
+                        "spikeman":StrategieBrainDead("spikeman")
+                    }
                     )
 
     BRAINDEAD1 = General(
         unitsA,
         unitsB,
         sS=None,
-        crossbow=StrategieDaft("Crossbow"),
-        knight=StrategieDaft("knight"),
-        spikeman=StrategieDaft("spikeman")
+        sT={
+            "crossbow":StrategieDAFT("Crossbow"),
+            "knight":StrategieDAFT("knight"),
+            "spikeman":StrategieDAFT("spikeman")
+        }
     )
     BRAINDEAD2 = General(
         unitsA,
         unitsB,
         sS=None,
-        crossbow=StrategieDaft("Crossbow"),
-        knight=StrategieDaft("knight"),
-        spikeman=StrategieDaft("spikeman")
+        sT={
+            "crossbow":StrategieDAFT("Crossbow"),
+            "knight":StrategieDAFT("knight"),
+            "spikeman":StrategieDAFT("spikeman")
+        }
     )
-
 
     SOMEIQ = General(
         unitsA,
         unitsB,
+        crossbows_depleted=StrategieArcherFallbackSomeIQ(),
+        knights_depleted=StrategieNoKnightFallbackSomeIQ(),
+        spikemen_depleted=StrategieNoPikemanFallback(),
+
+        sS=StrategieStartSomeIQ(),
+        sT={
+            "Knight":StrategieKnightSomeIQ(),
+            "Spikeman":StrategieSpikemanSomeIQ(),
+            "CrossBow":StrategieArcherSomeIQ(),
+        }
     )
 
     #SIMU Dumb
