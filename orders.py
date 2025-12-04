@@ -252,6 +252,11 @@ class OrderManager:
 
         self._by_priority[prio_max] = node
 
+    def FlushOrders(self):
+        self._head = None
+        self._tail = None
+        self._by_priority = {}
+        self._by_order = {}
 
 
     def Add(self, order, priority):
