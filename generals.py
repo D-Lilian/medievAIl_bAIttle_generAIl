@@ -130,46 +130,46 @@ if __name__ == '__main__':
     for u in unitsB:
         u.order_manager = OrderManager()
 
-    DAFT1 = General(unitsA,
-                    unitsB,
-                    sS=None,
-                    sT={
-                        UnitType.CROSSBOWMAN:StrategieBrainDead(UnitType.CROSSBOWMAN),
-                        UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
-                        UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
-                    }
-                    )
+   # DAFT1 = General(unitsA,
+   #                 unitsB,
+   #                 sS=None,
+   #                 sT={
+   #                     UnitType.CROSSBOWMAN:StrategieBrainDead(UnitType.CROSSBOWMAN),
+   #                     UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
+   #                     UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
+   #                 }
+   #                 )
 
-    DAFT2 = General(unitsB,
-                    unitsA,
-                    sS=None,
-                    sT={
-                        UnitType.CROSSBOWMAN:StrategieBrainDead(UnitType.CROSSBOWMAN),
-                        UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
-                        UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
-                    }
-                    )
+   # DAFT2 = General(unitsB,
+   #                 unitsA,
+   #                 sS=None,
+   #                 sT={
+   #                     UnitType.CROSSBOWMAN:StrategieBrainDead(UnitType.CROSSBOWMAN),
+   #                     UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
+   #                     UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
+   #                 }
+   #                 )
 
-    #BRAINDEAD1 = General(
-    #    unitsA,
-    #    unitsB,
-    #    sS=None,
-    #    sT={
-    #        UnitType.CROSSBOWMAN:StrategieBrainDead(#UnitType.CROSSBOWMAN),
-    #        UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
-    #        UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
-    #    }
-    #)
-    #BRAINDEAD2 = General(
-    #    unitsA,
-    #    unitsB,
-    #    sS=None,
-    #    sT={
-    #        UnitType.CROSSBOWMAN:StrategieBrainDead(#UnitType.CROSSBOWMAN),
-    #        UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
-    #        UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
-    #    }
-    #)
+    BRAINDEAD1 = General(
+        unitsA,
+        unitsB,
+        sS=None,
+        sT={
+            UnitType.CROSSBOWMAN:StrategieBrainDead(UnitType.CROSSBOWMAN),
+            UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
+            UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
+        }
+    )
+    BRAINDEAD2 = General(
+        unitsB,
+        unitsA,
+        sS=None,
+        sT={
+            UnitType.CROSSBOWMAN:StrategieBrainDead(UnitType.CROSSBOWMAN),
+            UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
+            UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
+        }
+    )
     #SOMEIQ = General(
     #    unitsA,
     #    unitsB,
@@ -186,8 +186,10 @@ if __name__ == '__main__':
     #)
 
     #SIMU Dumb
-    DAFT1.BeginStrategy()
-    DAFT2.BeginStrategy()
+    #DAFT1.BeginStrategy()
+    #DAFT2.BeginStrategy()
+    BRAINDEAD1.BeginStrategy()
+    BRAINDEAD2.BeginStrategy()
     for u in unitsA:
         for o in u.order_manager:
             print(o)

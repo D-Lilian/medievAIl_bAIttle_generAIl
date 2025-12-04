@@ -175,12 +175,12 @@ class AttackOnSightOrder(Order):
     # Au debut de la partie les unités se "voient" forcément
     # Le AttackOnSightOrder peut toujours etre accompli, cad il ne peut jamais se terminer, cad que l'appel à Try renvoi toujours False
 
-    def __init__(self, unit, typeTargets):
+    def __init__(self, unit, typeTarget):
         super().__init__(unit)
-        self.typeTarget = typeTargets
+        self.typeTarget = typeTarget
 
     def Try(self, simu):
-        target = simu.get_nearest_troup_in_sight(self.unit, type_targets=self.typeTargets)
+        target = simu.get_nearest_troup_in_sight(self.unit, type_target=self.typeTarget)
         if target is None:
             return False
 
@@ -257,6 +257,7 @@ class OrderManager:
 
     def Add(self, order, priority):
         if priority in self._by_priority:
+            print(f"Tring to add {type(order).__name__} with priority {priority} but priority already used by {type(self._by_priority[priority].order).__name__}")
             raise ValueError("Priority already used")
         node = _Node(order)
         self._by_priority[priority] = node
@@ -346,15 +347,22 @@ class OrderManager:
 
 if __name__ == "__main__":
     u1 = "Archer"
-    u1 = Unit()
+    ##u1 = Unit()
     om = OrderManager()
-    u1.om = om
+    #u1.om = om
 
-    u1.om.Add(MoveByStepOrder(u1, 10, 0), 0);
-    u1.om.Add(MoveByStepOrder(u1, 2, 0), 1);
-    u1.om.Add(MoveByStepOrder(u1, 3, 0), 2);
-    u1.om.Add(MoveByStepOrder(u1, 4, 0), 3);
+    om.Add(MoveByStepOrder(u1, 10, 0), 0);
+    om.Add(MoveByStepOrder(u1, 2, 0), 1);
+    om.Add(MoveByStepOrder(u1, 3, 0), 2);
+    om.Add(MoveByStepOrder(u1, 4, 0), 3);
+
 
     for order in om:
-        om.TryOrder("", order)
+        print(order)
+        #om.TryOrder("", order)
+        om.Remove(order)
+
+    for order in om:
+        print(order)
+        #om.TryOrder("", order)
         om.Remove(order)
