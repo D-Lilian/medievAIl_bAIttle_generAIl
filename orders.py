@@ -1,5 +1,8 @@
 #from generals import GameEngineError,WrongArguments
 from Model import simulation
+from Model.units import Unit
+
+
 class Order:
     def __init__(self, unit):
         self.unit = unit
@@ -252,6 +255,11 @@ class OrderManager:
 
         self._by_priority[prio_max] = node
 
+    def FlushOrders(self):
+        self._head = None
+        self._tail = None
+        self._by_priority = {}
+        self._by_order = {}
 
 
     def Add(self, order, priority):

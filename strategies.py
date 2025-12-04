@@ -1,4 +1,9 @@
+from errors import WrongArguments
+from orders import AttackOnSightOrder
+
+
 class StrategyStart:
+
     def __init__(self):
         pass
 
@@ -9,15 +14,15 @@ class StrategyStart:
 
 class StrategyTroup:
     def __init__(self, general, favoriteTroup, hatedTroup):
-        if self.favoriteTroup == self.hatedTroup:
+        if favoriteTroup == hatedTroup:
             raise WrongArguments("Favorite and hated troups cannot be the same")
 
         self.favoriteTroup = favoriteTroup
         self.hatedTroup = hatedTroup
 
-        if not self.favoriteTroup in general.HistUnits:
-            self.favoriteTroup = None
-        pass
+        #if not self.favoriteTroup in general.HisUnits:
+        #    self.favoriteTroup = None
+        #pass
 
     def ApplyOrder(self, unit):
         self.unit = unit
@@ -67,7 +72,6 @@ class StrategieStartDAFT(StrategyStart):
 # ----------------------
 # Aucune hated troup
 # Aucune favorite troup
-
 class StrategieBrainDead(StrategyTroup):
     def __init__(self, general):
         super().__init__(general, "All", "None")
