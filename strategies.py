@@ -40,7 +40,7 @@ class StrategieDAFT(StrategyTroup):
 
     def apply_order(self, general, unit):
         print("Applying order")
-        unit.PushOrder(AttackOnSightOrder(unit, None), 0)
+        unit.order_manager.Add(AttackOnSightOrder(unit, None), 0)
 
 ## Deprecated
 class StrategieArcherDAFT(StrategyTroup):
@@ -48,21 +48,21 @@ class StrategieArcherDAFT(StrategyTroup):
         super().__init__(general, "All", "None")
 
     def apply_order(self, general, unit):
-        unit.PushOrder(AttackOnSightOrder(unit, None), 0)
+        unit.order_manager.Add(AttackOnSightOrder(unit, None), 0)
 
 class StrategieKnightDAFT(StrategyTroup):
     def __init__(self, general):
         super().__init__(general, "All", "None")
 
     def apply_order(self, general, unit):
-        unit.PushOrder(AttackOnSightOrder(unit, None), 0)
+        unit.order_manager.Add(AttackOnSightOrder(unit, None), 0)
 
 class StrategiePikemanDAFT(StrategyTroup):
     def __init__(self, general):
         super().__init__(general, "All", "None")
 
     def apply_order(self, general, unit):
-        unit.PushOrder(AttackOnSightOrder(unit, None), 0)
+        unit.order_manager.Add(AttackOnSightOrder(unit, None), 0)
 
 class StrategieStartDAFT(StrategyStart):
     def apply_order(self, general, units):
@@ -89,24 +89,24 @@ class StrategieArcherBrainDead(StrategyTroup):
         super().__init__(general, "All", "None")
 
     def apply_order(self, general, unit):
-        unit.PushOrder(AttackOnReachOrder(unit, None), 0)
+        unit.order_manager.Add(AttackOnReachOrder(unit, None), 0)
 
 class StrategieKnightBrainDead(StrategyTroup):
     def __init__(self, general):
         super().__init__(general, "All", "None")
 
     def applyOrder(self, general, unit):
-        unit.PushOrder(AttackOnReachOrder(unit, None), 0)
+        unit.order_manager.Add(AttackOnReachOrder(unit, None), 0)
 
 class StrategiePikemanBrainDead(StrategyTroup):
     def __init__(self, general):
         super().__init__(general, "All", "None")
     def apply_order(self, general, unit):
-        unit.PushOrder(AttackOnReachOrder(unit, None), 0)
+        unit.order_manager.Add(AttackOnReachOrder(unit, None), 0)
 
 class StrategieStartBrainDead(StrategyStart):
     def apply_order(self, general, unit):
-        unit.PushOrder(AttackOnReachOrder, 0) # On push/insere/add un ordre de priorité 0
+        unit.order_manager.Add(AttackOnReachOrder, 0) # On push/insere/add un ordre de priorité 0
 # ----------------------
 
 # Le but de SomeIQ est de battre Braindead et daft, pas de battre un autre SomeIQ
@@ -117,12 +117,12 @@ class StrategieArcherSomeIQ(StrategyTroup): #focus Pikeman (faibles au tir), év
         super().__init__(None, UnitType.PIKEMAN, UnitType.KNIGHT)
 
     def apply_order(self, general, unit):
-        unit.PushOrder(AvoidOrder(unit,UnitType.KNIGHT),0)  #éviter les knights
+        unit.order_manager.Add(AvoidOrder(unit,UnitType.KNIGHT),0)  #éviter les knights
 
         if self.favoriteTroup is not None:
-            unit.PushOrder(AttackOnSightOrder(unit,self.favoriteTroup), 1) # attaquer en priorité les Spikemen
+            unit.order_manager.Add(AttackOnSightOrder(unit,self.favoriteTroup), 1) # attaquer en priorité les Spikemen
         else:
-            unit.PushOrder(AttackOnSightOrder(unit,"All"), 1)
+            unit.order_manager.Add(AttackOnSightOrder(unit,"All"), 1)
 
 
 class StrategieKnightSomeIQ(StrategyTroup):
@@ -130,19 +130,19 @@ class StrategieKnightSomeIQ(StrategyTroup):
         super().__init__(None, UnitType.CROSSBOWMAN, UnitType.PIKEMAN)
     
     def apply_order(self, general, unit):
-        unit.PushOrder(AttackOnSightOrder(unit,UnitType.CROSSBOWMAN), 0)
-        unit.PushOrder(AttackOnSightOrder(unit,"ALL"), 1) 
+        unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.CROSSBOWMAN), 0)
+        unit.order_manager.Add(AttackOnSightOrder(unit,"ALL"), 1)
 
 class StrategiePikemanSomeIQ(StrategyTroup):
     def __init__(self):
         super().__init__(None, UnitType.KNIGHT, UnitType.CROSSBOWMAN)
 
     def applyOrder(self, general, unit):
-        unit.PushOrder(StayInReachOrder(unit,UnitType.CROSSBOWMAN), 0)
-        unit.PushOrder(AttackOnSightOrder(unit,"All"), 1) # On push/insere/add un ordre de priorité 0
+        unit.order_manager.Add(StayInReachOrder(unit,UnitType.CROSSBOWMAN), 0)
+        unit.order_manager.Add(AttackOnSightOrder(unit,"All"), 1) # On push/insere/add un ordre de priorité 0
        # stay in friendly zone a cote des archers et attaquer
     """for archer in [u for u in general.MyUnits if u.Type == "archer"]:
-        unit.PushOrder(StayInFriendlySpaceOrder(unit, "Archer"), 0)
+        unit.order_manager.Add(StayInFriendlySpaceOrder(unit, "Archer"), 0)
         # Attaque automatique des ennemis visibles"""
 
 
@@ -152,8 +152,8 @@ class StrategiePikemanSomeIQ(StrategyTroup):
 class StrategieStartSomeIQ(StrategyStart):
     def apply_order(self, general):
         for unit in general.MyUnits: 
-            #unit.PushOrder(MoveOneStepFromRef(unit, 10, "WORLD"), 180)
-            unit.PushOrder(MoveByStepOrder(unit, 10, 180))
+            #unit.order_manager.Add(MoveOneStepFromRef(unit, 10, "WORLD"), 180)
+            unit.order_manager.Add(MoveByStepOrder(unit, 10, 180))
 
         soufredouleur = general.GetRandomUnit()
         if soufredouleur is not None:
@@ -190,11 +190,11 @@ class StrategieArcherFallbackSomeIQ(StrategyTroup):
 
         if unit.type == UnitType.KNIGHT:
             # knight → rush les archers ennemis
-            unit.PushOrder(AttackOnSightOrder(unit,UnitType.CROSSBOWMAN), 0)
+            unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.CROSSBOWMAN), 0)
 
         elif unit.type == UnitType.PIKEMAN:
             # Pikeman → focus les knights ennemis
-            unit.PushOrder(AttackOnSightOrder(unit,UnitType.KNIGHT), 0)
+            unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.KNIGHT), 0)
 
 
 class StrategieNoKnightFallbackSomeIQ(StrategyTroup):
@@ -206,14 +206,14 @@ class StrategieNoKnightFallbackSomeIQ(StrategyTroup):
     def applyOrder(self, general, unit):
         if unit.type == UnitType.CROSSBOWMAN:
             #les archers restent en arrière et focus ce qui s'avance
-            unit.PushOrder(AttackOnSightOrder(unit,"All"), 0)
+            unit.order_manager.Add(AttackOnSightOrder(unit,"All"), 0)
 
         elif unit.type == UnitType.PIKEMAN:
             # Les spikemen se mettent en garde du corps des archers et tapent tout
             archers = [u for u in general.MyUnits if u.type == UnitType.CROSSBOWMAN]
             for archer in archers:
-                unit.PushOrder(StayInFriendlySpaceOrder(unit, UnitType.CROSSBOWMAN), 0)
-            unit.PushOrder(AttackOnSightOrder(), 1)
+                unit.order_manager.Add(StayInFriendlySpaceOrder(unit, UnitType.CROSSBOWMAN), 0)
+            unit.order_manager.Add(AttackOnSightOrder(unit, self.favoriteTroup), 1)
 
 
 class StrategieNoPikemanFallback(StrategyTroup):
@@ -225,13 +225,12 @@ class StrategieNoPikemanFallback(StrategyTroup):
     def applyOrder(self, general, unit):
 
         if unit.type == UnitType.KNIGHT:
-            #les knights jouent le rôle de frontline
-            unit.PushOrder(AttackOnSightOrder(), 0)
+            unit.order_manager.Add(AttackOnSightOrder(), 0)
 
-        elif unit.type == UnitType.CROSSBOW:
+        elif unit.type == UnitType.CROSSBOWMAN:
             # Les archers restent à distance et focus surtout les unités de mêlée
-            unit.PushOrder(AvoidOrder(unit, UnitType.KNIGHT), 0)
-            unit.PushOrder(AttackOnSightOrder(), 1)
+            unit.order_manager.Add(AvoidOrder(unit, UnitType.KNIGHT), 0)
+            unit.order_manager.Add(AttackOnSightOrder(unit, self.favoriteTroup), 1)
 
 
 
