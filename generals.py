@@ -13,13 +13,14 @@ class General:
     # -il ya + d'archers que de knights
     # etc
     def __init__(self,
-                 unitsA,
+                 unitsA  ,
                  unitsB,
                  sS,
+                 sT,
                  crossbows_depleted=None,
                  knights_depleted=None,
                  spikemen_depleted=None,
-                 **sT):
+                 ):
         # Set UNits
         if(len(unitsB) != len(unitsA) != 200): #vérification de la longueur des unités
             raise WrongArguments("Not enough arguments")
@@ -39,13 +40,13 @@ class General:
         self.sS = sS
 
 
-    def notify(self, type_troupe: str):
+    def notify(self, type_troupe: UnitType):
         """À appeler quand `type_troupe` vient de tomber à 0."""
-        if type_troupe == UnitType.CROSSBOW:
+        if type_troupe == UnitType.CROSSBOWMAN:
             self.are_crossbows_left = False
         if type_troupe == UnitType.KNIGHT:
             self.are_knights_left = False
-        if type_troupe == UnitType.SPIKEMAN:
+        if type_troupe == UnitType.PIKEMAN:
             self.are_spikemen_left = False
 
 
@@ -80,7 +81,7 @@ class General:
         if self.are_crossbows_left == False and self.crossbows_depleted is not None:
             self.crossbows_depleted()
         if self.are_knights_left == False and self.knigts_depleted is not None:
-            self.knights_depleted()
+            self.knigts_depleted()
         if self.are_spikemen_left == False  and self.spikemen_depleted is not None:
             self.spikemen_depleted()
 # # Cert# 1. On appel simu pour effectuer notre action, simu nous appelle et se passe en paramètre. Depuis try, on renvoi True si l'ordre a reussi
@@ -91,7 +92,7 @@ class General:
 # Si un role est en Enforce(priorité -1), il est le seul a etre executé, tant qu'il ne reussit pas, aucun autre ordre n'est appelé.
 
 
-    def get_units_by_type(self, unit_type): #retourne toutes mes unites d’un type donné
+    def get_units_by_type(self, unit_type: UnitType ): #retourne toutes mes unites d’un type donné
             return [u for u in self.MyUnits if u.type == unit_type]
 
 
@@ -119,16 +120,16 @@ if __name__ == '__main__':
     def __repr__(self):
         return f"Unit({self.Type})"
 
-    unitsA = [MockUnit(UnitType.CROSSBOW) for i in range(200)]
-    unitsB = [MockUnit(UnitType.CROSSBOW) for i in range(200)]
+    unitsA = [MockUnit(UnitType.CROSSBOWMAN) for i in range(200)] + [MockUnit(UnitType.KNIGHT) for i in range(200)] + [MockUnit(UnitType.PIKEMAN) for i in range(200)]
+    unitsB = [MockUnit(UnitType.CROSSBOWMAN) for i in range(200)] + [MockUnit(UnitType.KNIGHT) for i in range(200)] + [MockUnit(UnitType.PIKEMAN) for i in range(200)]
 
     DAFT1 = General(unitsA,
                     unitsB,
                     sS=None,
                     sT={
-                        UnitType.CROSSBOW:StrategieBrainDead(UnitType.CROSSBOW),
+                        UnitType.CROSSBOWMAN:StrategieBrainDead(UnitType.CROSSBOWMAN),
                         UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
-                        UnitType.SPIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
+                        UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
                     }
                     )
 
@@ -136,9 +137,9 @@ if __name__ == '__main__':
                     unitsA,
                     sS=None,
                     sT={
-                        UnitType.CROSSBOW:StrategieBrainDead(UnitType.CROSSBOW),
+                        UnitType.CROSSBOWMAN:StrategieBrainDead(UnitType.CROSSBOWMAN),
                         UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
-                        UnitType.SPIKEMAN:StrategieBrainDead(UnitType.SPIKEMAN)
+                        UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
                     }
                     )
 
@@ -147,9 +148,9 @@ if __name__ == '__main__':
         unitsB,
         sS=None,
         sT={
-            UnitType.CROSSBOW:StrategieBrainDead(UnitType.CROSSBOW),
+            UnitType.CROSSBOWMAN:StrategieBrainDead(UnitType.CROSSBOWMAN),
             UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
-            UnitType.SPIKEMAN:StrategieBrainDead(UnitType.SPIKEMAN)
+            UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
         }
     )
     BRAINDEAD2 = General(
@@ -157,9 +158,9 @@ if __name__ == '__main__':
         unitsB,
         sS=None,
         sT={
-            UnitType.CROSSBOW:StrategieBrainDead(UnitType.CROSSBOW),
+            UnitType.CROSSBOWMAN:StrategieBrainDead(UnitType.CROSSBOWMAN),
             UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
-            UnitType.SPIKEMAN:StrategieBrainDead(UnitType.SPIKEMAN)
+            UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
         }
     )
     SOMEIQ = General(
@@ -172,8 +173,8 @@ if __name__ == '__main__':
         sS=None,
         sT={ # TODO: Fix the strategies to use the enum
             UnitType.KNIGHT:StrategieKnightSomeIQ(),
-            UnitType.SPIKEMAN:StrategiePikemanSomeIQ(),
-            UnitType.CROSSBOW:StrategieArcherSomeIQ(),
+            UnitType.PIKEMAN:StrategiePikemanSomeIQ(),
+            UnitType.CROSSBOWMAN:StrategieArcherSomeIQ(),
         }
     )
 
@@ -181,6 +182,6 @@ if __name__ == '__main__':
     DAFT1.BeginStrategy()
     DAFT2.BeginStrategy()
 
-    while(True):
-        DAFT1.CreateOrders()
-        DAFT2.CreateOrders()
+    #while(True):
+    #    DAFT1.CreateOrders()
+    #    DAFT2.CreateOrders()
