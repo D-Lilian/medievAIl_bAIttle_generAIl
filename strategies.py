@@ -1,5 +1,6 @@
 from errors import WrongArguments
-from orders import AttackOnSightOrder, AvoidOrder, AttackOnReachOrder, StayInReachOrder, SacrificeOrder, MoveByStepOrder
+from orders import AttackOnSightOrder, AvoidOrder, AttackOnReachOrder, StayInReachOrder, SacrificeOrder, \
+    MoveByStepOrder, StayInFriendlySpaceOrder
 
 
 class StrategyStart:
