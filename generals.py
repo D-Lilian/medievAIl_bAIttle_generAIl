@@ -106,6 +106,7 @@ def get_squad(self, unit_type: str, count: int, squad_id: int): #selectionne jus
             u.squad_id = squad_id
         return squad
 
+
 if __name__ == '__main__':
     unitsA = ["archer" for i in range(200)]
     unitsB = ["archer" for i in range(200)]
