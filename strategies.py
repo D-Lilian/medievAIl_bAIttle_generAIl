@@ -1,3 +1,4 @@
+from Model.units import UnitType
 from errors import WrongArguments
 from orders import AttackOnSightOrder, AvoidOrder, AttackOnReachOrder, StayInReachOrder, SacrificeOrder, \
     MoveByStepOrder, StayInFriendlySpaceOrder
@@ -125,18 +126,18 @@ class StrategieArcherSomeIQ(StrategyTroup): #focus Pikeman (faibles au tir), év
 
 class StrategieKnightSomeIQ(StrategyTroup):
     def __init__(self):
-        super().__init__(None, UnitType.CROSSBOW, UnitType.PIKEMAN) 
+        super().__init__(None, UnitType.CROSSBOWMAN, UnitType.PIKEMAN)
     
     def applyOrder(self, general, unit):
-        unit.PushOrder(AttackOnSightOrder(unit,UnitType.CROSSBOW), 0) 
+        unit.PushOrder(AttackOnSightOrder(unit,UnitType.CROSSBOWMAN), 0)
         unit.PushOrder(AttackOnSightOrder(unit,"ALL"), 1) 
 
 class StrategiePikemanSomeIQ(StrategyTroup):
     def __init__(self):
-        super().__init__(None, UnitType.KNIGHT, UnitType.CROSSBOW)
+        super().__init__(None, UnitType.KNIGHT, UnitType.CROSSBOWMAN)
 
     def applyOrder(self, general, unit):
-        unit.PushOrder(StayInReachOrder(unit,UnitType.CROSSBOW), 0)
+        unit.PushOrder(StayInReachOrder(unit,UnitType.CROSSBOWMAN), 0)
         unit.PushOrder(AttackOnSightOrder(unit,"All"), 1) # On push/insere/add un ordre de priorité 0
        # stay in friendly zone a cote des archers et attaquer
     """for archer in [u for u in general.MyUnits if u.Type == "archer"]:
@@ -188,7 +189,7 @@ class StrategieArcherFallbackSomeIQ(StrategyTroup):
 
         if unit.type == UnitType.KNIGHT:
             # knight → rush les archers ennemis
-            unit.PushOrder(AttackOnSightOrder(unit,UnitType.CROSSBOW), 0)
+            unit.PushOrder(AttackOnSightOrder(unit,UnitType.CROSSBOWMAN), 0)
 
         elif unit.type == UnitType.PIKEMAN:
             # Pikeman → focus les knights ennemis
@@ -202,15 +203,15 @@ class StrategieNoKnightFallbackSomeIQ(StrategyTroup):
         super().__init__(None, "All", "None")
 
     def applyOrder(self, general, unit):
-        if unit.type == UnitType.CROSSBOW:
+        if unit.type == UnitType.CROSSBOWMAN:
             #les archers restent en arrière et focus ce qui s'avance
             unit.PushOrder(AttackOnSightOrder(unit,"All"), 0)
 
         elif unit.type == UnitType.PIKEMAN:
             # Les spikemen se mettent en garde du corps des archers et tapent tout
-            archers = [u for u in general.MyUnits if u.type == UnitType.CROSSBOW]
+            archers = [u for u in general.MyUnits if u.type == UnitType.CROSSBOWMAN]
             for archer in archers:
-                unit.PushOrder(StayInFriendlySpaceOrder(unit, UnitType.CROSSBOW), 0)
+                unit.PushOrder(StayInFriendlySpaceOrder(unit, UnitType.CROSSBOWMAN), 0)
             unit.PushOrder(AttackOnSightOrder(), 1)
 
 
@@ -251,7 +252,7 @@ class StrategySquad(): #Stratégie pour un squad mixte
             self.units += general.get_squad(UnitType.KNIGHT, self.nb_knights, self.squad_id)
 
         if self.nb_archers > 0:
-            self.units += general.get_squad(UnitType.CROSSBOW, self.nb_archers, self.squad_id)
+            self.units += general.get_squad(UnitType.CROSSBOWMAN, self.nb_archers, self.squad_id)
 
         if self.nb_pikemen > 0:
             self.units += general.get_squad(UnitType.PIKEMAN, self.nb_pikemen, self.squad_id)
