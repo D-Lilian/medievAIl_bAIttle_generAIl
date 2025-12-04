@@ -193,6 +193,26 @@ class AttackOnSightOrder(Order):
             return False
             # Redondant mais besoin pour la clarté du code
 
+class AttackNearestTroupOmniscient(Order):
+    def __init__(self, unit, typeTarget):
+        super().__init__(unit)
+        self.typeTarget = typeTarget
+
+    def Try(self, simu):
+        target = simu.get_nearest_enemy_unit(self.unit, type_target=self.typeTarget)
+        if target is None:
+            return False
+
+        if simu.is_in_range(self.unit, target):
+            simu.kill(self.unit, target) # Renvoi faux si la troupe est morte, true sinon
+            return False
+        else:
+            #self.unit.PushOrder(MoveOrder(
+            simu.move_unit_closest_to(self.unit, target) # se deplace le plus lioin possible en fonction de la capacité de la troupe
+            return False
+            # Redondant mais besoin pour la clarté du code
+
+
 class FormationOrder(Order):
     def __init__(self, unit, units):
         super().__init__(unit)
