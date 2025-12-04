@@ -11,10 +11,12 @@ class Unit:
         self.team = team                    # choix de l'equipe
         self.armor = armor                  # valeur de l'armure
         self.attack = attack                # nombre de degats infliges
+        self.damage_dealt = 0               # degats infliges lors de la derniere attaque
         self.range = range                  # portee de l'unite
         self.size = size                    # taille de l'unite
         self.sight = sight                  # Distance champ de vision
         self.speed = speed                  # vitesse de deplacement
+        self.distance_moved = 0             # distance parcourue lors du dernier deplacement
         self.accuracy = accuracy            # precision de l'unite
         self.reload = reload                # avanncement du rechargement, peut attaquer a 0
         self.reload_time = reload_time      # temps pour recharger
