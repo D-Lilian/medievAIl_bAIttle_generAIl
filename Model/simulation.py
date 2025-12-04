@@ -5,6 +5,7 @@ import math
 import Model.Units as Units
 from Model.Scenario import Scenario
 
+
 # boucle sur les ordres de orderManager, chaque ordre appelant une fonction de simulation
 # une fois par tick un seul mouvement et une seule attaque par unite
 # chaque tick, on verifie si une unite peut attaquer, sinon elle bouge vers l'ennemi le plus proche
@@ -51,10 +52,13 @@ class Simulation:
             self.tick += 1
             # print(self.tick)
 
-            for unit in self.reload_units:
+            for unit in list(self.reload_units):
                 unit.update_reload(1 / DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
                 if unit.can_attack():
-                    self.reload_units.remove(unit)
+                    try:
+                        self.reload_units.remove(unit)
+                    except ValueError:
+                        pass
 
             if self.paused:
                 while self.paused:
@@ -308,15 +312,7 @@ if __name__ == "__main__":
 
     start_time = time.perf_counter()
 
-    scenario = Scenario(
-        units=units,
-        units_a=units_a,
-        units_b=units_b,
-        general_a=None,
-        general_b=None,
-        size_x=200,
-        size_y=200
-    )
+    scenario = Scenario(units, units_a, units_b, None, None, size_x=200, size_y=200)
 
     sim = Simulation(
         scenario=scenario,
