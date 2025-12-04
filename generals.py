@@ -161,7 +161,7 @@ if __name__ == '__main__':
             UnitType.CROSSBOWMAN:StrategieBrainDead(UnitType.CROSSBOWMAN),
             UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
             UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
-        }
+        _}
     )
     SOMEIQ = General(
         unitsA,
