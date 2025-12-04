@@ -38,7 +38,9 @@ class Simulation:
             random.shuffle(self.scenario.units)
 
             for unit in self.scenario.units:
-                enemy = self.get_nearest_enemy_unit(unit)
+                if unit.hp <= 0:
+                    continue
+                enemy = self.get_nearest_enemy_in_reach(unit)
                 if enemy is None:
                     continue
                 if self.is_in_reach(unit, enemy) and unit.can_attack():
@@ -50,7 +52,7 @@ class Simulation:
                     self.move_unit_towards_unit(unit, enemy)
                     # print("Move : ", unit.name, " at (", unit.x, ",", unit.y, ") moves towards ", enemy.name, " at (", enemy.x, ",", enemy.y, ")")
             self.tick += 1
-            # print(self.tick)
+            print(self.tick)
 
             for unit in list(self.reload_units):
                 unit.update_reload(1 / DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
@@ -70,9 +72,23 @@ class Simulation:
 
     def finished(self):
         """Check if the simulation has finished."""
-        if not self.scenario.units_a or not self.scenario.units_b:
-            print("Ticks : ", self.tick, "Team A units left:", len(self.scenario.units_a), "  | Team B units left:", len(self.scenario.units_b))
+        count_a = 0
+        count_b = 0
+
+        for unit in self.scenario.units_a:
+            if unit.hp > 0:
+                count_a += 1
+        if count_a == 0:
+            print("Ticks : ", self.tick, "Team A units left:", count_a, "  | Team B units left:", count_b)
             return True
+
+        for unit in self.scenario.units_b:
+            if unit.hp > 0:
+                count_b += 1
+        if count_b == 0:
+            print("Ticks : ", self.tick, "Team A units left:", count_a, "  | Team B units left:", count_b)
+            return True
+
         return self.tick >= self.tick_speed * 240
 
     ## ----------- Movement functions -------------
@@ -115,7 +131,7 @@ class Simulation:
 
                 collision_occurred = False
                 for other in self.scenario.units:
-                    if other is not attacker_unit:
+                    if other is not attacker_unit and other.hp > 0:
 
                         dist = self.distance_between_coordinates(new_x, new_y, other.x, other.y)
                         min_distance = attacker_unit.size + other.size
@@ -145,13 +161,15 @@ class Simulation:
                 attacker_unit.y = final_y
 
                 self.as_unit_moved = True
+                attacker_unit.distance_traveled += move_distance
+                return True
         return False
 
     ## ----------- Combat functions -------------
 
     def is_in_sight(self, attacker_unit, target_unit):
         """Check if target is within sight of the attacker."""
-        if attacker_unit in self.scenario.units and target_unit in self.scenario.units:
+        if attacker_unit in self.scenario.units and target_unit in self.scenario.units and attacker_unit.hp > 0 and target_unit.hp > 0:
             center_distance = self.distance_between_coordinates(attacker_unit.x, attacker_unit.y, target_unit.x, target_unit.y)
             surface_distance = center_distance - (attacker_unit.size + target_unit.size)
 
@@ -160,7 +178,7 @@ class Simulation:
 
     def is_in_reach(self, attacker_unit, target_unit):
         """Check if target is within range of the attacker."""
-        if attacker_unit in self.scenario.units and target_unit in self.scenario.units:
+        if attacker_unit in self.scenario.units and target_unit in self.scenario.units and attacker_unit.hp > 0 and target_unit.hp > 0:
             center_distance = self.distance_between_coordinates(attacker_unit.x, attacker_unit.y, target_unit.x, target_unit.y)
             surface_distance = center_distance - (attacker_unit.size + target_unit.size)
 
@@ -173,6 +191,8 @@ class Simulation:
         nearest_unit = None
         nearest_distance = float('inf')
         for enemy in enemy_units:
+            if enemy.hp <= 0:
+                continue
             distance = self.distance_between_coordinates(unit.x, unit.y, enemy.x, enemy.y)
             if distance < nearest_distance:
                 nearest_distance = distance
@@ -184,34 +204,36 @@ class Simulation:
         enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
         nearest_unit = None
         nearest_distance = float('inf')
-        for enemy in enemy_units:
-            if typeTarget is not None and enemy.unit_type != typeTarget:
+        for target_unit in enemy_units:
+            if (typeTarget is not None and target_unit.unit_type != typeTarget) or target_unit.hp <= 0:
                 continue
-            if self.is_in_sight(unit, enemy):
-                distance = self.distance_between_coordinates(unit.x, unit.y, enemy.x, enemy.y)
+            if self.is_in_sight(unit, target_unit):
+                distance = self.distance_between_coordinates(unit.x, unit.y, target_unit.x, target_unit.y)
                 if distance < nearest_distance:
                     nearest_distance = distance
-                    nearest_unit = enemy
+                    nearest_unit = target_unit
         return nearest_unit
 
     def get_nearest_enemy_in_reach(self, unit, typeTarget=None):
         """Return the nearest enemy unit in reach of the given unit."""
+        if unit.hp <= 0:
+            return None
         enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
         nearest_unit = None
         nearest_distance = float('inf')
-        for enemy in enemy_units:
-            if typeTarget is not None and enemy.unit_type != typeTarget:
+        for target_unit in enemy_units:
+            if (typeTarget is not None and target_unit.unit_type != typeTarget) or target_unit.hp <= 0:
                 continue
-            if self.is_in_reach(unit, enemy):
-                distance = self.distance_between_coordinates(unit.x, unit.y, enemy.x, enemy.y)
+            if self.is_in_reach(unit, target_unit):
+                distance = self.distance_between_coordinates(unit.x, unit.y, target_unit.x, target_unit.y)
                 if distance < nearest_distance:
                     nearest_distance = distance
-                    nearest_unit = enemy
+                    nearest_unit = target_unit
         return nearest_unit
 
     def attack_unit(self,attacker_unit, target_unit):
         """Perform an attack on a target unit if possible."""
-        if attacker_unit.can_attack() and self.is_in_reach(attacker_unit, target_unit):
+        if attacker_unit.can_attack() and self.is_in_reach(attacker_unit, target_unit) and attacker_unit.hp > 0 and target_unit.hp > 0:
             elevation_modifier = 1.0
             accuracy_modifier = attacker_unit.accuracy
             base_damage = 0
@@ -225,13 +247,8 @@ class Simulation:
             target_unit.hp -= damage
             # print("Damage : ", attacker_unit.name, " at (", attacker_unit.x, ",", attacker_unit.y, ") deals ", (base_damage * elevation_modifier * accuracy_modifier), " to ", target_unit.name, " at (", target_unit.x, ",", target_unit.y, ") (HP left: ", target_unit.hp, ")")
 
-            if target_unit.hp <= 0:
-                self.scenario.units.remove(target_unit)
-                team_list = self.scenario.units_a if target_unit.team == "A" else self.scenario.units_b
-                team_list.remove(target_unit)
-                # print("Dead : ", target_unit.name, " at (", target_unit.x, ",", target_unit.y, ") killed by ", attacker_unit.name, " at (", attacker_unit.x, ",", attacker_unit.y, ")")
-
             attacker_unit.perform_attack()
+            attacker_unit.damage_dealt += damage
             self.reload_units.append(attacker_unit)
             return True
         return False
@@ -251,8 +268,21 @@ class Simulation:
     def is_in_formation(self, unit, units, type_formation='ROND'):
         """Check if the unit is in the specified formation with the given units."""
         if type_formation == 'ROND':
-            center_x = sum(u.x for u in units) / len(units)
-            center_y = sum(u.y for u in units) / len(units)
+            count = 0
+            center_x = 0
+            center_y = 0
+            for u in units:
+                if u.hp <= 0:
+                    continue
+                center_x += u.x
+                center_y += u.y
+                count += 1
+
+            if count <= 0:
+                return False
+
+            center_x /= count
+            center_y /= count
 
             angle = math.atan2(unit.y - center_y, unit.x - center_x)
             desired_distance = 5
@@ -301,11 +331,13 @@ if __name__ == "__main__":
     units_b = []
     units = []
     for i in range (0, 100):
-        temp = Units.Knight("A", 20 + i % 20, 10 + i % 5)
+        temp = Units.Crossbowman("A", 20 + i % 20, 10 + i % 5)
+        temp.range = 50
         units_a.append(temp)
         units.append(temp)
 
-        temp = Units.Knight("B", 20 + i % 20, 50 + i % 5)
+        temp = Units.Crossbowman("B", 20 + i % 20, 50 + i % 5)
+        temp.range = 50
         units_b.append(temp)
         units.append(temp)
 
