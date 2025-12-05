@@ -1,4 +1,4 @@
-from Model.units import UnitType
+from Model.Units import UnitType
 from errors import WrongArguments
 from orders import AttackOnSightOrder, AvoidOrder, AttackOnReachOrder, StayInReachOrder, SacrificeOrder, \
     MoveByStepOrder, StayInFriendlySpaceOrder, AttackNearestTroupOmniscient

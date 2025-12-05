@@ -1,7 +1,7 @@
 #from generals import GameEngineError,WrongArguments
 
 from Model import simulation
-from Model.units import Unit
+from Model.Units import Unit
 
 
 class Order:
@@ -28,7 +28,7 @@ class MoveOrder(Order):
     def Try(self, simu):
         if simu.compare_position(self.unit, self.x, self.y):
             return True # L'ordre a bien été réussi
-        simu.move_unit_closest_to_xy(self.unit, self.x, self.y) # l'appel peut echouer ou pas, c pas grave on reessayera au prochain tick
+        simu.move_unit_towards_coordinates(self.unit, self.x, self.y) # l'appel peut echouer ou pas, c pas grave on reessayera au prochain tick
         return False
 
 
@@ -69,11 +69,11 @@ class AvoidOrder(Order):
         self.typeUnits = typeUnits
 
     def Try(self, simu):
-        target = simu.get_nearest_troup_in_sight(self.unit, type_units=self.typeUnits)
+        target = simu.get_nearest_enemy_in_sight(self.unit, type_units=self.typeUnits)
         if target is None:
             return False # Il ya aucune enemy nearby
 
-        if simu.is_in_range(target, self.Unit): # NOTE l'ordre des arguments ici est inversée
+        if simu.is_in_reach(target, self.Unit): # NOTE l'ordre des arguments ici est inversée
             if simu.move_one_step_towards_dir(self.unit,self.target, 180): # TODO angle
                 return False
         else:
@@ -93,8 +93,8 @@ class StayInFriendlySpaceOrder(Order):
         if friendly is None:
             return False # Il ya aucune enemy nearby
 
-        if simu.is_in_range(friendly, self.unit): # NOTE l'ordre des arguments ici est inversée
-            if simu.move_unit_closest_to(self.unit,friendly):
+        if simu.is_in_reach(friendly, self.unit): # NOTE l'ordre des arguments ici est inversée
+            if simu.move_unit_towards_unit(self.unit, friendly):
                 return False
         else:
             return False
@@ -112,14 +112,14 @@ class MoveTowardEnemyWithSpecificAttribute(Order):
         current_target = None
 
         if self.fixed and self.target:
-            if simu.IsUnitValid(self.target):
+            if simu.is_unit_still_alive(self.target):
                 current_target = self.target
             else:
                 self.target = None
                 return False
 
         if current_target is None:
-            current_target = simu.GetNearestEnemyWithAttribute( # TODO
+            current_target = simu.get_nearest_enemy_with_attibutes( # TODO
                 self.unit, self.attribute_name, self.attribute_value
             )
 
@@ -127,7 +127,7 @@ class MoveTowardEnemyWithSpecificAttribute(Order):
                 self.target = current_target
 
         if current_target:
-            simu.move_unit_closest_to(self.unit, current_target)
+            simu.move_unit_towards_unit(self.unit, current_target)
 
         return False
 
@@ -139,8 +139,8 @@ class AttackOrder(Order):
 
     def Try(self, simu):
         # todo enlever le isinrgange
-        if simu.is_in_range(self.unit, self.target):
-            killed = simu.kill(self.unit, self.target)
+        if simu.is_in_reach(self.unit, self.target):
+            killed = simu.attack_unit(self.unit, self.target)
             if not killed:
                 return False
             return True
@@ -155,7 +155,7 @@ class StayInReachOrder(Order):
         if simu.is_in_reach(self.unit, self.target):
             return False
 
-        simu.move_unit_closest_to(self.unit, self.target) # se deplace le plus lioin possible en fonction de la capacité de la troupe
+        simu.move_unit_towards_unit(self.unit, self.target) # se deplace le plus lioin possible en fonction de la capacité de la troupe
         return False
 
 
@@ -165,10 +165,10 @@ class AttackOnReachOrder(Order):
         self.typeTarget = typeTarget
 
     def Try(self, simu):
-        target = simu.get_nearest_troup_in_reach(self.unit, type_target=self.typeTarget)
+        target = simu.get_nearest_enemy_in_reach(self.unit, type_target=self.typeTarget)
         if target is None:
             return False
-        simu.kill(self.unit, target)
+        simu.attack_unit(self.unit, target)
         return False
 
 class AttackOnSightOrder(Order):
@@ -180,16 +180,16 @@ class AttackOnSightOrder(Order):
         self.typeTarget = typeTarget
 
     def Try(self, simu):
-        target = simu.get_nearest_troup_in_sight(self.unit, type_target=self.typeTarget)
+        target = simu.get_nearest_enemy_in_sight(self.unit, type_target=self.typeTarget)
         if target is None:
             return False
 
-        if simu.is_in_range(self.unit, target):
-            simu.kill(self.unit, target) # Renvoi faux si la troupe est morte, true sinon
+        if simu.is_in_reach(self.unit, target):
+            simu.attack_unit(self.unit, target) # Renvoi faux si la troupe est morte, true sinon
             return False
         else:
             #self.unit.PushOrder(MoveOrder(
-            simu.move_unit_closest_to(self.unit, target) # se deplace le plus lioin possible en fonction de la capacité de la troupe
+            simu.move_unit_towards_unit(self.unit, target) # se deplace le plus lioin possible en fonction de la capacité de la troupe
             return False
             # Redondant mais besoin pour la clarté du code
 
@@ -203,12 +203,12 @@ class AttackNearestTroupOmniscient(Order):
         if target is None:
             return False
 
-        if simu.is_in_range(self.unit, target):
-            simu.kill(self.unit, target) # Renvoi faux si la troupe est morte, true sinon
+        if simu.is_in_reach(self.unit, target):
+            simu.attack_unit(self.unit, target) # Renvoi faux si la troupe est morte, true sinon
             return False
         else:
             #self.unit.PushOrder(MoveOrder(
-            simu.move_unit_closest_to(self.unit, target) # se deplace le plus lioin possible en fonction de la capacité de la troupe
+            simu.move_unit_towards_unit(self.unit, target) # se deplace le plus lioin possible en fonction de la capacité de la troupe
             return False
             # Redondant mais besoin pour la clarté du code
 
@@ -233,11 +233,11 @@ class isInDangerOrder(Order):
 
 
     def Try(self,simu):
-        target = simu.get_nearest_troup_in_sight(self.friendly, self.typeTarget)
+        target = simu.get_nearest_enemy_in_sight(self.friendly, self.typeTarget)
         if target is None:
             return False
 
-        simu.move_unit_closest_to(self.unit, target)
+        simu.move_unit_towards_unit(self.unit, target)
         return False
 
 class _Node:
