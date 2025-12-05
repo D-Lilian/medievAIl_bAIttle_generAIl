@@ -40,9 +40,11 @@ class Unit:
 
 
 class UnitType(Enum):
-    CROSSBOWMAN = "Crossbowman"
-    KNIGHT = "Knight"
-    PIKEMAN = "Pikeman"
+    CROSSBOWMAN = 0
+    KNIGHT = 1
+    PIKEMAN = 2
+    NONE = 3
+    ALL = None
 
 
 class Crossbowman(Unit):
