@@ -1,10 +1,12 @@
 from enum import Enum
 
 
+
 class Unit:
 
     def __init__(self, unit_type, name, team, hp, armor, attack, range, size, sight, speed, accuracy, reload,
                  reload_time, x, y, order_manager):
+        from Model.orders import OrderManager
         self.unit_type = unit_type
         self.name = name
         self.hp = hp                        # <=0 si l'unite est morte
