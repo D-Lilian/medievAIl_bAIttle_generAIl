@@ -20,7 +20,7 @@ class Unit:
         self.reload_time = reload_time      # temps pour recharger
         self.x = x                          # coordonnee en X
         self.y = y                          # coordonnee en Y
-        self.order_manager = order_manager  # ordres donnees par le gerenal
+        self.order_manager = OrderManager()  # ordres donnees par le gerenal
 
     def can_attack(self):
         """Check if the unit can perform an attack."""

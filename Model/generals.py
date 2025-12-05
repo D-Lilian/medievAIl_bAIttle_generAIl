@@ -121,11 +121,6 @@ if __name__ == '__main__':
     unitsA = [Crossbowman('A', 0, 0) for i in range(200)] + [Knight('A', 0, 0) for i in range(200)] + [Pikeman('A', 0, 0) for i in range(200)]
     unitsB = [Crossbowman('B', 0, 0) for i in range(200)] + [Knight('B', 0, 0) for i in range(200)] + [Pikeman('B', 0, 0) for i in range(200)]
 
-    for u in unitsA:
-        u.order_manager = OrderManager()
-
-    for u in unitsB:
-        u.order_manager = OrderManager()
 
    # DAFT1 = General(unitsA,
    #                 unitsB,
