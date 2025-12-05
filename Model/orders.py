@@ -366,7 +366,7 @@ class OrderManager:
 
 
 if __name__ == "__main__":
-    u1 = "Archer"
+    u1 = "Crossbowman"
     ##u1 = Unit()
     om = OrderManager()
     #u1.om = om
