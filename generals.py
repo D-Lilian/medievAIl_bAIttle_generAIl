@@ -21,9 +21,6 @@ class General:
                  knights_depleted=None,
                  spikemen_depleted=None,
                  ):
-        # Set UNits
-        if(len(unitsB) != len(unitsA) != 200): #vérification de la longueur des unités
-            raise WrongArguments("Not enough arguments")
 
         self.MyUnits = unitsA
         self.HistUnits = unitsB
@@ -143,7 +140,7 @@ if __name__ == '__main__':
    # DAFT2 = General(unitsB,
    #                 unitsA,
    #                 sS=None,
-   #                 sT={
+   #                 sT=cart_prod ("ab", {1,2,3}){
    #                     UnitType.CROSSBOWMAN:StrategieBrainDead(UnitType.CROSSBOWMAN),
    #                     UnitType.KNIGHT:StrategieBrainDead(UnitType.KNIGHT),
    #                     UnitType.PIKEMAN:StrategieBrainDead(UnitType.PIKEMAN)
