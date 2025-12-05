@@ -164,8 +164,8 @@ class Camera:
         @param fast True for faster movement (when Shift is pressed)
         """
         speed = self.scroll_speed_fast if fast else self.scroll_speed_normal
-        self.x += dx * speed
-        self.y += dy * speed
+        self.x += dx * speed * self.zoom_level
+        self.y += dy * speed * self.zoom_level
     
     def toggle_zoom(self):
         """
@@ -401,6 +401,10 @@ class TerminalView(ViewInterface):
         # Zoom
         if key in (ord('m'), ord('M')):
             self.camera.toggle_zoom()
+            # Re-clamp camera after zoom change
+            max_y, max_x = self.stdscr.getmaxyx()
+            ui_height = 5 if self.show_ui else 0
+            self.camera.clamp(self.board_width, self.board_height, max_x, max_y, ui_height)
             return True
         
         # Toggle auto-follow
@@ -431,15 +435,19 @@ class TerminalView(ViewInterface):
         if key in (ord('z'), ord('Z'), curses.KEY_UP):
             fast = key == ord('Z')
             self.camera.move(0, -1, fast)
+            self.auto_follow = False  # Disable auto-follow on manual movement
         elif key in (ord('s'), ord('S'), curses.KEY_DOWN):
             fast = key == ord('S')
             self.camera.move(0, 1, fast)
+            self.auto_follow = False
         elif key in (ord('q'), ord('Q'), curses.KEY_LEFT):
             fast = key == ord('Q')
             self.camera.move(-1, 0, fast)
+            self.auto_follow = False
         elif key in (ord('d'), ord('D'), curses.KEY_RIGHT):
             fast = key == ord('D')
             self.camera.move(1, 0, fast)
+            self.auto_follow = False
         
         return True
     
