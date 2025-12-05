@@ -43,8 +43,8 @@ class UnitType(Enum):
     CROSSBOWMAN = 0
     KNIGHT = 1
     PIKEMAN = 2
-    NONE = 3
-    ALL = None
+    ALL = 3
+    NONE = None
 
 
 class Crossbowman(Unit):
