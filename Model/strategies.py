@@ -77,7 +77,7 @@ class StrategieStartDAFT(StrategyStart):
 # Aucune favorite troup
 class StrategieBrainDead(StrategyTroup):
     def __init__(self, general):
-        super().__init__(general, "All", "None")
+        super().__init__(general, None, None)
 
     def apply_order(self, general, unit):
         #unit.order_manager.Add(AttackOnReachOrder(unit, self.favoriteTroup), 0)
@@ -123,7 +123,7 @@ class StrategieCrossbowmanSomeIQ(StrategyTroup): #focus Pikeman (faibles au tir)
         if self.favoriteTroup is not None:
             unit.order_manager.Add(AttackOnSightOrder(unit,self.favoriteTroup), 1) # attaquer en priorité les pikemen
         else:
-            unit.order_manager.Add(AttackOnSightOrder(unit,"All"), 1)
+            unit.order_manager.Add(AttackOnSightOrder(unit,None), 1)
 
 
 class StrategieKnightSomeIQ(StrategyTroup):
@@ -132,7 +132,7 @@ class StrategieKnightSomeIQ(StrategyTroup):
     
     def apply_order(self, general, unit):
         unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.CROSSBOWMAN), 0)
-        unit.order_manager.Add(AttackOnSightOrder(unit,"ALL"), 1)
+        unit.order_manager.Add(AttackOnSightOrder(unit,None), 1)
 
 class StrategiePikemanSomeIQ(StrategyTroup):
     def __init__(self):
@@ -140,7 +140,7 @@ class StrategiePikemanSomeIQ(StrategyTroup):
 
     def applyOrder(self, general, unit):
         unit.order_manager.Add(StayInReachOrder(unit,UnitType.CROSSBOWMAN), 0)
-        unit.order_manager.Add(AttackOnSightOrder(unit,"All"), 1) # On push/insere/add un ordre de priorité 0
+        unit.order_manager.Add(AttackOnSightOrder(unit,None), 1) # On push/insere/add un ordre de priorité 0
        # stay in friendly zone a cote des srossbowmen et attaquer
     """for crossbowman in [u for u in general.MyUnits if u.Type == "Crossbowman"]:
         unit.order_manager.Add(StayInFriendlySpaceOrder(unit, "Crossbowman"), 0)
