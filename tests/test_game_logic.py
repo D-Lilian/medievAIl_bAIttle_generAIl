@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, '../View')
 from collections import Counter
 
-from terminal_view import TerminalView
+from View.terminal_view import TerminalView
 from simple_game_logic import create_test_scenario
 
 

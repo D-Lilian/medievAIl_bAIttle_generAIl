@@ -794,7 +794,7 @@ class TerminalView(ViewInterface):
         """
         # Handle user input
         if not self.handle_input():
-            return False  # Signal pour quitter
+            return False  
         
         # Get terminal dimensions
         max_y, max_x = self.stdscr.getmaxyx()
