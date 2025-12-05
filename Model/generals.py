@@ -1,6 +1,6 @@
 from orders import OrderManager
 from Model.Units import Unit, UnitType, Crossbowman, Knight, Pikeman
-from strategies import StrategyStart,StrategyTroup,StrategieDAFT,StrategiePikemanDAFT,StrategieNoPikemanFallback,StrategiePikemanSomeIQ,StrategieBrainDead,StrategiePikemanBrainDead,StrategieStartDAFT,StrategieCrossbowmanDAFT,StrategieKnightDAFT,StrategieStartSomeIQ,StrategieCrossbowmanSomeIQ,StrategieKnightSomeIQ,StrategieCrossbowmanFallbackSomeIQ,StrategieNoKnightFallbackSomeIQ,StrategieStartBrainDead,StrategieCrossbowmanBrainDead,StrategieKnightBrainDead
+from strategies import *
 
 from errors import *
 
