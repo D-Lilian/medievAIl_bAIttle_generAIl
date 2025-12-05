@@ -25,6 +25,47 @@ import curses
 from typing import List
 import time
 import sys
+import random
+
+# Try to import Model modules
+try:
+    from Model.simulation import Simulation, DEFAULT_NUMBER_OF_TICKS_PER_SECOND
+    from Model.Scenario import Scenario
+    from Model.Units import Knight, Pikeman, Crossbowman, UnitType
+    
+    # Monkey-patch Simulation to add a step method if it doesn't exist
+    if not hasattr(Simulation, 'step'):
+        def simulation_step(self):
+            """Execute one simulation step (tick)."""
+            random.shuffle(self.scenario.units)
+
+            for unit in self.scenario.units:
+                if unit.hp <= 0:
+                    continue
+                enemy = self.get_nearest_enemy_in_reach(unit)
+                if enemy is None:
+                    continue
+                if self.is_in_reach(unit, enemy) and unit.can_attack():
+                    self.attack_unit(unit, enemy)
+                    unit.reload = unit.reload_time
+                else:
+                    self.move_unit_towards_unit(unit, enemy)
+            
+            self.tick += 1
+
+            for unit in list(self.reload_units):
+                unit.update_reload(1 / DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
+                if unit.can_attack():
+                    try:
+                        self.reload_units.remove(unit)
+                    except ValueError:
+                        pass
+                        
+        Simulation.step = simulation_step
+        
+except ImportError:
+    # Fallback for standalone testing without Model
+    pass
 
 
 class Team(Enum):
@@ -541,6 +582,22 @@ class TerminalView(ViewInterface):
             'reload_time': reload_time, 'reload_val': reload_val
         }
 
+    def _resolve_team(self, team_val) -> Team:
+        """Resolve team value to Team enum."""
+        if isinstance(team_val, Team):
+            return team_val
+        if team_val in (1, 'A', 'a'):
+            return Team.A
+        return Team.B
+
+    def _get_units_from_simulation(self, simulation) -> list:
+        """Retrieve units list from simulation (Scenario or Board)."""
+        if hasattr(simulation, 'scenario') and hasattr(simulation.scenario, 'units'):
+            return simulation.scenario.units
+        if hasattr(simulation, 'board') and hasattr(simulation.board, 'units'):
+            return simulation.board.units
+        return []
+
     def update_units_cache(self, simulation):
         """
         Update the unit cache from the simulation.
@@ -548,7 +605,6 @@ class TerminalView(ViewInterface):
         Args:
             simulation: Simulation instance containing the units
         """
-        # self.units_cache.clear()
         self.units_cache.clear()
         self.team1_units = 0
         self.team2_units = 0
@@ -557,69 +613,48 @@ class TerminalView(ViewInterface):
         self.type_counts_team1 = {}
         self.type_counts_team2 = {}
         
-        # Fetch units from simulation
-        # Adapt depending on your Model architecture
-        if hasattr(simulation, 'board') and hasattr(simulation.board, 'units'):
-            for unit in simulation.board.units:
-                if not hasattr(unit, 'hp'):
-                    continue
-                fields = self._extract_unit_fields(unit)
-                letter = self._resolve_letter(fields['type'])
-                status = UnitStatus.ALIVE if fields['alive'] else UnitStatus.DEAD
-                # Support pour team = 1/2, 'A'/'B', ou Team.A/Team.B
-                team_val = fields['team']
-                if isinstance(team_val, Team):
-                    team = team_val
-                elif team_val in (1, 'A', 'a'):
-                    team = Team.A
-                else:
-                    team = Team.B
+        for unit in self._get_units_from_simulation(simulation):
+            if not hasattr(unit, 'hp'):
+                continue
                 
-                repr_obj = UniteRepr(
-                    type=fields['type'],
-                    team=team,
-                    letter=letter,
-                    x=fields['x'],
-                    y=fields['y'],
-                    hp=max(0, fields['hp']),
-                    hp_max=fields['hp_max'],
-                    status=status
-                )
-                self.units_cache.append(repr_obj)
+            fields = self._extract_unit_fields(unit)
+            team = self._resolve_team(fields['team'])
+            
+            repr_obj = UniteRepr(
+                type=fields['type'],
+                team=team,
+                letter=self._resolve_letter(fields['type']),
+                x=fields['x'],
+                y=fields['y'],
+                hp=max(0, fields['hp']),
+                hp_max=fields['hp_max'],
+                status=UnitStatus.ALIVE if fields['alive'] else UnitStatus.DEAD
+            )
+            self.units_cache.append(repr_obj)
 
-                # Record death time for temporary blinking
-                uid = id(repr_obj)
-                if not fields['alive']:
-                    # If the unit just died, record the time
-                    if uid not in self._death_times:
-                        self._death_times[uid] = time.perf_counter()
+            # Record death time for temporary blinking
+            uid = id(repr_obj)
+            if not fields['alive']:
+                if uid not in self._death_times:
+                    self._death_times[uid] = time.perf_counter()
+            elif uid in self._death_times:
+                del self._death_times[uid]
+            
+            # Update statistics
+            is_team_a = (team == Team.A)
+            target_counts = self.type_counts_team1 if is_team_a else self.type_counts_team2
+            
+            if fields['alive']:
+                target_counts[fields['type']] = target_counts.get(fields['type'], 0) + 1
+                if is_team_a:
+                    self.team1_units += 1
                 else:
-                    # If still alive, make sure it is not marked as dead
-                    if uid in self._death_times:
-                        del self._death_times[uid]
-                
-                # Counts (support team = 1/2, 'A'/'B' or Team enum)
-                team_val = fields['team']
-                if isinstance(team_val, Team):
-                    is_team_a = (team_val == Team.A)
-                elif team_val in (1, 'A', 'a'):
-                    is_team_a = True
+                    self.team2_units += 1
+            else:
+                if is_team_a:
+                    self.dead_team1 += 1
                 else:
-                    is_team_a = False
-                    
-                target_counts = self.type_counts_team1 if is_team_a else self.type_counts_team2
-                
-                if fields['alive']:
-                    target_counts[fields['type']] = target_counts.get(fields['type'], 0) + 1
-                    if is_team_a:
-                        self.team1_units += 1
-                    else:
-                        self.team2_units += 1
-                else:
-                    if is_team_a:
-                        self.dead_team1 += 1
-                    else:
-                        self.dead_team2 += 1
+                    self.dead_team2 += 1
         
         # Update simulation time
         if hasattr(simulation, 'elapsed_time'):
@@ -959,46 +994,49 @@ class TerminalView(ViewInterface):
         return self.debug_snapshot()
 
 
+# --- Dummy Classes for Testing and Demo ---
+
+class DummyUnit:
+    def __init__(self, x, y, equipe, unit_type, hp, hp_max):
+        self.x = x
+        self.y = y
+        self.equipe = equipe
+        self.hp = hp
+        self.hp_max = hp_max
+        self.name = unit_type
+
+class DummyBoard:
+    def __init__(self):
+        self.units = []
+        # Mirror formation: team 1 on the left, team 2 on the right
+        formations = [
+            ('Knight', 100, 100),
+            ('Pikeman', 55, 55),
+            ('Crossbowman', 30, 30),
+        ]
+        
+        # Team A (left) - Cyan
+        for i, (unit_type, hp, hp_max) in enumerate(formations):
+            self.units.append(DummyUnit(20, 30 + i*5, 'A', unit_type, hp, hp_max))
+        
+        # Team B (right) - Red - mirror
+        for i, (unit_type, hp, hp_max) in enumerate(formations):
+            self.units.append(DummyUnit(100, 30 + i*5, 'B', unit_type, hp, hp_max))
+
+class DummySimulation:
+    def __init__(self):
+        self.board = DummyBoard()
+        self.elapsed_time = 0.0
+    def step(self):
+        # Both teams move towards each other
+        for u in self.board.units:
+            if u.hp > 0:
+                u.x += 0.3 if u.equipe == 1 else -0.3
+        self.elapsed_time += 0.05
+
+
 def create_dummy_simulation():
     """Simple simulation fixture for unit tests."""
-    class DummyUnit:
-        def __init__(self, x, y, equipe, unit_type, hp, hp_max):
-            self.x = x
-            self.y = y
-            self.equipe = equipe
-            self.hp = hp
-            self.hp_max = hp_max
-            self.name = unit_type
-
-    class DummyBoard:
-        def __init__(self):
-            self.units = []
-            # Mirror formation: team 1 on the left, team 2 on the right
-            formations = [
-                ('Knight', 100, 100),
-                ('Pikeman', 55, 55),
-                ('Crossbowman', 30, 30),
-            ]
-            
-            # Team A (left) - Cyan
-            for i, (unit_type, hp, hp_max) in enumerate(formations):
-                self.units.append(DummyUnit(20, 30 + i*5, 'A', unit_type, hp, hp_max))
-            
-            # Team B (right) - Red - mirror
-            for i, (unit_type, hp, hp_max) in enumerate(formations):
-                self.units.append(DummyUnit(100, 30 + i*5, 'B', unit_type, hp, hp_max))
-
-    class DummySimulation:
-        def __init__(self):
-            self.board = DummyBoard()
-            self.elapsed_time = 0.0
-        def step(self):
-            # Both teams move towards each other
-            for u in self.board.units:
-                if u.hp > 0:
-                    u.x += 0.3 if u.equipe == 1 else -0.3
-            self.elapsed_time += 0.05
-
     return DummySimulation()
 
 def main_test():
@@ -1028,58 +1066,45 @@ def main_test():
 def main_demo():
     """Demo function for the terminal view."""
     
-    # Classe factice de simulation pour la démo
-    class DummyUnit:
-        def __init__(self, x, y, equipe, unit_type, hp, hp_max):
-            self.x = x
-            self.y = y
-            self.equipe = equipe
-            self.hp = hp
-            self.hp_max = hp_max
-            self.name = unit_type
-    
-    class DummyBoard:
-        def __init__(self):
-            self.units = []
-            # Face-to-face formations: team 1 on the left, team 2 on the right
-            formations = [
-                ('Knight', 100, 100),
-                ('Knight', 100, 100),
-                ('Pikeman', 55, 55),
-                ('Pikeman', 55, 55),
-                ('Crossbowman', 35, 35),
-                ('Crossbowman', 35, 35),
-                ('Long Swordsman', 60, 60),
-            ]
-            
-            # Team A (left, cyan)
-            for i, (unit_type, hp, hp_max) in enumerate(formations):
-                self.units.append(DummyUnit(15, 20 + i*3, 'A', unit_type, hp, hp_max))
-            
-            # Team B (right, red) - mirrored formation
-            for i, (unit_type, hp, hp_max) in enumerate(formations):
-                self.units.append(DummyUnit(105, 20 + i*3, 'B', unit_type, hp, hp_max))
-    
-    class DummySimulation:
-        def __init__(self):
-            self.board = DummyBoard()
-            self.elapsed_time = 0.0
+    # Try to use real Model if available
+    if 'Simulation' in globals() and 'Scenario' in globals():
+        units = []
+        units_a = []
+        units_b = []
         
-        def step(self):
-            # Both armies move closer to each other
-            for unit in self.board.units:
-                if unit.equipe == 1:
-                    unit.x += 0.5
-                else:
-                    unit.x -= 0.5
-            self.elapsed_time += 0.05
+        # Team A (Cyan) - Left side
+        for i in range(5):
+            u = Knight(1, 20, 20 + i*5)
+            units.append(u)
+            units_a.append(u)
+        
+        for i in range(5):
+            u = Pikeman(1, 25, 20 + i*5)
+            units.append(u)
+            units_a.append(u)
+            
+        # Team B (Red) - Right side
+        for i in range(5):
+            u = Knight(2, 100, 20 + i*5)
+            units.append(u)
+            units_b.append(u)
+            
+        for i in range(5):
+            u = Pikeman(2, 95, 20 + i*5)
+            units.append(u)
+            units_b.append(u)
+            
+        scenario = Scenario(units, units_a, units_b, None, None, 120, 120)
+        simulation = Simulation(scenario, tick_speed=20)
+    else:
+        # Fallback to dummy simulation
+        simulation = DummySimulation()
     
     # Create the view
     view = TerminalView(120, 120, tick_speed=20)
     
     try:
         view.init_curses()
-        simulation = DummySimulation()
         
         # Main loop
         running = True
