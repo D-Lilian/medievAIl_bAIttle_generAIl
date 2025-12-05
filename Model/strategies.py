@@ -36,7 +36,7 @@ class StrategyTroup:
 # Aucune favorite troup
 class StrategieDAFT(StrategyTroup):
     def __init__(self, general):
-        super().__init__(general, "All", "None")
+        super().__init__(general, UnitType.ALL, UnitType.NONE)
 
     def apply_order(self, general, unit):
         print("Applying order")
@@ -45,21 +45,21 @@ class StrategieDAFT(StrategyTroup):
 ## Deprecated
 class StrategieCrossbowmanDAFT(StrategyTroup):
     def __init__(self, general):
-        super().__init__(general, "All", "None")
+        super().__init__(general, UnitType.ALL, UnitType.NONE)
 
     def apply_order(self, general, unit):
         unit.order_manager.Add(AttackOnSightOrder(unit, None), 0)
 
 class StrategieKnightDAFT(StrategyTroup):
     def __init__(self, general):
-        super().__init__(general, "All", "None")
+        super().__init__(general, UnitType.ALL, UnitType.NONE)
 
     def apply_order(self, general, unit):
         unit.order_manager.Add(AttackOnSightOrder(unit, None), 0)
 
 class StrategiePikemanDAFT(StrategyTroup):
     def __init__(self, general):
-        super().__init__(general, "All", "None")
+        super().__init__(general, UnitType.ALL, UnitType.NONE)
 
     def apply_order(self, general, unit):
         unit.order_manager.Add(AttackOnSightOrder(unit, None), 0)
@@ -77,7 +77,7 @@ class StrategieStartDAFT(StrategyStart):
 # Aucune favorite troup
 class StrategieBrainDead(StrategyTroup):
     def __init__(self, general):
-        super().__init__(general, None, None)
+        super().__init__(general, UnitType.ALL, UnitType.NONE)
 
     def apply_order(self, general, unit):
         #unit.order_manager.Add(AttackOnReachOrder(unit, self.favoriteTroup), 0)
@@ -87,7 +87,7 @@ class StrategieBrainDead(StrategyTroup):
 ## DEPRECATED
 class StrategieCrossbowmanBrainDead(StrategyTroup):
     def __init__(self, general):
-        super().__init__(general, "All", "None")
+        super().__init__(general, UnitType.ALL, UnitType.NONE)
 
     def apply_order(self, general, unit):
         unit.order_manager.Add(AttackOnReachOrder(unit, None), 0)
@@ -123,7 +123,7 @@ class StrategieCrossbowmanSomeIQ(StrategyTroup): #focus Pikeman (faibles au tir)
         if self.favoriteTroup is not None:
             unit.order_manager.Add(AttackOnSightOrder(unit,self.favoriteTroup), 1) # attaquer en priorité les pikemen
         else:
-            unit.order_manager.Add(AttackOnSightOrder(unit,None), 1)
+            unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.ALL), 1)
 
 
 class StrategieKnightSomeIQ(StrategyTroup):
@@ -132,7 +132,7 @@ class StrategieKnightSomeIQ(StrategyTroup):
     
     def apply_order(self, general, unit):
         unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.CROSSBOWMAN), 0)
-        unit.order_manager.Add(AttackOnSightOrder(unit,None), 1)
+        unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.ALL), 1)
 
 class StrategiePikemanSomeIQ(StrategyTroup):
     def __init__(self):
@@ -140,7 +140,7 @@ class StrategiePikemanSomeIQ(StrategyTroup):
 
     def applyOrder(self, general, unit):
         unit.order_manager.Add(StayInReachOrder(unit,UnitType.CROSSBOWMAN), 0)
-        unit.order_manager.Add(AttackOnSightOrder(unit,None), 1) # On push/insere/add un ordre de priorité 0
+        unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.ALL), 1) # On push/insere/add un ordre de priorité 0
        # stay in friendly zone a cote des srossbowmen et attaquer
     """for crossbowman in [u for u in general.MyUnits if u.Type == "Crossbowman"]:
         unit.order_manager.Add(StayInFriendlySpaceOrder(unit, "Crossbowman"), 0)
@@ -185,7 +185,7 @@ class StrategieCrossbowmanFallbackSomeIQ(StrategyTroup):
     """quand il reste aucun crossbowmen vivant """
 
     def __init__(self):
-        super().__init__(None, "All", "None")
+        super().__init__(None, UnitType.ALL, UnitType.NONE)
 
     def applyOrder(self, general, unit):
 
@@ -202,12 +202,12 @@ class StrategieNoKnightFallbackSomeIQ(StrategyTroup):
     """Quand il ne reste aucun knight vivant."""
 
     def __init__(self):
-        super().__init__(None, "All", "None")
+        super().__init__(None, UnitType.ALL, UnitType.NONE)
 
     def applyOrder(self, general, unit):
         if unit.type == UnitType.CROSSBOWMAN:
             #les crossbowmen restent en arrière et focus ce qui s'avance
-            unit.order_manager.Add(AttackOnSightOrder(unit,"All"), 0)
+            unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.ALL), 0)
 
         elif unit.type == UnitType.PIKEMAN:
             # Les pikemen se mettent en garde du corps des crossbowmen et tapent tout
@@ -221,7 +221,7 @@ class StrategieNoPikemanFallback(StrategyTroup):
     """Quand il ne reste aucun pikeman vivant."""
 
     def __init__(self):
-        super().__init__(None, "All", "None")
+        super().__init__(None, UnitType.ALL, UnitType.NONE)
 
     def applyOrder(self, general, unit):
 
