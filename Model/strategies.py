@@ -197,6 +197,8 @@ class StrategieNoPikemanFallback(StrategyTroup):
 
     def applyOrder(self, general, unit):
 
+        # Enlever les ordres qui target les spikeman
+
         if unit.type == UnitType.KNIGHT:
             unit.order_manager.Add(AttackOnSightOrder(), 0)
 
@@ -204,6 +206,20 @@ class StrategieNoPikemanFallback(StrategyTroup):
             # Les crossbowmen restent à distance et focus surtout les unités de mêlée
             unit.order_manager.Add(AvoidOrder(unit, UnitType.KNIGHT), 0)
             unit.order_manager.Add(AttackOnSightOrder(unit, self.favoriteTroup), 1)
+
+class StrategieNoTroupFallbackSomeIQ:
+    """Quand il ne reste aucun troupe vivant. d'un type"""
+    def __init__(self, unitType: UnitType):
+        self.unitType = unitType
+
+    def apply_order(self, general):
+        pass
+        #for unit in general.MyUnits:
+        #    unit.order_manager.FlushOrders()
+
+
+
+
 
 
 

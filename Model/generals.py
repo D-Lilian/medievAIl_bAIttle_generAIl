@@ -13,8 +13,8 @@ class General:
     # -il ya + de crossbowmen que de knights
     # etc
     def __init__(self,
-                 unitsA,
-                 unitsB,
+                 unitsA: list[Unit],
+                 unitsB: list[Unit],
                  sS,
                  sT,
                  crossbows_depleted=None,
