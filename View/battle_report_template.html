@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battle Report - {timestamp}</title>
+    <link rel="stylesheet" href="battle_report.css">
+</head>
+<body>
+    <h1>Battle Report</h1>
+
+    <div class="stats">
+        <h2>Global Statistics</h2>
+        <p><strong>Simulation time:</strong> {simulation_time} seconds</p>
+        <p><strong>Team 1:</strong> <span class="team1">{team1_units} units</span></p>
+        <p><strong>Team 2:</strong> <span class="team2">{team2_units} units</span></p>
+        <p><strong>Total:</strong> {total_units} active units</p>
+    </div>
+
+    {team_sections}
+
+    <div class="stats">
+        <h2>Unit Legend</h2>
+        <ul>
+{legend_items}
+        </ul>
+    </div>
+
+    <footer>
+        <p>Generated on {generation_datetime}</p>
+    </footer>
+</body>
+</html>

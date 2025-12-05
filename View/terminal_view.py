@@ -847,109 +847,30 @@ class TerminalView(ViewInterface):
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"battle_report_{timestamp}.html"
         
-        html_content = f"""<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Battle Report - {timestamp}</title>
-    <style>
-        body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }}
-        h1 {{
-            color: #333;
-            text-align: center;
-            border-bottom: 3px solid #4CAF50;
-            padding-bottom: 10px;
-        }}
-        .stats {{
-            background: white;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }}
-        .team-section {{
-            margin: 20px 0;
-        }}
-        .team1 {{ color: #00bcd4; }}
-        .team2 {{ color: #f44336; }}
-        .unit-list {{
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }}
-        .unit {{
-            padding: 10px;
-            margin: 5px 0;
-            background: #fafafa;
-            border-left: 4px solid #ddd;
-            border-radius: 4px;
-        }}
-        .unit.team1 {{ border-left-color: #00bcd4; }}
-        .unit.team2 {{ border-left-color: #f44336; }}
-        .unit-header {{
-            font-weight: bold;
-            margin-bottom: 5px;
-        }}
-        .unit-details {{
-            font-size: 0.9em;
-            color: #666;
-        }}
-        .hp-bar {{
-            height: 10px;
-            background: #ddd;
-            border-radius: 5px;
-            overflow: hidden;
-            margin-top: 5px;
-        }}
-        .hp-fill {{
-            height: 100%;
-            background: #4CAF50;
-            transition: width 0.3s;
-        }}
-        .hp-low {{ background: #ff9800; }}
-        .hp-critical {{ background: #f44336; }}
-        details {{
-            margin: 10px 0;
-        }}
-        summary {{
-            cursor: pointer;
-            padding: 10px;
-            background: #4CAF50;
-            color: white;
-            border-radius: 4px;
-            font-weight: bold;
-        }}
-        summary:hover {{
-            background: #45a049;
-        }}
-    </style>
-</head>
-<body>
-    <h1>Battle Report</h1>
-    
-    <div class="stats">
-        <h2>Global Statistics</h2>
-        <p><strong>Simulation time:</strong> {self.simulation_time:.2f} seconds</p>
-        <p><strong>Team 1:</strong> <span class="team1">{self.team1_units} units</span></p>
-        <p><strong>Team 2:</strong> <span class="team2">{self.team2_units} units</span></p>
-        <p><strong>Total:</strong> {len(self.units_cache)} active units</p>
-    </div>
-"""
+        # Read template and CSS
+        template_path = os.path.join(os.path.dirname(__file__), 'battle_report_template.html')
+        css_path = os.path.join(os.path.dirname(__file__), 'battle_report.css')
+        
+        with open(template_path, 'r', encoding='utf-8') as f:
+            template = f.read()
+        
+        with open(css_path, 'r', encoding='utf-8') as f:
+            css_content = f.read()
+        
+        # Generate dynamic content
+        simulation_time = f"{self.simulation_time:.2f}"
+        team1_units = self.team1_units
+        team2_units = self.team2_units
+        total_units = len(self.units_cache)
+        generation_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # Split units by team
-        team1_units = [u for u in self.units_cache if u.team == Team.A]
-        team2_units = [u for u in self.units_cache if u.team == Team.B]
+        team1_units_list = [u for u in self.units_cache if u.team == Team.A]
+        team2_units_list = [u for u in self.units_cache if u.team == Team.B]
         
-        for team_num, team_units in [(1, team1_units), (2, team2_units)]:
-            html_content += f"""
+        team_sections = ""
+        for team_num, team_units in [(1, team1_units_list), (2, team2_units_list)]:
+            team_sections += f"""
     <div class="team-section">
         <details open>
             <summary>Team {team_num} - {len(team_units)} units</summary>
@@ -961,7 +882,7 @@ class TerminalView(ViewInterface):
                 hp_class = "hp-critical" if hp_percent < 25 else "hp-low" if hp_percent < 50 else ""
                 
                 status_label = "Alive" if unit.alive else "Dead"
-                html_content += f"""
+                team_sections += f"""
                 <div class="unit team{team_num}">
                     <div class="unit-header">
                         #{i} - {unit.type} ({unit.letter}) - Position: ({unit.x:.1f}, {unit.y:.1f}) - {status_label}
@@ -975,44 +896,38 @@ class TerminalView(ViewInterface):
                 </div>
 """
             
-            html_content += """
+            team_sections += """
             </div>
         </details>
     </div>
 """
         
-        html_content += """
-    <div class="stats">
-        <h2>Unit Legend</h2>
-        <ul>
-"""
-        
+        legend_items = ""
         for unit_type, letter in sorted(self.UNIT_LETTERS.items()):
-            html_content += f"            <li><strong>{letter}</strong>: {unit_type}</li>\n"
+            legend_items += f"            <li><strong>{letter}</strong>: {unit_type}</li>\n"
         
-        html_content += """
-        </ul>
-    </div>
-    
-    <footer style="text-align: center; margin-top: 40px; color: #666;">
-        <p>Generated on """ + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + """</p>
-    </footer>
-</body>
-</html>
-"""
+        # Replace placeholders
+        html_content = template.replace('{timestamp}', timestamp)
+        html_content = html_content.replace('{simulation_time}', simulation_time)
+        html_content = html_content.replace('{team1_units}', str(team1_units))
+        html_content = html_content.replace('{team2_units}', str(team2_units))
+        html_content = html_content.replace('{total_units}', str(total_units))
+        html_content = html_content.replace('{team_sections}', team_sections)
+        html_content = html_content.replace('{legend_items}', legend_items)
+        html_content = html_content.replace('{generation_datetime}', generation_datetime)
         
-        # Sauvegarde du fichier
-        try:
-            with open(filename, 'w', encoding='utf-8') as f:
-                f.write(html_content)
-            
-            # Ouvre le fichier dans le navigateur
-            import webbrowser
-            webbrowser.open('file://' + os.path.abspath(filename))
-            
-        except Exception:
-            # En cas d'erreur, on ne fait rien (le jeu continue)
-            pass
+        # Write CSS file
+        css_filename = "battle_report.css"
+        with open(css_filename, 'w', encoding='utf-8') as f:
+            f.write(css_content)
+        
+        # Write HTML file
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        # Open the file in the browser
+        import webbrowser
+        webbrowser.open('file://' + os.path.abspath(filename))
 
     def debug_snapshot(self) -> dict:
         """Return a snapshot of current stats (for tests)."""
