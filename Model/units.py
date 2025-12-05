@@ -5,6 +5,8 @@ class Unit:
 
     def __init__(self, unit_type, name, team, hp, armor, attack, range, size, sight, speed, accuracy, reload,
                  reload_time, x, y, order_manager):
+
+        from orders import OrderManager
         self.unit_type = unit_type
         self.name = name
         self.hp = hp                        # <=0 si l'unite est morte
@@ -22,7 +24,7 @@ class Unit:
         self.reload_time = reload_time      # temps pour recharger
         self.x = x                          # coordonnee en X
         self.y = y                          # coordonnee en Y
-        self.order_manager = order_manager  # ordres donnees par le gerenal
+        self.order_manager = OrderManager()  # ordres donnees par le gerenal
 
     def can_attack(self):
         """Check if the unit can perform an attack."""
