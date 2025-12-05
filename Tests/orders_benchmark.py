@@ -3,7 +3,7 @@ import cProfile
 import random
 import timeit
 import pstats
-from orders import OrderManager,Order
+from Model.orders import OrderManager,Order
 
 NORDER = 5000
 NTIME = 1.0

@@ -1,6 +1,6 @@
 from orders import OrderManager
-from Model.units import Unit, UnitType, Crossbowman, Knight, Pikeman
-from strategies import StrategyStart,StrategyTroup,StrategieDAFT,StrategiePikemanDAFT,StrategieNoPikemanFallback,StrategiePikemanSomeIQ,StrategieBrainDead,StrategiePikemanBrainDead,StrategieStartDAFT,StrategieArcherDAFT,StrategieKnightDAFT,StrategieStartSomeIQ,StrategieArcherSomeIQ,StrategieKnightSomeIQ,StrategieArcherFallbackSomeIQ,StrategieNoKnightFallbackSomeIQ,StrategieStartBrainDead,StrategieArcherBrainDead,StrategieKnightBrainDead
+from Model.Units import Unit, UnitType, Crossbowman, Knight, Pikeman
+from strategies import StrategyStart,StrategyTroup,StrategieDAFT,StrategiePikemanDAFT,StrategieNoPikemanFallback,StrategiePikemanSomeIQ,StrategieBrainDead,StrategiePikemanBrainDead,StrategieStartDAFT,StrategieCrossbowmanDAFT,StrategieKnightDAFT,StrategieStartSomeIQ,StrategieCrossbowmanSomeIQ,StrategieKnightSomeIQ,StrategieCrossbowmanFallbackSomeIQ,StrategieNoKnightFallbackSomeIQ,StrategieStartBrainDead,StrategieCrossbowmanBrainDead,StrategieKnightBrainDead
 
 from errors import *
 
@@ -9,27 +9,27 @@ from errors import *
 
 class General:
     # Il lui faut un moyen de detecter les différents etats du jeu adverse:
-    # -il n'ya plus d'archers
-    # -il ya + d'archers que de knights
+    # -il n'ya plus de crossbowmen
+    # -il ya + de crossbowmen que de knights
     # etc
     def __init__(self,
-                 unitsA  ,
+                 unitsA,
                  unitsB,
                  sS,
                  sT,
                  crossbows_depleted=None,
                  knights_depleted=None,
-                 spikemen_depleted=None,
+                 pikemen_depleted=None,
                  ):
 
         self.MyUnits = unitsA
         self.HistUnits = unitsB
         self.are_crossbows_left = True
         self.are_knights_left = True
-        self.are_spikemen_left = True
+        self.are_pikemen_left = True
         self.crossbows_depleted = crossbows_depleted
-        self.knigts_depleted = knights_depleted
-        self.spikemen_depleted = spikemen_depleted
+        self.knights_depleted = knights_depleted
+        self.pikemen_depleted = pikemen_depleted
 
         # Set strategie
         self.sT = sT
@@ -44,7 +44,7 @@ class General:
         if type_troupe == UnitType.KNIGHT:
             self.are_knights_left = False
         if type_troupe == UnitType.PIKEMAN:
-            self.are_spikemen_left = False
+            self.are_pikemen_left = False
 
 
 
@@ -74,14 +74,14 @@ class General:
             # Pour chaque unité, on appli la stratégie lié à son type
         #    self.sT[unit.Type].ApplyOrder(self, unit)
             # Ex
-            # self.St["archer"].Applyorder(self, a1)
-            # ici ça applicuqe la stratégie du général sur les troupes de type archer
+            # self.St["crossbowman"].Applyorder(self, a1)
+            # ici ça applicuqe la stratégie du général sur les troupes de type Crossbowman
         if self.are_crossbows_left == False and self.crossbows_depleted is not None:
             self.crossbows_depleted()
-        if self.are_knights_left == False and self.knigts_depleted is not None:
-            self.knigts_depleted()
-        if self.are_spikemen_left == False  and self.spikemen_depleted is not None:
-            self.spikemen_depleted()
+        if self.are_knights_left == False and self.knights_depleted is not None:
+            self.knights_depleted()
+        if self.are_pikemen_left == False  and self.pikemen_depleted is not None:
+            self.pikemen_depleted()
 # # Cert# 1. On appel simu pour effectuer notre action, simu nous appelle et se passe en paramètre. Depuis try, on renvoi True si l'ordre a reussi
 # et false si non.
 
@@ -170,15 +170,15 @@ if __name__ == '__main__':
     #SOMEIQ = General(
     #    unitsA,
     #    unitsB,
-    #    crossbows_depleted=StrategieArcherFallbackSomeIQ(),
+    #    crossbows_depleted=StrategieCrossbowmanFallbackSomeIQ(),
     #    knights_depleted=StrategieNoKnightFallbackSomeIQ(),
-    #    spikemen_depleted=StrategieNoPikemanFallback(),
+    #    pikemen_depleted=StrategieNoPikemanFallback(),
 
     #    sS=None,
     #    sT={ # TODO: Fix the strategies to use the enum
     #        UnitType.KNIGHT:StrategieKnightSomeIQ(),
     #        UnitType.PIKEMAN:StrategiePikemanSomeIQ(),
-    #        UnitType.CROSSBOWMAN:StrategieArcherSomeIQ(),
+    #        UnitType.CROSSBOWMAN:StrategieCrossbowmanSomeIQ(),
     #    }
     #)
 

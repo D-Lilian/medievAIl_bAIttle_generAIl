@@ -1,5 +1,5 @@
 import pytest
-from orders import OrderManager
+from Model.orders import OrderManager
 
 
 class DummyOrder:
