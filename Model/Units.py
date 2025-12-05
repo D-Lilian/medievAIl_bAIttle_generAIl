@@ -8,6 +8,7 @@ class Unit:
         self.unit_type = unit_type
         self.name = name
         self.hp = hp                        # <=0 si l'unite est morte
+        self.hp_max = hp                    # max hp for display
         self.team = team                    # choix de l'equipe
         self.armor = armor                  # valeur de l'armure
         self.attack = attack                # nombre de degats infliges
@@ -21,17 +22,23 @@ class Unit:
         self.x = x                          # coordonnee en X
         self.y = y                          # coordonnee en Y
         self.order_manager = order_manager  # ordres donnees par le gerenal
+        self.target = None                  # current target unit
+        self.damage_dealt = 0               # total damage dealt
 
     def can_attack(self):
         """Check if the unit can perform an attack."""
         return self.reload <= 0
 
-    def attack(self):
+    def perform_attack(self):
         """Perform an attack if the unit can attack. Resets reload timer."""
         if self.can_attack():
             self.reload = self.reload_time
             return True
         return False
+
+    def attack(self):
+        """Alias for perform_attack."""
+        return self.perform_attack()
 
     def update_reload(self, t):
         """Decrease reload timer by t simulated seconds."""

@@ -26,46 +26,50 @@ from typing import List
 import time
 import sys
 import random
+import os
 
-# Try to import Model modules
-try:
-    from Model.simulation import Simulation, DEFAULT_NUMBER_OF_TICKS_PER_SECOND
-    from Model.Scenario import Scenario
-    from Model.Units import Knight, Pikeman, Crossbowman, UnitType
-    
-    # Monkey-patch Simulation to add a step method if it doesn't exist
-    if not hasattr(Simulation, 'step'):
-        def simulation_step(self):
-            """Execute one simulation step (tick)."""
-            random.shuffle(self.scenario.units)
+# Add parent directory to path for Model imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-            for unit in self.scenario.units:
-                if unit.hp <= 0:
-                    continue
-                enemy = self.get_nearest_enemy_in_reach(unit)
-                if enemy is None:
-                    continue
-                if self.is_in_reach(unit, enemy) and unit.can_attack():
-                    self.attack_unit(unit, enemy)
-                    unit.reload = unit.reload_time
-                else:
-                    self.move_unit_towards_unit(unit, enemy)
-            
-            self.tick += 1
+# Import Model modules
+from Model.simulation import Simulation, DEFAULT_NUMBER_OF_TICKS_PER_SECOND
+from Model.Scenario import Scenario
+from Model.Units import Knight, Pikeman, Crossbowman, UnitType
 
-            for unit in list(self.reload_units):
-                unit.update_reload(1 / DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
-                if unit.can_attack():
-                    try:
-                        self.reload_units.remove(unit)
-                    except ValueError:
-                        pass
-                        
-        Simulation.step = simulation_step
+# Monkey-patch Simulation to add a step method if it doesn't exist
+if not hasattr(Simulation, 'step'):
+    def simulation_step(self):
+        """Execute one simulation step (tick)."""
+        random.shuffle(self.scenario.units)
+
+        for unit in self.scenario.units:
+            if unit.hp <= 0:
+                continue
+            enemy = self.get_nearest_enemy_in_reach(unit)
+            if enemy is None:
+                unit.target = None
+                continue
+            unit.target = enemy
+            if self.is_in_reach(unit, enemy) and unit.can_attack():
+                self.attack_unit(unit, enemy)
+                unit.reload = unit.reload_time
+            else:
+                self.move_unit_towards_unit(unit, enemy)
         
-except ImportError:
-    # Fallback for standalone testing without Model
-    pass
+        self.tick += 1
+
+        # Use instance tick_speed if available, otherwise default
+        tick_rate = getattr(self, 'tick_speed', DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
+        
+        for unit in list(self.reload_units):
+            unit.update_reload(1 / tick_rate)
+            if unit.can_attack():
+                try:
+                    self.reload_units.remove(unit)
+                except ValueError:
+                    pass
+                    
+    Simulation.step = simulation_step
 
 
 class Team(Enum):
@@ -116,6 +120,8 @@ class UniteRepr:
     hp: int
     hp_max: int
     status: UnitStatus
+    damage_dealt: int = 0
+    target_id: int = None  # ID of the target unit
     
     @property
     def alive(self) -> bool:
@@ -190,8 +196,8 @@ class Camera:
     x: int = 0
     y: int = 0
     zoom_level: int = 1
-    scroll_speed_normal: int = 2
-    scroll_speed_fast: int = 5
+    scroll_speed_normal: int = 5
+    scroll_speed_fast: int = 15
     # Smooth following
     target_x: float = 0.0
     target_y: float = 0.0
@@ -205,8 +211,10 @@ class Camera:
         @param fast True for faster movement (when Shift is pressed)
         """
         speed = self.scroll_speed_fast if fast else self.scroll_speed_normal
-        self.x += dx * speed * self.zoom_level
-        self.y += dy * speed * self.zoom_level
+        # In rotated view, dx controls y (horizontal on screen is vertical on board)
+        # and dy controls x (vertical on screen is horizontal on board)
+        self.y += dx * speed * self.zoom_level
+        self.x += dy * speed * self.zoom_level
     
     def toggle_zoom(self):
         """
@@ -223,12 +231,16 @@ class Camera:
         @param term_h Terminal height
         @param ui_height UI height
         """
-        units = simulation.board.units
+        units = simulation.board.units if hasattr(simulation, 'board') else simulation.scenario.units
         if not units:
             return
         
         # Focus on units that are fighting (have a target or are moving)
-        fighting_units = [u for u in units if u.target is not None or u.hp < u.hp_max]
+        # Use getattr for safety in case Model attributes change
+        fighting_units = [
+            u for u in units 
+            if getattr(u, 'target', None) is not None or u.hp < getattr(u, 'hp_max', u.hp)
+        ]
         if not fighting_units:
             # If no fighting units, use all units
             fighting_units = units
@@ -238,8 +250,8 @@ class Camera:
         avg_y = sum(u.y for u in fighting_units) / len(fighting_units)
         # Set target position
         # In rotated view: screen_x = (unit.y - camera.y) / zoom, screen_y = (unit.x - camera.x) / zoom
-        # To center avg_y on screen_x, camera.y = avg_y - (term_w / 2) * zoom
-        # To center avg_x on screen_y, camera.x = avg_x - ((term_h - ui_height) / 2) * zoom
+        # To center avg_y on screen_x (term_w), camera.y = avg_y - (term_w / 2) * zoom
+        # To center avg_x on screen_y (term_h), camera.x = avg_x - ((term_h - ui_height) / 2) * zoom
         self.target_x = avg_x - ((term_h - ui_height) / 2) * self.zoom_level
         self.target_y = avg_y - (term_w / 2) * self.zoom_level
     
@@ -336,7 +348,7 @@ class TerminalView(ViewInterface):
         self.paused = False
         self.show_debug = False
         self.show_ui = True
-        self.auto_follow = True  # Auto-follow camera on battle (enabled by default)
+        self.auto_follow = False  # Auto-follow camera on battle (disabled)
         
         # Curses window
         self.stdscr = None
@@ -412,7 +424,7 @@ class TerminalView(ViewInterface):
         - Navigation: ZQSD, arrow keys (with Shift for faster move)
         - Zoom: M (cycle between zoom levels)
         - Auto-follow: A (toggle auto-follow camera on battle)
-        - Controls: P(pause), +/-(tick speed), TAB(report), F(UI), D(debug)
+        - Controls: P(pause), +/-(tick speed), TAB(report), F(UI), Ctrl+D(debug)
         - Exit: Escape
 
         @return bool False to quit the application, True to continue
@@ -454,7 +466,7 @@ class TerminalView(ViewInterface):
             return True
         
         # Debug view
-        if key in (ord('d'), ord('D')):
+        if key == 4:  # Ctrl+D
             self.show_debug = not self.show_debug
             return True
         
@@ -465,6 +477,7 @@ class TerminalView(ViewInterface):
         
         # HTML report generation
         if key == ord('\t'):  # TAB
+            self.paused = True  # Pause the game
             self.generate_html_report()
             return True
         
@@ -575,11 +588,17 @@ class TerminalView(ViewInterface):
         rng = getattr(unit, 'range', None)
         reload_time = getattr(unit, 'reload_time', None)
         reload_val = getattr(unit, 'reload', None)
+        damage_dealt = getattr(unit, 'damage_dealt', 0)
+        target = getattr(unit, 'target', None)
+        target_id = id(target) if target else None
+        
         return {
             'team': team, 'hp': hp, 'hp_max': hp_max, 'type': unit_type,
             'x': x, 'y': y, 'alive': alive,
             'armor': armor, 'attack': attack, 'range': rng,
-            'reload_time': reload_time, 'reload_val': reload_val
+            'reload_time': reload_time, 'reload_val': reload_val,
+            'damage_dealt': damage_dealt,
+            'target_id': target_id
         }
 
     def _resolve_team(self, team_val) -> Team:
@@ -628,7 +647,9 @@ class TerminalView(ViewInterface):
                 y=fields['y'],
                 hp=max(0, fields['hp']),
                 hp_max=fields['hp_max'],
-                status=UnitStatus.ALIVE if fields['alive'] else UnitStatus.DEAD
+                status=UnitStatus.ALIVE if fields['alive'] else UnitStatus.DEAD,
+                damage_dealt=fields['damage_dealt'],
+                target_id=fields['target_id']
             )
             self.units_cache.append(repr_obj)
 
@@ -791,7 +812,7 @@ class TerminalView(ViewInterface):
             
             for i, unit in enumerate(self.units_cache[:6]):
                 status = "ALV" if unit.alive else "DED"
-                debug_text = f"{status} {unit.type[:10]:10} ({unit.letter}) HP:{unit.hp:3}/{unit.hp_max:3} {unit.hp_percent:3.0f}%"
+                debug_text = f"{status} {unit.type[:10]:10} ({unit.letter}) HP:{unit.hp:3}/{unit.hp_max:3} DMG:{unit.damage_dealt:3}"
                 color = ColorPair.TEAM_A if unit.team == Team.A else ColorPair.TEAM_B
                 if not unit.alive:
                     color = ColorPair.DEAD
@@ -848,9 +869,8 @@ class TerminalView(ViewInterface):
             # Auto-follow camera on battle if enabled
             if self.auto_follow:
                 self.camera.center_on_battle(simulation, max_x, max_y, 5 if self.show_ui else 0)
-        
-            # Update smooth camera following
-            self.camera.update_smooth_follow()
+                # Update smooth camera following
+                self.camera.update_smooth_follow()
             # Clamp camera after movement
             self.camera.clamp(self.board_width, self.board_height, max_x, max_y, 5 if self.show_ui else 0)
             
@@ -879,6 +899,44 @@ class TerminalView(ViewInterface):
         
         return True
     
+    def _generate_unit_html(self, i: int, unit: UniteRepr, team_num: int) -> str:
+        """Generate HTML for a single unit."""
+        hp_percent = (unit.hp / unit.hp_max) * 100 if unit.hp_max > 0 else 0
+        hp_class = "hp-critical" if hp_percent < 25 else "hp-low" if hp_percent < 50 else ""
+        status_label = "Alive" if unit.alive else "Dead"
+        target_info = f"Targeting: #{unit.target_id}" if unit.target_id else "Idle"
+        
+        return f"""
+                <div class="unit team{team_num}">
+                    <div class="unit-header">
+                        <span>#{i} {unit.type} ({unit.letter})</span>
+                        <span>{status_label}</span>
+                    </div>
+                    <div class="unit-details">
+                        <div>Pos: ({unit.x:.1f}, {unit.y:.1f})</div>
+                        <div>HP: {unit.hp}/{unit.hp_max} ({hp_percent:.0f}%) | DMG: {unit.damage_dealt}</div>
+                        <div>{target_info}</div>
+                    </div>
+                    <div class="hp-bar">
+                        <div class="hp-fill {hp_class}" style="width: {hp_percent}%"></div>
+                    </div>
+                </div>
+"""
+
+    def _generate_team_section(self, team_num: int, units: List[UniteRepr]) -> str:
+        """Generate HTML section for a team."""
+        units_html = "".join(self._generate_unit_html(i, u, team_num) for i, u in enumerate(units, 1))
+        return f"""
+    <div class="team-section">
+        <details open>
+            <summary>Team {team_num} - {len(units)} units</summary>
+            <div class="unit-list">
+{units_html}
+            </div>
+        </details>
+    </div>
+"""
+
     def generate_html_report(self):
         """
         Generate an HTML report with the current state of all units.
@@ -886,90 +944,53 @@ class TerminalView(ViewInterface):
         """
         import datetime
         import os
+        import webbrowser
         
+        # Prepare data
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"battle_report_{timestamp}.html"
         
-        # Read template and CSS
-        template_path = os.path.join(os.path.dirname(__file__), 'battle_report_template.html')
-        css_path = os.path.join(os.path.dirname(__file__), 'battle_report.css')
+        # Generate sections
+        team1_units = [u for u in self.units_cache if u.team == Team.A]
+        team2_units = [u for u in self.units_cache if u.team == Team.B]
         
-        with open(template_path, 'r', encoding='utf-8') as f:
+        team_sections = self._generate_team_section(1, team1_units) + \
+                        self._generate_team_section(2, team2_units)
+        
+        legend_items = "\n".join(
+            f"            <li><strong>{letter}</strong>: {unit_type}</li>" 
+            for unit_type, letter in sorted(self.UNIT_LETTERS.items())
+        )
+        
+        # Load resources
+        base_dir = os.path.dirname(__file__)
+        with open(os.path.join(base_dir, 'battle_report_template.html'), 'r', encoding='utf-8') as f:
             template = f.read()
-        
-        with open(css_path, 'r', encoding='utf-8') as f:
+        with open(os.path.join(base_dir, 'battle_report.css'), 'r', encoding='utf-8') as f:
             css_content = f.read()
-        
-        # Generate dynamic content
-        simulation_time = f"{self.simulation_time:.2f}"
-        team1_units = self.team1_units
-        team2_units = self.team2_units
-        total_units = len(self.units_cache)
-        generation_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        # Split units by team
-        team1_units_list = [u for u in self.units_cache if u.team == Team.A]
-        team2_units_list = [u for u in self.units_cache if u.team == Team.B]
-        
-        team_sections = ""
-        for team_num, team_units in [(1, team1_units_list), (2, team2_units_list)]:
-            team_sections += f"""
-    <div class="team-section">
-        <details open>
-            <summary>Team {team_num} - {len(team_units)} units</summary>
-            <div class="unit-list">
-"""
             
-            for i, unit in enumerate(team_units, 1):
-                hp_percent = (unit.hp / unit.hp_max) * 100 if unit.hp_max > 0 else 0
-                hp_class = "hp-critical" if hp_percent < 25 else "hp-low" if hp_percent < 50 else ""
-                
-                status_label = "Alive" if unit.alive else "Dead"
-                team_sections += f"""
-                <div class="unit team{team_num}">
-                    <div class="unit-header">
-                        #{i} - {unit.type} ({unit.letter}) - Position: ({unit.x:.1f}, {unit.y:.1f}) - {status_label}
-                    </div>
-                    <div class="unit-details">
-                        HP: {unit.hp}/{unit.hp_max} ({hp_percent:.1f}%)
-                    </div>
-                    <div class="hp-bar">
-                        <div class="hp-fill {hp_class}" style="width: {hp_percent}%"></div>
-                    </div>
-                </div>
-"""
+        # Fill template
+        replacements = {
+            '{timestamp}': timestamp,
+            '{simulation_time}': f"{self.simulation_time:.2f}",
+            '{team1_units}': str(self.team1_units),
+            '{team2_units}': str(self.team2_units),
+            '{total_units}': str(len(self.units_cache)),
+            '{team_sections}': team_sections,
+            '{legend_items}': legend_items,
+            '{generation_datetime}': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        html_content = template
+        for key, value in replacements.items():
+            html_content = html_content.replace(key, value)
             
-            team_sections += """
-            </div>
-        </details>
-    </div>
-"""
-        
-        legend_items = ""
-        for unit_type, letter in sorted(self.UNIT_LETTERS.items()):
-            legend_items += f"            <li><strong>{letter}</strong>: {unit_type}</li>\n"
-        
-        # Replace placeholders
-        html_content = template.replace('{timestamp}', timestamp)
-        html_content = html_content.replace('{simulation_time}', simulation_time)
-        html_content = html_content.replace('{team1_units}', str(team1_units))
-        html_content = html_content.replace('{team2_units}', str(team2_units))
-        html_content = html_content.replace('{total_units}', str(total_units))
-        html_content = html_content.replace('{team_sections}', team_sections)
-        html_content = html_content.replace('{legend_items}', legend_items)
-        html_content = html_content.replace('{generation_datetime}', generation_datetime)
-        
-        # Write CSS file
-        css_filename = "battle_report.css"
-        with open(css_filename, 'w', encoding='utf-8') as f:
+        # Write files
+        with open("battle_report.css", 'w', encoding='utf-8') as f:
             f.write(css_content)
-        
-        # Write HTML file
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(html_content)
-        
-        # Open the file in the browser
-        import webbrowser
+            
         webbrowser.open('file://' + os.path.abspath(filename))
 
     def debug_snapshot(self) -> dict:
@@ -994,111 +1015,69 @@ class TerminalView(ViewInterface):
         return self.debug_snapshot()
 
 
-# --- Dummy Classes for Testing and Demo ---
-
-class DummyUnit:
-    def __init__(self, x, y, equipe, unit_type, hp, hp_max):
-        self.x = x
-        self.y = y
-        self.equipe = equipe
-        self.hp = hp
-        self.hp_max = hp_max
-        self.name = unit_type
-
-class DummyBoard:
-    def __init__(self):
-        self.units = []
-        # Mirror formation: team 1 on the left, team 2 on the right
-        formations = [
-            ('Knight', 100, 100),
-            ('Pikeman', 55, 55),
-            ('Crossbowman', 30, 30),
-        ]
-        
-        # Team A (left) - Cyan
-        for i, (unit_type, hp, hp_max) in enumerate(formations):
-            self.units.append(DummyUnit(20, 30 + i*5, 'A', unit_type, hp, hp_max))
-        
-        # Team B (right) - Red - mirror
-        for i, (unit_type, hp, hp_max) in enumerate(formations):
-            self.units.append(DummyUnit(100, 30 + i*5, 'B', unit_type, hp, hp_max))
-
-class DummySimulation:
-    def __init__(self):
-        self.board = DummyBoard()
-        self.elapsed_time = 0.0
-    def step(self):
-        # Both teams move towards each other
-        for u in self.board.units:
-            if u.hp > 0:
-                u.x += 0.3 if u.equipe == 1 else -0.3
-        self.elapsed_time += 0.05
-
-
-def create_dummy_simulation():
-    """Simple simulation fixture for unit tests."""
-    return DummySimulation()
-
 def main_test():
     """Headless test mode: python terminal_view.py --test"""
-    sim = create_dummy_simulation()
+    print("=== Headless Test Mode ===")
+    
+    # Create real simulation
+    units = []
+    units_a = []
+    units_b = []
+    
+    # Small scenario for testing
+    u1 = Knight(1, 20, 20)
+    u2 = Pikeman(2, 30, 30)
+    units = [u1, u2]
+    units_a = [u1]
+    units_b = [u2]
+    
+    scenario = Scenario(units, units_a, units_b, None, None, 120, 120)
+    simulation = Simulation(scenario, tick_speed=20)
+    
     view = TerminalView(120, 120)
     
-    print("=== Headless Test Mode ===")
-    print("Simulation: 50 ticks with dummy data")
-    
-    snapshot = view.run_headless(sim, ticks=50)
+    print("Simulation: 50 ticks")
+    snapshot = view.run_headless(simulation, ticks=50)
     
     print("\nResults:")
     print(f"  Simulated time: {snapshot['time']:.2f}s")
     print(f"  Team 1: {snapshot['team1_alive']} alive, {snapshot['team1_dead']} dead")
     print(f"  Team 2: {snapshot['team2_alive']} alive, {snapshot['team2_dead']} dead")
-    print(f"  Types team 1: {snapshot['types_team1']}")
-    print(f"  Types team 2: {snapshot['types_team2']}")
     print(f"  Total units: {snapshot['total_units_cached']}")
-    
-    # Génération facultative du rapport HTML (désactivée par défaut)
-    # view.generate_html_report()
-    
     print("\nHeadless test: OK")
 
 
 def main_demo():
     """Demo function for the terminal view."""
     
-    # Try to use real Model if available
-    if 'Simulation' in globals() and 'Scenario' in globals():
-        units = []
-        units_a = []
-        units_b = []
+    units = []
+    units_a = []
+    units_b = []
+    
+    # Team A (Cyan) - Left side
+    for i in range(5):
+        u = Knight(1, 20, 20 + i*5)
+        units.append(u)
+        units_a.append(u)
+    
+    for i in range(5):
+        u = Pikeman(1, 25, 20 + i*5)
+        units.append(u)
+        units_a.append(u)
         
-        # Team A (Cyan) - Left side
-        for i in range(5):
-            u = Knight(1, 20, 20 + i*5)
-            units.append(u)
-            units_a.append(u)
+    # Team B (Red) - Right side
+    for i in range(5):
+        u = Knight(2, 100, 20 + i*5)
+        units.append(u)
+        units_b.append(u)
         
-        for i in range(5):
-            u = Pikeman(1, 25, 20 + i*5)
-            units.append(u)
-            units_a.append(u)
-            
-        # Team B (Red) - Right side
-        for i in range(5):
-            u = Knight(2, 100, 20 + i*5)
-            units.append(u)
-            units_b.append(u)
-            
-        for i in range(5):
-            u = Pikeman(2, 95, 20 + i*5)
-            units.append(u)
-            units_b.append(u)
-            
-        scenario = Scenario(units, units_a, units_b, None, None, 120, 120)
-        simulation = Simulation(scenario, tick_speed=20)
-    else:
-        # Fallback to dummy simulation
-        simulation = DummySimulation()
+    for i in range(5):
+        u = Pikeman(2, 95, 20 + i*5)
+        units.append(u)
+        units_b.append(u)
+        
+    scenario = Scenario(units, units_a, units_b, None, None, 120, 120)
+    simulation = Simulation(scenario, tick_speed=20)
     
     # Create the view
     view = TerminalView(120, 120, tick_speed=20)

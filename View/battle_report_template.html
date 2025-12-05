@@ -7,27 +7,45 @@
     <link rel="stylesheet" href="battle_report.css">
 </head>
 <body>
-    <h1>Battle Report</h1>
+    <div class="container">
+        <header>
+            <h1>Battle Report</h1>
+            <p>Generated on {generation_datetime}</p>
+        </header>
 
-    <div class="stats">
-        <h2>Global Statistics</h2>
-        <p><strong>Simulation time:</strong> {simulation_time} seconds</p>
-        <p><strong>Team 1:</strong> <span class="team1">{team1_units} units</span></p>
-        <p><strong>Team 2:</strong> <span class="team2">{team2_units} units</span></p>
-        <p><strong>Total:</strong> {total_units} active units</p>
-    </div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-value">{simulation_time}s</span>
+                <span class="stat-label">Simulation Time</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" style="color: var(--team1-color)">{team1_units}</span>
+                <span class="stat-label">Team 1 Units</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" style="color: var(--team2-color)">{team2_units}</span>
+                <span class="stat-label">Team 2 Units</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value">{total_units}</span>
+                <span class="stat-label">Total Active</span>
+            </div>
+        </div>
 
-    {team_sections}
+        <div class="teams-container">
+            {team_sections}
+        </div>
 
-    <div class="stats">
-        <h2>Unit Legend</h2>
-        <ul>
+        <div class="legend">
+            <h3>Unit Legend</h3>
+            <ul>
 {legend_items}
-        </ul>
-    </div>
+            </ul>
+        </div>
 
-    <footer>
-        <p>Generated on {generation_datetime}</p>
-    </footer>
+        <footer>
+            <p>MedievAIl Battle Simulator Report</p>
+        </footer>
+    </div>
 </body>
 </html>
