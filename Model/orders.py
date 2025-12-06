@@ -1,23 +1,34 @@
 #from generals import GameEngineError,WrongArguments
 
 from Model import simulation
-from Model.Units import Unit
+from Model.Units import Unit, Crossbowman
+from Model.simulation import Simulation
+from Utils.logs import logger,setup_logger
 
 
 class Order:
-    def __init__(self, unit):
+    def __init__(self, unit, squad_id=None):
         self.unit = unit
+        self.squad_id = squad_id
+        # On passe une fonction (lambda) à bind.
+        # Elle sera appelée à chaque fois qu'un log est émis,
+        # garantissant que les informations sont toujours à jour.
 
-    def Try(self, simu):
-        """
-        Returns:
-            bool: True si l'ordre est accompli et peut être supprimé
-                  False si l'ordre doit être réessayé
-        """
-        raise NotImplementedError # On ne peut pas instancier la classe Ordre direct
+        log = logger.bind(order=str(self))
+        self.log = log
+
+
+    def Try(self, simu: Simulation):
+        raise NotImplementedError
 
     def __lt__(self, other):
         return
+
+    def __str__(self):
+        return str(f"Order[{self.unit.__hash__()}/{self.__class__.__name__}]->[{self.unit.__class__.__name__}/{self.__hash__()} at ({self.unit.x}, {self.unit.y})]")
+
+    #def __str__(self):
+    #    return f"{self.__class__.__name__}(for {self.unit})"
 
 class MoveOrder(Order):
     def __init__(self, unit, x, y):
@@ -27,8 +38,8 @@ class MoveOrder(Order):
 
     def Try(self, simu):
         if simu.compare_position(self.unit, self.x, self.y):
-            return True # L'ordre a bien été réussi
-        simu.move_unit_towards_coordinates(self.unit, self.x, self.y) # l'appel peut echouer ou pas, c pas grave on reessayera au prochain tick
+            return True
+        simu.move_unit_towards_coordinates(self.unit, self.x, self.y)
         return False
 
 
@@ -37,7 +48,7 @@ class SacrificeOrder(Order):
         super().__init__(unit)
         self.unit = unit
 
-    def Try(self, simu):
+    def Try(self, simu:Simulation):
         # TODO
         raise NotImplemented
     # Fait la meme chose que avoid, + se déplace vers un coin opposé à la map
@@ -52,8 +63,8 @@ class MoveByStepOrder(Order):
         self.direction = direction
 
 
-    def Try(self, simu):
-        if simu.move_one_step_from_ref(self.unit, self.direction, "WORLD"): # TODO angle
+    def Try(self, simu:Simulation):
+        if simu.move_one_step_from_ref(self.unit, self.direction, "WORLD"):
             simu.nbStep -= 1
         if self.nbStep == 0:
             return True
@@ -73,8 +84,8 @@ class AvoidOrder(Order):
         if target is None:
             return False # Il ya aucune enemy nearby
 
-        if simu.is_in_reach(target, self.Unit): # NOTE l'ordre des arguments ici est inversée
-            if simu.move_one_step_towards_dir(self.unit,self.target, 180): # TODO angle
+        if simu.is_in_reach(target, self.unit):
+            if simu.move_one_step_towards_dir(self.unit, target, 180):
                 return False
         else:
             return False
@@ -120,8 +131,7 @@ class MoveTowardEnemyWithSpecificAttribute(Order):
 
         if current_target is None:
             current_target = simu.get_nearest_enemy_with_attibutes( # TODO
-                self.unit, self.attribute_name, self.attribute_value
-            )
+                self.unit, self.attribute_name, self.attribute_value)
 
             if self.fixed and current_target:
                 self.target = current_target
@@ -188,7 +198,6 @@ class AttackOnSightOrder(Order):
             simu.attack_unit(self.unit, target) # Renvoi faux si la troupe est morte, true sinon
             return False
         else:
-            #self.unit.PushOrder(MoveOrder(
             simu.move_unit_towards_unit(self.unit, target) # se deplace le plus lioin possible en fonction de la capacité de la troupe
             return False
             # Redondant mais besoin pour la clarté du code
@@ -207,7 +216,6 @@ class AttackNearestTroupOmniscient(Order):
             simu.attack_unit(self.unit, target) # Renvoi faux si la troupe est morte, true sinon
             return False
         else:
-            #self.unit.PushOrder(MoveOrder(
             simu.move_unit_towards_unit(self.unit, target) # se deplace le plus lioin possible en fonction de la capacité de la troupe
             return False
             # Redondant mais besoin pour la clarté du code
@@ -240,6 +248,17 @@ class isInDangerOrder(Order):
         simu.move_unit_towards_unit(self.unit, target)
         return False
 
+class DumbOrder(Order):
+    def __init__(self,unit,friendly,typeTarget):
+        super().__init__(unit)
+        self.friendly = friendly
+        self.typeTarget = typeTarget
+
+    def Try(self,simu, *args):
+        self.log.debug("trying order")
+        return False
+
+
 class _Node:
     def __init__(self, order):
         self.order = order
@@ -253,8 +272,9 @@ class OrderManager:
         self._tail = None
         self._by_priority = {}
         self._by_order = {}
+        self.log =  logger.bind(order="order-manager")
 
-    def AddMaxPriority(self, order):
+    def AddMaxPriority(self, order, squad_id=None):
         node = _Node(order) # Create a new node for the order
         keys = [p for p in self._by_priority]
         prio_max = max(keys) + 1 if keys else 0
@@ -264,6 +284,7 @@ class OrderManager:
 
         # La liste est vide
         if self._head is None:
+            self.log.debug(f"Adding order at the beggining with prio {prio_max}")
             self._head = self._tail = node
             return
 
@@ -272,6 +293,7 @@ class OrderManager:
         self._tail = node
 
         self._by_priority[prio_max] = node
+        self.log.debug(f"Adding order with max priority of {prio_max}")
 
     def FlushOrders(self):
         self._head = None
@@ -279,10 +301,15 @@ class OrderManager:
         self._by_priority = {}
         self._by_order = {}
 
+    def removeSquadOrders(self):
+        orders_to_remove = [order for order in self._by_order if order.squad_id is not None]
+        for order in orders_to_remove:
+            self.Remove(order)
 
-    def Add(self, order, priority):
+
+
+    def Add(self, order, priority, squad_id=None):
         if priority in self._by_priority:
-            print(f"Tring to add {type(order).__name__} with priority {priority} but priority already used by {type(self._by_priority[priority].order).__name__}")
             raise ValueError("Priority already used")
         node = _Node(order)
         self._by_priority[priority] = node
@@ -317,8 +344,6 @@ class OrderManager:
                 return False # Tout les autres ordres ne sont pas effectué
 
         return order.Try(simu)
-        #print("Trying order")
-        #order.Try(simu)
 
     def Get(self, priority):
         n = self._by_priority.get(priority)
@@ -355,6 +380,17 @@ class OrderManager:
     def __len__(self):
         return len(self._by_priority)
 
+    def __str__(self):
+        cur = self._head
+        s = []
+        while cur:
+            p = self._by_order[cur.order]
+            s.append(f"{cur.order.__class__.__name__}(p={p})")
+            cur = cur.next
+        if not s:
+            return "OrderManager(empty)"
+        return f"OrderManager([{', '.join(s)}])"
+
     def __repr__(self):
         cur = self._head
         s = []
@@ -371,23 +407,26 @@ class OrderManager:
 
 
 if __name__ == "__main__":
-    u1 = "Crossbowman"
-    ##u1 = Unit()
+    u1 = Crossbowman('A', 0, 0)
+    setup_logger(level="DEBUG", modules=["orders"])
     om = OrderManager()
-    #u1.om = om
 
-    om.Add(MoveByStepOrder(u1, 10, 0), 0);
-    om.Add(MoveByStepOrder(u1, 2, 0), 1);
-    om.Add(MoveByStepOrder(u1, 3, 0), 2);
-    om.Add(MoveByStepOrder(u1, 4, 0), 3);
+    #om.Add(DumbOrder(u1, 10, 0), 0);
+    #om.Add(DumbOrder(u1, 2, 0), 1);
+    #om.Add(DumbOrder(u1, 3, 0), 2);
+    #om.Add(DumbOrder(u1, 4, 0), 3);
+
+    om.AddMaxPriority(DumbOrder(u1, 10, 0),);
+    om.AddMaxPriority(DumbOrder(u1, 2, 0),);
+    om.AddMaxPriority(DumbOrder(u1, 3, 0),);
+    om.AddMaxPriority(DumbOrder(u1, 4, 0),);
 
 
+    logger.debug(om)
     for order in om:
-        print(order)
-        #om.TryOrder("", order)
+        om.TryOrder("", order)
         om.Remove(order)
 
     for order in om:
-        print(order)
         #om.TryOrder("", order)
         om.Remove(order)
