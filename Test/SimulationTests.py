@@ -1,5 +1,5 @@
 import unittest
-from Model.simulation import Simulation
+from Model.Simulation import Simulation
 from Model.Scenario import Scenario
 
 
