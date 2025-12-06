@@ -32,42 +32,34 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import Model modules
-from Model.simulation import Simulation, DEFAULT_NUMBER_OF_TICKS_PER_SECOND
-from Model.Scenario import Scenario
+from Model.simulation import Simulation
 from Model.Units import Knight, Pikeman, Crossbowman, UnitType
 
 # Monkey-patch Simulation to add a step method if it doesn't exist
 if not hasattr(Simulation, 'step'):
     def simulation_step(self):
         """Execute one simulation step (tick)."""
-        random.shuffle(self.scenario.units)
+        random.shuffle(self.units)
 
-        for unit in self.scenario.units:
+        for unit in self.units:
             if unit.hp <= 0:
                 continue
-            enemy = self.get_nearest_enemy_in_reach(unit)
+            enemy = self.get_nearest_enemy_unit(unit)
             if enemy is None:
                 unit.target = None
                 continue
             unit.target = enemy
-            if self.is_in_reach(unit, enemy) and unit.can_attack():
+            if self.is_in_reach(unit, enemy) and unit.reload <= 0:
                 self.attack_unit(unit, enemy)
                 unit.reload = unit.reload_time
             else:
-                self.move_unit_towards_unit(unit, enemy)
+                self.move_unit_towards_coordinates(unit, enemy.x, enemy.y)
         
         self.tick += 1
 
-        # Use instance tick_speed if available, otherwise default
-        tick_rate = getattr(self, 'tick_speed', DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
-        
-        for unit in list(self.reload_units):
-            unit.update_reload(1 / tick_rate)
-            if unit.can_attack():
-                try:
-                    self.reload_units.remove(unit)
-                except ValueError:
-                    pass
+        if self.tick % 5 == 0:
+            for unit in self.units:
+                self.reload_unit(unit)
                     
     Simulation.step = simulation_step
 
@@ -610,9 +602,9 @@ class TerminalView(ViewInterface):
         return Team.B
 
     def _get_units_from_simulation(self, simulation) -> list:
-        """Retrieve units list from simulation (Scenario or Board)."""
-        if hasattr(simulation, 'scenario') and hasattr(simulation.scenario, 'units'):
-            return simulation.scenario.units
+        """Retrieve units list from simulation."""
+        if hasattr(simulation, 'units'):
+            return simulation.units
         if hasattr(simulation, 'board') and hasattr(simulation.board, 'units'):
             return simulation.board.units
         return []
@@ -1074,8 +1066,7 @@ def main_test():
     units_a = [u1]
     units_b = [u2]
     
-    scenario = Scenario(units, units_a, units_b, None, None, 120, 120)
-    simulation = Simulation(scenario, tick_speed=20)
+    simulation = Simulation(units, units_a, None, units_b, None, tickSpeed=20, size_x=120, size_y=120)
     
     view = TerminalView(120, 120)
     
@@ -1119,8 +1110,7 @@ def main_demo():
         units.append(u)
         units_b.append(u)
         
-    scenario = Scenario(units, units_a, units_b, None, None, 120, 120)
-    simulation = Simulation(scenario, tick_speed=20)
+    simulation = Simulation(units, units_a, None, units_b, None, tickSpeed=20, size_x=120, size_y=120)
     
     # Create the view
     view = TerminalView(120, 120, tick_speed=20)

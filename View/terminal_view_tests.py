@@ -113,13 +113,9 @@ class TestTerminalView(unittest.TestCase):
                 self.x = 10
                 self.y = 10
         
-        class MockScenario:
-            def __init__(self):
-                self.units = [MockUnit(1), MockUnit(2)]
-        
         class MockSimulation:
             def __init__(self):
-                self.scenario = MockScenario()
+                self.units = [MockUnit(1), MockUnit(2)]
                 self.elapsed_time = 1.5
         
         sim = MockSimulation()

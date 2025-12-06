@@ -1,8 +1,8 @@
-from orders import OrderManager
+from Model.orders import OrderManager
 from Model.Units import Unit, UnitType, Crossbowman, Knight, Pikeman
-from strategies import *
+from Model.strategies import *
 
-from errors import *
+from Model.errors import *
 
 # Le general ne se préocupe pas de savoir "ou" sont les troupes, il n'a pas logique de réprésentation "logique" du jeu
 # si il veut qu'une de ses troupes attaquent l'unité la plus proche, alors il le demande, il ne va pas aller chercher l'unité la plus proche
