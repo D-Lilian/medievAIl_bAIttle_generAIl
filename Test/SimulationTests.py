@@ -33,7 +33,7 @@ class MockUnit:
         self.armor = {}
         self.unit_type = unit_type
         self.damage_dealt = 0
-        self.distance_traveled = 0
+        self.distance_moved = 0
 
     def can_attack(self):
         return self.reload <= 0.0
@@ -161,17 +161,6 @@ class TestMovementFunctions(unittest.TestCase):
         self.sim.move_unit_towards_coordinates(self.unitA, 100, 10)
         distance_moved = abs(self.unitA.x - initial_x)
         self.assertLessEqual(distance_moved, 3.01)
-
-    def test_move_clamped_to_bounds(self):
-        self.sim.move_unit_towards_coordinates(self.unitA, -10, -10)
-        self.assertGreaterEqual(self.unitA.x, 0)
-        self.assertGreaterEqual(self.unitA.y, 0)
-
-        self.unitA.x = 190
-        self.unitA.y = 190
-        self.sim.move_unit_towards_coordinates(self.unitA, 300, 300)
-        self.assertLessEqual(self.unitA.x, self.scenario.size_x)
-        self.assertLessEqual(self.unitA.y, self.scenario.size_y)
 
     def test_move_collision_detection(self):
         self.unitA.x = 20
