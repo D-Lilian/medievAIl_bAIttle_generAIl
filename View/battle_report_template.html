@@ -32,6 +32,16 @@
             </div>
         </div>
 
+        <div class="controls">
+            <input type="text" id="unitSearch" placeholder="Search units (ID, Type, Status)..." onkeyup="filterUnits()">
+            <div class="buttons">
+                <button onclick="toggleDetails(true)">Expand All</button>
+                <button onclick="toggleDetails(false)">Collapse All</button>
+            </div>
+        </div>
+
+        {battle_map}
+
         <div class="teams-container">
             {team_sections}
         </div>
@@ -47,5 +57,97 @@
             <p>MedievAIl Battle Simulator Report</p>
         </footer>
     </div>
+
+    <script>
+        let selectedUnitId = null;
+
+        function filterUnits() {
+            const input = document.getElementById('unitSearch');
+            const filter = input.value.toUpperCase();
+            const units = document.getElementsByClassName('unit');
+
+            for (let i = 0; i < units.length; i++) {
+                const txtValue = units[i].textContent || units[i].innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    units[i].style.display = "";
+                } else {
+                    units[i].style.display = "none";
+                }
+            }
+        }
+
+        function toggleDetails(open) {
+            const details = document.getElementsByTagName('details');
+            for (let i = 0; i < details.length; i++) {
+                if (open) {
+                    details[i].setAttribute('open', 'true');
+                } else {
+                    details[i].removeAttribute('open');
+                }
+            }
+        }
+
+        function selectUnit(unitId) {
+            // Remove previous selection
+            if (selectedUnitId) {
+                const prevUnit = document.getElementById(selectedUnitId);
+                const prevDot = document.querySelector(`[data-unit-id="${selectedUnitId}"]`);
+                if (prevUnit) prevUnit.classList.remove('selected');
+                if (prevDot) prevDot.classList.remove('selected');
+            }
+
+            // Set new selection
+            selectedUnitId = unitId;
+            const unit = document.getElementById(unitId);
+            const dot = document.querySelector(`[data-unit-id="${unitId}"]`);
+            
+            if (unit) {
+                unit.classList.add('selected');
+                unit.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Expand the parent details if collapsed
+                const details = unit.closest('details');
+                if (details && !details.hasAttribute('open')) {
+                    details.setAttribute('open', 'true');
+                }
+            }
+            
+            if (dot) {
+                dot.classList.add('selected');
+            }
+        }
+
+        // Add click handlers to unit cards
+        document.addEventListener('DOMContentLoaded', function() {
+            const units = document.getElementsByClassName('unit');
+            for (let i = 0; i < units.length; i++) {
+                units[i].addEventListener('click', function() {
+                    const unitId = this.getAttribute('data-unit-id');
+                    selectUnit(unitId);
+                });
+            }
+        });
+
+        let currentZoom = 1;
+        
+        function zoomMap(delta) {
+            currentZoom += delta;
+            if (currentZoom < 1) currentZoom = 1;
+            if (currentZoom > 5) currentZoom = 5;
+            updateMapZoom();
+        }
+        
+        function resetZoom() {
+            currentZoom = 1;
+            updateMapZoom();
+        }
+        
+        function updateMapZoom() {
+            const map = document.getElementById('battleMap');
+            if (map) {
+                map.style.width = `${currentZoom * 100}%`;
+            }
+        }
+    </script>
 </body>
 </html>

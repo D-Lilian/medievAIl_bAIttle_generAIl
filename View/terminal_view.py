@@ -906,8 +906,11 @@ class TerminalView(ViewInterface):
         status_label = "Alive" if unit.alive else "Dead"
         target_info = f"Targeting: #{unit.target_id}" if unit.target_id else "Idle"
         
+        # Generate unique ID for the unit
+        unit_id = f"unit-{team_num}-{i}"
+        
         return f"""
-                <div class="unit team{team_num}">
+                <div class="unit team{team_num}" id="{unit_id}" data-unit-id="{unit_id}">
                     <div class="unit-header">
                         <span>#{i} {unit.type} ({unit.letter})</span>
                         <span>{status_label}</span>
@@ -937,6 +940,43 @@ class TerminalView(ViewInterface):
     </div>
 """
 
+    def _generate_battle_map(self) -> str:
+        """Generate HTML for the battle map visualization."""
+        dots_html = ""
+        for i, unit in enumerate(self.units_cache, 1):
+            # Calculate grid position (1-based)
+            col = int(unit.x) + 1
+            row = int(unit.y) + 1
+            
+            # Clamp to board limits
+            col = max(1, min(self.board_width, col))
+            row = max(1, min(self.board_height, row))
+            
+            team_class = "team1" if unit.team == Team.A else "team2"
+            team_num = 1 if unit.team == Team.A else 2
+            unit_id = f"unit-{team_num}-{i}"
+            
+            dots_html += f'<div class="unit-cell {team_class}" style="grid-column: {col}; grid-row: {row};" data-unit-id="{unit_id}" onclick="selectUnit(\'{unit_id}\')" title="{unit.type} #{i} ({unit.x:.1f}, {unit.y:.1f})">{unit.letter}</div>'
+            
+        return f"""
+        <div class="battle-map-container">
+            <div class="map-header">
+                <h3>Battlefield Map ({self.board_width}x{self.board_height})</h3>
+                <div class="map-controls">
+                    <button onclick="zoomMap(0.5)" title="Zoom In">+</button>
+                    <button onclick="zoomMap(-0.5)" title="Zoom Out">-</button>
+                    <button onclick="resetZoom()" title="Reset Zoom">Reset</button>
+                </div>
+            </div>
+            <div class="battle-map-viewport">
+                <div id="battleMap" class="battle-map" style="--cols: {self.board_width}; --rows: {self.board_height};">
+                    {dots_html}
+                </div>
+            </div>
+            <p class="help-text">Click units to view details • Use controls to zoom</p>
+        </div>
+        """
+
     def generate_html_report(self):
         """
         Generate an HTML report with the current state of all units.
@@ -956,6 +996,8 @@ class TerminalView(ViewInterface):
         
         team_sections = self._generate_team_section(1, team1_units) + \
                         self._generate_team_section(2, team2_units)
+        
+        battle_map = self._generate_battle_map()
         
         legend_items = "\n".join(
             f"            <li><strong>{letter}</strong>: {unit_type}</li>" 
@@ -977,6 +1019,7 @@ class TerminalView(ViewInterface):
             '{team2_units}': str(self.team2_units),
             '{total_units}': str(len(self.units_cache)),
             '{team_sections}': team_sections,
+            '{battle_map}': battle_map,
             '{legend_items}': legend_items,
             '{generation_datetime}': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
