@@ -1,23 +1,12 @@
 # map_generator.py
-from adodbapi.ado_consts import directions
-
 from scenario import Scenario
 from unit import Crossbowman, Knight, Pikeman
 import random
 import math
 
-import units
-
-
 class MapGenerator:
     """
     Generate symmetric battle scenarios with mirrored formations.
-
-    Design principles:
-    - Symmetric battles (mirrored armies)
-    - 100-200 units range
-    - Fast battles (~2min max)
-    - Moderate starting distance (time to form up before engagement)
     """
 
     UNIT_CLASSES = [Crossbowman, Knight, Pikeman]
@@ -26,7 +15,7 @@ class MapGenerator:
     def generate_battle_scenario(
             units_per_team: int = 100,
             formation: str = 'line',
-            size_x: int = 200,
+            size_x: int = 120,
             size_y: int = 120
     ) -> Scenario:
         """
@@ -279,8 +268,8 @@ class MapGenerator:
             x = spawn_x + radius * math.cos(angle)
             y = center_y + radius * math.sin(angle)
 
-            UnitClass = random.choice(MapGenerator.UNIT_CLASSES)
-            unit = UnitClass(team=team, x=x, y=y)
+            Unitclass = random.choice(MapGenerator.UNIT_CLASSES)
+            unit = Unitclass(team=team, x=x, y=y)
             units.append(unit)
         return units
 
@@ -337,6 +326,7 @@ class MapGenerator:
                 Checkerboard Formation
 
             """
+            global placed
             units = []
                 
             # Calculate grid size
