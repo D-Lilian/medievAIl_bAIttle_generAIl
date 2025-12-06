@@ -1,7 +1,5 @@
 from enum import Enum
 
-
-
 class Unit:
 
     def __init__(self, unit_type, name, team, hp, armor, attack, range, size, sight, speed, accuracy, reload,

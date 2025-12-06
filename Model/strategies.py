@@ -12,7 +12,7 @@ class StrategyStart:
     def ApplyOrder(self, unit):
         # Ici donne a une troupe random par exemple le fait de se déplacer a l'autre bout de la map
         self.unit = unit
-        raise NotImplemented #attaquer tout le monde par défaut pas sure
+        raise NotImplementedError #attaquer tout le monde par défaut pas sure
 
 class StrategyTroup:
     def __init__(self, general, favoriteTroup, hatedTroup):
@@ -28,7 +28,7 @@ class StrategyTroup:
 
     def ApplyOrder(self, unit):
         self.unit = unit
-        raise NotImplemented
+        raise NotImplementedError
 
 # DAFT
 # ----------------------

@@ -348,6 +348,7 @@ class TerminalView(ViewInterface):
         
         # Unit cache
         self.units_cache: List[UniteRepr] = []
+        self.all_units_dict = {}  # Persistent storage for all units (alive and dead)
         
         # Stats
         self.team1_units = 0
@@ -616,7 +617,7 @@ class TerminalView(ViewInterface):
         Args:
             simulation: Simulation instance containing the units
         """
-        self.units_cache.clear()
+        # Reset stats
         self.team1_units = 0
         self.team2_units = 0
         self.dead_team1 = 0
@@ -624,12 +625,19 @@ class TerminalView(ViewInterface):
         self.type_counts_team1 = {}
         self.type_counts_team2 = {}
         
-        for unit in self._get_units_from_simulation(simulation):
+        # Get current living units from simulation
+        current_units = self._get_units_from_simulation(simulation)
+        current_unit_ids = set()
+        
+        # Update living units
+        for unit in current_units:
             if not hasattr(unit, 'hp'):
                 continue
                 
             fields = self._extract_unit_fields(unit)
             team = self._resolve_team(fields['team'])
+            uid = id(unit)
+            current_unit_ids.add(uid)
             
             repr_obj = UniteRepr(
                 type=fields['type'],
@@ -643,22 +651,25 @@ class TerminalView(ViewInterface):
                 damage_dealt=fields['damage_dealt'],
                 target_id=fields['target_id']
             )
-            self.units_cache.append(repr_obj)
+            self.all_units_dict[uid] = repr_obj
 
-            # Record death time for temporary blinking
-            uid = id(repr_obj)
-            if not fields['alive']:
-                if uid not in self._death_times:
-                    self._death_times[uid] = time.perf_counter()
-            elif uid in self._death_times:
-                del self._death_times[uid]
-            
-            # Update statistics
-            is_team_a = (team == Team.A)
+        # Mark missing units as dead
+        for uid, repr_obj in self.all_units_dict.items():
+            if uid not in current_unit_ids:
+                repr_obj.status = UnitStatus.DEAD
+                repr_obj.hp = 0
+                # Keep last known position
+        
+        # Rebuild cache from all units
+        self.units_cache = list(self.all_units_dict.values())
+        
+        # Recalculate stats
+        for unit in self.units_cache:
+            is_team_a = (unit.team == Team.A)
             target_counts = self.type_counts_team1 if is_team_a else self.type_counts_team2
             
-            if fields['alive']:
-                target_counts[fields['type']] = target_counts.get(fields['type'], 0) + 1
+            if unit.alive:
+                target_counts[unit.type] = target_counts.get(unit.type, 0) + 1
                 if is_team_a:
                     self.team1_units += 1
                 else:
@@ -672,6 +683,8 @@ class TerminalView(ViewInterface):
         # Update simulation time
         if hasattr(simulation, 'elapsed_time'):
             self.simulation_time = simulation.elapsed_time
+        elif hasattr(simulation, 'tick') and hasattr(simulation, 'tickSpeed'):
+             self.simulation_time = simulation.tick / simulation.tickSpeed
     
     def draw_map(self):
         """
@@ -945,6 +958,8 @@ class TerminalView(ViewInterface):
             row = max(1, min(self.board_height, row))
             
             team_class = "team1" if unit.team == Team.A else "team2"
+            if not unit.alive:
+                team_class += " dead"
             team_num = 1 if unit.team == Team.A else 2
             unit_id = f"unit-{team_num}-{i}"
             
