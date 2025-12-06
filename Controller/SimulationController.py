@@ -11,7 +11,7 @@ def run_simulation_worker(scenario, output, idx, tickSpeed=5):
         paused = False
     )
     result = sim.simulate()
-    output.put((idx, result))
+    output.append((idx, result))
     return
 
 class SimulationController:
@@ -28,7 +28,7 @@ class SimulationController:
             paused=paused,
             unlocked=unlocked
         )
-        self.simulation.simulate()
+        return self.simulation.simulate()
 
     def toggle_pause(self):
         self.simulation.paused = not self.simulation.paused
