@@ -948,7 +948,15 @@ class TerminalView(ViewInterface):
     def _generate_battle_map(self) -> str:
         """Generate HTML for the battle map visualization."""
         dots_html = ""
-        for i, unit in enumerate(self.units_cache, 1):
+        
+        # Split units by team to match ID generation in team sections
+        team1_units = [u for u in self.units_cache if u.team == Team.A]
+        team2_units = [u for u in self.units_cache if u.team == Team.B]
+        
+        def process_unit(i, unit, team_num):
+            if not unit.alive:
+                return ""
+                
             # Calculate grid position (1-based)
             col = int(unit.x) + 1
             row = int(unit.y) + 1
@@ -957,30 +965,37 @@ class TerminalView(ViewInterface):
             col = max(1, min(self.board_width, col))
             row = max(1, min(self.board_height, row))
             
-            team_class = "team1" if unit.team == Team.A else "team2"
-            if not unit.alive:
-                team_class += " dead"
-            team_num = 1 if unit.team == Team.A else 2
+            team_class = "team1" if team_num == 1 else "team2"
             unit_id = f"unit-{team_num}-{i}"
             
-            dots_html += f'<div class="unit-cell {team_class}" style="grid-column: {col}; grid-row: {row};" data-unit-id="{unit_id}" onclick="selectUnit(\'{unit_id}\')" title="{unit.type} #{i} ({unit.x:.1f}, {unit.y:.1f})">{unit.letter}</div>'
+            return f'<div class="unit-cell {team_class}" style="grid-column: {col}; grid-row: {row};" data-unit-id="{unit_id}" onclick="selectUnit(\'{unit_id}\')" title="{unit.type} #{i} ({unit.x:.1f}, {unit.y:.1f})">{unit.letter}</div>'
+
+        # Process Team 1
+        for i, unit in enumerate(team1_units, 1):
+            dots_html += process_unit(i, unit, 1)
+            
+        # Process Team 2
+        for i, unit in enumerate(team2_units, 1):
+            dots_html += process_unit(i, unit, 2)
             
         return f"""
         <div class="battle-map-container">
-            <div class="map-header">
-                <h3>Battlefield Map ({self.board_width}x{self.board_height})</h3>
-                <div class="map-controls">
-                    <button onclick="zoomMap(0.5)" title="Zoom In">+</button>
-                    <button onclick="zoomMap(-0.5)" title="Zoom Out">-</button>
-                    <button onclick="resetZoom()" title="Reset Zoom">Reset</button>
+            <details open>
+                <summary>Battlefield Map ({self.board_width}x{self.board_height})</summary>
+                <div class="map-header">
+                    <div class="map-controls">
+                        <button onclick="zoomMap(0.5)" title="Zoom In">+</button>
+                        <button onclick="zoomMap(-0.5)" title="Zoom Out">-</button>
+                        <button onclick="resetZoom()" title="Reset Zoom">Reset</button>
+                    </div>
                 </div>
-            </div>
-            <div class="battle-map-viewport">
-                <div id="battleMap" class="battle-map" style="--cols: {self.board_width}; --rows: {self.board_height};">
-                    {dots_html}
+                <div class="battle-map-viewport">
+                    <div id="battleMap" class="battle-map" style="--cols: {self.board_width}; --rows: {self.board_height};">
+                        {dots_html}
+                    </div>
                 </div>
-            </div>
-            <p class="help-text">Click units to view details • Use controls to zoom</p>
+                <p class="help-text">Click units to view details • Use controls to zoom</p>
+            </details>
         </div>
         """
 
