@@ -1,14 +1,15 @@
 from Model.Units import UnitType
-from errors import WrongArguments
-from orders import AttackOnSightOrder, AvoidOrder, AttackOnReachOrder, StayInReachOrder, SacrificeOrder, \
+from Model.orders import FormationOrder
+from Utils.errors import WrongArguments
+from orders import AttackOnSightOrder, AvoidOrder, StayInReachOrder, SacrificeOrder, \
     MoveByStepOrder, StayInFriendlySpaceOrder, AttackNearestTroupOmniscient
 
-
+#############################################################################################################
+# CLasse abstraites
+#############################################################################################################
 class StrategyStart:
-
     def __init__(self):
         pass
-
     def ApplyOrder(self, unit):
         # Ici donne a une troupe random par exemple le fait de se déplacer a l'autre bout de la map
         self.unit = unit
@@ -22,16 +23,13 @@ class StrategyTroup:
         self.favoriteTroup = favoriteTroup
         self.hatedTroup = hatedTroup
 
-        #if not self.favoriteTroup in general.HisUnits:
-        #    self.favoriteTroup = None
-        #pass
-
     def ApplyOrder(self, unit):
         self.unit = unit
         raise NotImplemented
 
+#############################################################################################################
 # DAFT
-# ----------------------
+#############################################################################################################
 # Aucune hated troup
 # Aucune favorite troup
 class StrategieDAFT(StrategyTroup):
@@ -48,11 +46,9 @@ class StrategieStartDAFT(StrategyStart):
     def apply_order(self, general, units):
         pass
 
-# ----------------------
-
-
+#############################################################################################################
 # BrainDead
-# ----------------------
+#############################################################################################################
 # Aucune hated troup
 # Aucune favorite troup
 class StrategieBrainDead(StrategyTroup):
@@ -64,17 +60,16 @@ class StrategieBrainDead(StrategyTroup):
         unit.order_manager.Add(AttackOnSightOrder(unit, self.favoriteTroup), 0)
 
 
-## DEPRECATED
-
 class StrategieStartBrainDead(StrategyStart):
     def apply_order(self, general, unit):
         pass
         #unit.order_manager.Add(AttackOnReachOrder, 0) # On push/insere/add un ordre de priorité 0
-# ----------------------
 
+#############################################################################################################
 # Le but de SomeIQ est de battre Braindead et daft, pas de battre un autre SomeIQ
 # SomeIQ
-# ----------------------
+#############################################################################################################
+
 class StrategieCrossbowmanSomeIQ(StrategyTroup): #focus Pikeman (faibles au tir), évitent les Knights, restent groupés
     def __init__(self):
         super().__init__(None, UnitType.PIKEMAN, UnitType.KNIGHT)
@@ -110,7 +105,7 @@ class StrategiePikemanSomeIQ(StrategyTroup):
     def __init__(self):
         super().__init__(None, UnitType.KNIGHT, UnitType.CROSSBOWMAN)
 
-    def applyOrder(self, general, unit):
+    def apply_order(self, general, unit):
         unit.order_manager.Add(StayInReachOrder(unit,UnitType.CROSSBOWMAN), 0)
         unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.ALL), 1) # On push/insere/add un ordre de priorité 0
        # stay in friendly zone a cote des srossbowmen et attaquer
@@ -123,10 +118,31 @@ class StrategiePikemanSomeIQ(StrategyTroup):
 
 
 class StrategieStartSomeIQ(StrategyStart):
+    """
+    On envoi un mec se sacrifier, on recule toutes les troupes de 10 cases
+    """
     def apply_order(self, general):
+        # ON fait reculer tout le monde
         for unit in general.MyUnits: 
             #unit.order_manager.Add(MoveOneStepFromRef(unit, 10, "WORLD"), 180)
             unit.order_manager.Add(MoveByStepOrder(unit, 10, 180))
+        #StrategySquad(nb_crossbowmen=20).build_squad(general)
+        #StrategySquad(nb_crossbowmen=20)
+        #StrategySquad(nb_crossbowmen=20)
+
+        # On fait une squad crossbow à gauche,
+        squad1 = general.generate_squad({UnitType.CROSSBOWMAN:20, UnitType.PIKEMAN:5})
+        for unit in squad1:
+            unit.order_manager.AddMaxPriority(MoveByStepOrder(unit, 50, 90), squad_id=squad1.squad_id)
+            unit.order_manager.AddMaxPriority(FormationOrder(unit, squad1), squad_id=squad1.squad_id)
+
+        # On fait une squad crossbow à droite,
+        squad2 = general.generate_squad({UnitType.CROSSBOWMAN:20, UnitType.PIKEMAN:5})
+        for unit in squad2:
+            unit.order_manager.AddMaxPriority(MoveByStepOrder(unit, 50, -90), squad_id=squad2.squad_id)
+            unit.order_manager.AddMaxPriority(FormationOrder(unit, squad2), squad_id=squad2.squad_id)
+
+
 
         soufredouleur = general.GetRandomUnit()
         if soufredouleur is not None:
@@ -159,15 +175,20 @@ class StrategieCrossbowmanFallbackSomeIQ(StrategyTroup):
     def __init__(self):
         super().__init__(None, UnitType.ALL, UnitType.NONE)
 
-    def applyOrder(self, general, unit):
+    def apply_order(self, general, unit):
+        # knight → rush les crossbowmen ennemis
+        unit.order_manager.AddMaxPriority(AttackOnSightOrder(unit,UnitType.CROSSBOWMAN))
 
-        if unit.type == UnitType.KNIGHT:
-            # knight → rush les crossbowmen ennemis
-            unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.CROSSBOWMAN), 0)
+        # Pikeman → focus les knights ennemis
+        unit.order_manager.AddMaxPriority(AttackOnSightOrder(unit,UnitType.KNIGHT))
 
-        elif unit.type == UnitType.PIKEMAN:
-            # Pikeman → focus les knights ennemis
-            unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.KNIGHT), 0)
+        #if unit.type == UnitType.KNIGHT:
+        #    # knight → rush les crossbowmen ennemis
+        #    unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.CROSSBOWMAN), 0)
+
+        #elif unit.type == UnitType.PIKEMAN:
+        #    # Pikeman → focus les knights ennemis
+        #    unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.KNIGHT), 0)
 
 
 class StrategieNoKnightFallbackSomeIQ(StrategyTroup):
@@ -176,7 +197,7 @@ class StrategieNoKnightFallbackSomeIQ(StrategyTroup):
     def __init__(self):
         super().__init__(None, UnitType.ALL, UnitType.NONE)
 
-    def applyOrder(self, general, unit):
+    def apply_order(self, general, unit):
         if unit.type == UnitType.CROSSBOWMAN:
             #les crossbowmen restent en arrière et focus ce qui s'avance
             unit.order_manager.Add(AttackOnSightOrder(unit,UnitType.ALL), 0)
@@ -195,7 +216,7 @@ class StrategieNoPikemanFallback(StrategyTroup):
     def __init__(self):
         super().__init__(None, UnitType.ALL, UnitType.NONE)
 
-    def applyOrder(self, general, unit):
+    def apply_order(self, general, unit):
 
         # Enlever les ordres qui target les spikeman
 
@@ -227,26 +248,28 @@ class StrategieNoTroupFallbackSomeIQ:
 
 class StrategySquad(): #Stratégie pour un squad mixte 
     
-    def __init__(self, nb_crossbowmen=0, nb_knights=0, nb_pikemen=0, squad_id=1):
+    def __init__(self, general, nb_crossbowmen=0, nb_knights=0, nb_pikemen=0, squad_id=0):
         self.nb_crossbowmen = nb_crossbowmen
         self.nb_knights = nb_knights
         self.nb_pikemen = nb_pikemen
-        self.squad_id = squad_id
+        self.squad_id = general.squad_id
         self.units = []
+
 
     def build_squad(self, general): #Choisit les unités dans le général, et leur donne squad_id.
-        self.units = []
+        if(self.units != []):
+            # strategie already called
+            general.log.warn("Strategye called twice")
+            return self.units
 
-        if self.nb_knights > 0:
-            self.units += general.get_squad(UnitType.KNIGHT, self.nb_knights, self.squad_id)
+        squad = general.generate_squad(
+            {UnitType.CROSSBOWMAN: self.nb_crossbowmen,
+             UnitType.KNIGHT: self.nb_knights,
+             UnitType.PIKEMAN: self.nb_pikemen}
+        )
+        self.units = squad
 
-        if self.nb_crossbowmen > 0:
-            self.units += general.get_squad(UnitType.CROSSBOWMAN, self.nb_crossbowmen, self.squad_id)
-
-        if self.nb_pikemen > 0:
-            self.units += general.get_squad(UnitType.PIKEMAN, self.nb_pikemen, self.squad_id)
-
-        return self.units
+        return squad
 
     def apply_orders(self, general, order_cls, priority, *order_args):# order_cls : classe d'ordre (ex: AttackOnSightOrder) priority , order_args ,
         for u in self.units:

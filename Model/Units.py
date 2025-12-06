@@ -1,11 +1,36 @@
 from enum import Enum
 
 
+class UnitType(Enum):
+    CROSSBOWMAN = 0
+    KNIGHT = 1
+    PIKEMAN = 2
+    ALL = 3
+    NONE = None
+
+class Team(Enum):
+    A = 0
+    B = 1
+
 
 class Unit:
 
-    def __init__(self, unit_type, name, team, hp, armor, attack, range, size, sight, speed, accuracy, reload,
-                 reload_time, x, y, order_manager):
+    def __init__(self,
+                 unit_type: UnitType,
+                 name: str,
+                 team: Team,
+                 hp: int,
+                 armor: dict,
+                 attack: dict,
+                 range: int,
+                 size: int,
+                 sight: int,
+                 speed: float,
+                 accuracy: float,
+                 reload: float,
+                 reload_time: float,
+                 x: int,
+                 y: int):
         from Model.orders import OrderManager
         self.unit_type = unit_type
         self.name = name
@@ -23,6 +48,7 @@ class Unit:
         self.x = x                          # coordonnee en X
         self.y = y                          # coordonnee en Y
         self.order_manager = OrderManager()  # ordres donnees par le gerenal
+        self.squad_id = None
 
     def can_attack(self):
         """Check if the unit can perform an attack."""
@@ -40,19 +66,18 @@ class Unit:
         if not self.can_attack():
             self.reload -= t
 
+            # Dans votre fichier Units.py
 
-class UnitType(Enum):
-    CROSSBOWMAN = 0
-    KNIGHT = 1
-    PIKEMAN = 2
-    ALL = 3
-    NONE = None
+    def __str__(self):
+        return f"{self.unit_type} {self.__hash__()} (Team {self.team}) at ({self.x},{self.y})"
+
+
 
 
 class Crossbowman(Unit):
     def __init__(self, team, x, y):
         super().__init__(unit_type=UnitType.CROSSBOWMAN, name="Crossbowman", team=team, hp=35, range=5, size=1,
-                         sight=5, speed=0.96, accuracy=0.85, reload_time=2.0, x=x, y=y, order_manager=None, reload=0,
+                         sight=5, speed=0.96, accuracy=0.85, reload_time=2.0, x=x, y=y,  reload=0,
                          attack={
                              "Base Pierce": 5,
                              "Spearmen": 3,
@@ -71,7 +96,7 @@ class Crossbowman(Unit):
 class Knight(Unit):
     def __init__(self, team, x, y):
         super().__init__(unit_type=UnitType.KNIGHT, name="Knight", team=team, hp=100, range=0, size=1, sight=4,
-                         speed=1.35, accuracy=1.0, reload_time=1.8, x=x, y=y, order_manager=None, reload=0,
+                         speed=1.35, accuracy=1.0, reload_time=1.8, x=x, y=y,  reload=0,
                          attack={
                              "Base Melee": 10,
                              "Archers": 0,
@@ -91,7 +116,7 @@ class Knight(Unit):
 class Pikeman(Unit):
     def __init__(self, team, x, y):
         super().__init__(unit_type=UnitType.PIKEMAN, name="Pikeman", team=team, hp=55, range=0, size=1, sight=4,
-                         speed=1.0, accuracy=1.0, reload_time=3.0, x=x, y=y, order_manager=None, reload=0,
+                         speed=1.0, accuracy=1.0, reload_time=3.0, x=x, y=y,  reload=0,
                          attack={
                              "Base Melee": 4,
                              "Eagle Warriors": 1,
