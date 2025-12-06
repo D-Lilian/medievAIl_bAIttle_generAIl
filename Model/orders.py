@@ -119,7 +119,7 @@ class MoveTowardEnemyWithSpecificAttribute(Order):
                 return False
 
         if current_target is None:
-            current_target = simu.get_nearest_enemy_with_attibutes( # TODO
+            current_target = simu.get_nearest_enemy_with_attributes( # TODO
                 self.unit, self.attribute_name, self.attribute_value
             )
 
