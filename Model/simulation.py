@@ -2,13 +2,7 @@ import time
 import random
 import math
 
-import Model.Units as Units
-from Model.Scenario import Scenario
-
-
-# boucle sur les ordres de orderManager, chaque ordre appelant une fonction de simulation
-# une fois par tick un seul mouvement et une seule attaque par unite
-# chaque tick, on verifie si une unite peut attaquer, sinon elle bouge vers l'ennemi le plus proche
+from Model.Units import *
 
 # Number chosen to make simulation fast but realistic
 # So that reload time and tick speed are compatible
@@ -32,27 +26,26 @@ class Simulation:
 
     ## ----------- Simulation functions -------------
 
-    def simulate(self, output=None):
+    def simulate(self):
         """Run the simulation until a team wins or time runs out."""
+        self.scenario.general_a.BeginStrategy()
+        self.scenario.general_b.BeginStrategy()
+        self.scenario.general_a.CreateOrders()
+        self.scenario.general_b.CreateOrders()
+
         while not self.finished():
             random.shuffle(self.scenario.units)
 
             for unit in self.scenario.units:
-                if unit.hp <= 0:
+                if not self.is_unit_still_alive(unit):
                     continue
-                enemy = self.get_nearest_enemy_in_reach(unit)
-                if enemy is None:
-                    continue
-                if self.is_in_reach(unit, enemy) and unit.can_attack():
-                    # print("Attack : ", unit.name, " at (", unit.x, ",", unit.y, ") attacks ", enemy.name, " at (", enemy.x, ",", enemy.y, ")")
-                    self.attack_unit(unit, enemy)
-                    unit.reload = unit.reload_time
-                else:
-                    # self.move_one_step_from_target_in_direction(unit, enemy, 0)
-                    self.move_unit_towards_unit(unit, enemy)
-                    # print("Move : ", unit.name, " at (", unit.x, ",", unit.y, ") moves towards ", enemy.name, " at (", enemy.x, ",", enemy.y, ")")
+
+                for unit_order in unit.order_manager:
+                    if unit_order.Try(self):
+                        unit_order.Remove(unit_order)
+                self.as_unit_attacked = False
+                self.as_unit_moved = False
             self.tick += 1
-            print(self.tick)
 
             for unit in list(self.reload_units):
                 unit.update_reload(1 / DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
@@ -62,13 +55,30 @@ class Simulation:
                     except ValueError:
                         pass
 
+            if self.tick % DEFAULT_NUMBER_OF_TICKS_PER_SECOND == 0:
+                types = self.type_present_in_team()
+                for types_present in types.get("A"):
+                    if types_present not in self.types_present.get("A"):
+                        self.scenario.general_a.notify(types_present)
+                for types_present in types.get("B"):
+                    if types_present not in self.types_present.get("B"):
+                        self.scenario.general_b.HandleUnitTypeDepleted(types_present)
+                self.types_present = types
+
+                self.scenario.general_a.CreateOrders()
+                self.scenario.general_b.CreateOrders()
+
             if self.paused:
                 while self.paused:
                     time.sleep(0.1)
             elif not self.unlocked:
                 time.sleep(1 / self.tick_speed)
 
-
+        # Simulation ended, return results
+        # Can be expanded to return more detailed results in the future
+        return {
+            'ticks': self.tick
+        }
 
     def finished(self):
         """Check if the simulation has finished."""
@@ -76,20 +86,17 @@ class Simulation:
         count_b = 0
 
         for unit in self.scenario.units_a:
-            if unit.hp > 0:
+            if self.is_unit_still_alive(unit):
                 count_a += 1
-        if count_a == 0:
-            print("Ticks : ", self.tick, "Team A units left:", count_a, "  | Team B units left:", count_b)
-            return True
-
         for unit in self.scenario.units_b:
-            if unit.hp > 0:
+            if self.is_unit_still_alive(unit):
                 count_b += 1
-        if count_b == 0:
+
+        if count_a == 0 or count_b == 0:
             print("Ticks : ", self.tick, "Team A units left:", count_a, "  | Team B units left:", count_b)
             return True
 
-        return self.tick >= self.tick_speed * 240
+        return self.tick >= self.tick_speed * 120
 
     ## ----------- Movement functions -------------
 
@@ -111,7 +118,7 @@ class Simulation:
 
     def move_unit_towards_coordinates(self, attacker_unit, target_x, target_y):
         """Move a unit towards target coordinates, up to its max distance."""
-        if attacker_unit in self.scenario.units:
+        if attacker_unit in self.scenario.units and self.is_unit_still_alive(attacker_unit) and not self.as_unit_moved:
 
             final_x = attacker_unit.x
             final_y = attacker_unit.y
@@ -131,7 +138,7 @@ class Simulation:
 
                 collision_occurred = False
                 for other in self.scenario.units:
-                    if other is not attacker_unit and other.hp > 0:
+                    if other is not attacker_unit and self.is_unit_still_alive(other):
 
                         dist = self.distance_between_coordinates(new_x, new_y, other.x, other.y)
                         min_distance = attacker_unit.size + other.size
@@ -161,7 +168,7 @@ class Simulation:
                 attacker_unit.y = final_y
 
                 self.as_unit_moved = True
-                attacker_unit.distance_traveled += move_distance
+                attacker_unit.distance_moved += move_distance
                 return True
         return False
 
@@ -169,7 +176,7 @@ class Simulation:
 
     def is_in_sight(self, attacker_unit, target_unit):
         """Check if target is within sight of the attacker."""
-        if attacker_unit in self.scenario.units and target_unit in self.scenario.units and attacker_unit.hp > 0 and target_unit.hp > 0:
+        if attacker_unit in self.scenario.units and target_unit in self.scenario.units and self.is_unit_still_alive(attacker_unit) and self.is_unit_still_alive(target_unit):
             center_distance = self.distance_between_coordinates(attacker_unit.x, attacker_unit.y, target_unit.x, target_unit.y)
             surface_distance = center_distance - (attacker_unit.size + target_unit.size)
 
@@ -178,20 +185,23 @@ class Simulation:
 
     def is_in_reach(self, attacker_unit, target_unit):
         """Check if target is within range of the attacker."""
-        if attacker_unit in self.scenario.units and target_unit in self.scenario.units and attacker_unit.hp > 0 and target_unit.hp > 0:
+        if attacker_unit in self.scenario.units and target_unit in self.scenario.units and self.is_unit_still_alive(attacker_unit) and self.is_unit_still_alive(target_unit):
             center_distance = self.distance_between_coordinates(attacker_unit.x, attacker_unit.y, target_unit.x, target_unit.y)
             surface_distance = center_distance - (attacker_unit.size + target_unit.size)
 
             return surface_distance <= attacker_unit.range
         return False
 
-    def get_nearest_enemy_unit(self, unit):
+    def get_nearest_enemy_unit(self, unit, type_target=UnitType.ALL):
         """Return the nearest enemy unit of the given unit."""
+        if type_target == UnitType.NONE:
+            return None
+
         enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
         nearest_unit = None
         nearest_distance = float('inf')
         for enemy in enemy_units:
-            if enemy.hp <= 0:
+            if not self.is_unit_still_alive(enemy) or (type_target is not UnitType.ALL and enemy.unit_type != type_target):
                 continue
             distance = self.distance_between_coordinates(unit.x, unit.y, enemy.x, enemy.y)
             if distance < nearest_distance:
@@ -199,13 +209,16 @@ class Simulation:
                 nearest_unit = enemy
         return nearest_unit
 
-    def get_nearest_enemy_in_sight(self, unit, typeTarget=None):
+    def get_nearest_enemy_in_sight(self, unit, type_target=UnitType.ALL):
         """Return the nearest enemy unit in sight of the given unit."""
+        if type_target == UnitType.NONE:
+            return None
+
         enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
         nearest_unit = None
         nearest_distance = float('inf')
         for target_unit in enemy_units:
-            if (typeTarget is not None and target_unit.unit_type != typeTarget) or target_unit.hp <= 0:
+            if (type_target is not UnitType.ALL and target_unit.unit_type != type_target) or not self.is_unit_still_alive(target_unit):
                 continue
             if self.is_in_sight(unit, target_unit):
                 distance = self.distance_between_coordinates(unit.x, unit.y, target_unit.x, target_unit.y)
@@ -214,15 +227,15 @@ class Simulation:
                     nearest_unit = target_unit
         return nearest_unit
 
-    def get_nearest_enemy_in_reach(self, unit, typeTarget=None):
+    def get_nearest_enemy_in_reach(self, unit, type_target=UnitType.ALL):
         """Return the nearest enemy unit in reach of the given unit."""
-        if unit.hp <= 0:
+        if not self.is_unit_still_alive(unit) or type_target == UnitType.NONE:
             return None
         enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
         nearest_unit = None
         nearest_distance = float('inf')
         for target_unit in enemy_units:
-            if (typeTarget is not None and target_unit.unit_type != typeTarget) or target_unit.hp <= 0:
+            if (type_target is not UnitType.ALL and target_unit.unit_type != type_target) or not self.is_unit_still_alive(target_unit):
                 continue
             if self.is_in_reach(unit, target_unit):
                 distance = self.distance_between_coordinates(unit.x, unit.y, target_unit.x, target_unit.y)
@@ -231,9 +244,45 @@ class Simulation:
                     nearest_unit = target_unit
         return nearest_unit
 
-    def attack_unit(self,attacker_unit, target_unit):
+    def get_nearest_friendly_in_sight(self, unit, type_target=UnitType.ALL):
+        """Return the nearest friendly unit in sight of the given unit."""
+        if type_target == UnitType.NONE:
+            return None
+
+        friendly_units = self.scenario.units_a if unit.team == "A" else self.scenario.units_b
+        nearest_unit = None
+        nearest_distance = float('inf')
+        for target_unit in friendly_units:
+            if (type_target is not UnitType.ALL and target_unit.unit_type != type_target) or not self.is_unit_still_alive(target_unit):
+                continue
+            if self.is_in_sight(unit, target_unit):
+                distance = self.distance_between_coordinates(unit.x, unit.y, target_unit.x, target_unit.y)
+                if distance < nearest_distance:
+                    nearest_distance = distance
+                    nearest_unit = target_unit
+        return nearest_unit
+
+    def is_unit_still_alive(self, unit):
+        """Check if the given unit is still alive."""
+        return unit.hp > 0
+
+    def get_nearest_enemy_with_attributes(self, unit, attribute):
+        """Return the nearest enemy unit with the lowest value of the given attribute."""
+        enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
+        nearest_unit = None
+        best_attribute_value = float('inf')
+        for target_unit in enemy_units:
+            if not self.is_unit_still_alive(target_unit):
+                continue
+            attr_value = getattr(target_unit, attribute, None)
+            if attr_value is not None and attr_value < best_attribute_value:
+                best_attribute_value = attr_value
+                nearest_unit = target_unit
+        return nearest_unit
+
+    def attack_unit(self, attacker_unit, target_unit):
         """Perform an attack on a target unit if possible."""
-        if attacker_unit.can_attack() and self.is_in_reach(attacker_unit, target_unit) and attacker_unit.hp > 0 and target_unit.hp > 0:
+        if attacker_unit.can_attack() and self.is_in_reach(attacker_unit, target_unit) and self.is_unit_still_alive(attacker_unit) and self.is_unit_still_alive(target_unit):
             elevation_modifier = 1.0
             accuracy_modifier = attacker_unit.accuracy
             base_damage = 0
@@ -241,15 +290,14 @@ class Simulation:
             for damage_type, damage_value in attacker_unit.attack.items():
                 if damage_type in target_unit.armor:
                     base_damage += max(0, damage_value - target_unit.armor.get(damage_type))
-                    # print("Base Damage Type : ", damage_type, " Base Damage : ", damage_value, " Target Armor : ", target_unit.armor.get(damage_type))
 
             damage = max(1, base_damage * elevation_modifier * accuracy_modifier)
             target_unit.hp -= damage
-            # print("Damage : ", attacker_unit.name, " at (", attacker_unit.x, ",", attacker_unit.y, ") deals ", (base_damage * elevation_modifier * accuracy_modifier), " to ", target_unit.name, " at (", target_unit.x, ",", target_unit.y, ") (HP left: ", target_unit.hp, ")")
 
             attacker_unit.perform_attack()
             attacker_unit.damage_dealt += damage
             self.reload_units.append(attacker_unit)
+            self.as_unit_attacked = True
             return True
         return False
 
@@ -323,36 +371,3 @@ class Simulation:
         target_y = center_y + math.sin(angle) * desired_distance
 
         return target_x, target_y
-
-# Example usage
-if __name__ == "__main__":
-
-    units_a = []
-    units_b = []
-    units = []
-    for i in range (0, 100):
-        temp = Units.Crossbowman("A", 20 + i % 20, 10 + i % 5)
-        temp.range = 50
-        units_a.append(temp)
-        units.append(temp)
-
-        temp = Units.Crossbowman("B", 20 + i % 20, 50 + i % 5)
-        temp.range = 50
-        units_b.append(temp)
-        units.append(temp)
-
-
-    start_time = time.perf_counter()
-
-    scenario = Scenario(units, units_a, units_b, None, None, size_x=200, size_y=200)
-
-    sim = Simulation(
-        scenario=scenario,
-        tick_speed=5,
-        unlocked=True,
-        paused=False
-    )
-
-    sim.simulate()
-    end_time = time.perf_counter()
-    print(f"\nMain execution time: {end_time - start_time:.6f} seconds")
