@@ -10,7 +10,6 @@ from orders import AttackOnSightOrder, AvoidOrder, StayInReachOrder, SacrificeOr
 class StrategyStart:
     def __init__(self):
         pass
-
     def ApplyOrder(self, unit):
         # Ici donne a une troupe random par exemple le fait de se déplacer a l'autre bout de la map
         self.unit = unit
@@ -119,10 +118,31 @@ class StrategiePikemanSomeIQ(StrategyTroup):
 
 
 class StrategieStartSomeIQ(StrategyStart):
+    """
+    On envoi un mec se sacrifier, on recule toutes les troupes de 10 cases
+    """
     def apply_order(self, general):
+        # ON fait reculer tout le monde
         for unit in general.MyUnits: 
             #unit.order_manager.Add(MoveOneStepFromRef(unit, 10, "WORLD"), 180)
             unit.order_manager.Add(MoveByStepOrder(unit, 10, 180))
+        #StrategySquad(nb_crossbowmen=20).build_squad(general)
+        #StrategySquad(nb_crossbowmen=20)
+        #StrategySquad(nb_crossbowmen=20)
+
+        # On fait une squad crossbow à gauche,
+        squad1 = general.generate_squad({UnitType.CROSSBOWMAN:20, UnitType.PIKEMAN:5})
+        for unit in squad1:
+            unit.order_manager.AddMaxPriority(MoveByStepOrder(unit, 50, 90), squad_id=squad1.squad_id)
+            unit.order_manager.AddMaxPriority(FormationOrder(unit, squad1), squad_id=squad1.squad_id)
+
+        # On fait une squad crossbow à droite,
+        squad2 = general.generate_squad({UnitType.CROSSBOWMAN:20, UnitType.PIKEMAN:5})
+        for unit in squad2:
+            unit.order_manager.AddMaxPriority(MoveByStepOrder(unit, 50, -90), squad_id=squad2.squad_id)
+            unit.order_manager.AddMaxPriority(FormationOrder(unit, squad2), squad_id=squad2.squad_id)
+
+
 
         soufredouleur = general.GetRandomUnit()
         if soufredouleur is not None:
