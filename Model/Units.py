@@ -1,6 +1,17 @@
 from enum import Enum
 
 
+class UnitType(Enum):
+    CROSSBOWMAN = 0
+    KNIGHT = 1
+    PIKEMAN = 2
+    ALL = 3
+    NONE = None
+
+class Team(Enum):
+    A = 0
+    B = 1
+
 
 class Unit:
 
