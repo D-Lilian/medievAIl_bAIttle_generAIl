@@ -1,7 +1,7 @@
 from Model.Units import UnitType
 from Model.orders import FormationOrder
 from Utils.errors import WrongArguments
-from orders import AttackOnSightOrder, AvoidOrder, StayInReachOrder, SacrificeOrder, \
+from Model.orders import AttackOnSightOrder, AvoidOrder, StayInReachOrder, SacrificeOrder, \
     MoveByStepOrder, StayInFriendlySpaceOrder, AttackNearestTroupOmniscient
 
 #############################################################################################################

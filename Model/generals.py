@@ -1,7 +1,9 @@
-from Model.Units import Unit, Crossbowman, Knight, Pikeman
+from Model.Units import Unit, UnitType, Crossbowman, Knight, Pikeman
+from Model.strategies import *
 from Utils.errors import GameEngineError
-from strategies import *
-from Utils.logs import setup_logger,logger
+from Utils.logs import setup_logger, logger
+
+# ... The rest of your file remains the same
 
 
 # Le general ne se préocupe pas de savoir "ou" sont les troupes, il n'a pas logique de réprésentation "logique" du jeu

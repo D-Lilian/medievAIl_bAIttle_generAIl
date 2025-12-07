@@ -1,9 +1,12 @@
-#from generals import GameEngineError,WrongArguments
+# from generals import GameEngineError,WrongArguments
 
-from Model import simulation
-from Model.Units import Unit, Crossbowman
-from Model.simulation import Simulation
-from Utils.logs import logger,setup_logger
+#from Model import simulation
+
+
+from Utils.logs import logger, setup_logger
+from Model.Units import Unit
+from Model.Simulation import Simulation
+
 
 
 class Order:
@@ -408,6 +411,18 @@ class OrderManager:
 
 
 if __name__ == "__main__":
+
+    # quand on exécute ce fichier directement.
+    import sys
+    from pathlib import Path
+    # On ajoute la racine du projet ('medievAIl_bAIttle_generAIl') au chemin de recherche
+    project_root = Path(__file__).resolve().parent.parent
+    sys.path.append(str(project_root))
+
+    # Maintenant que le chemin est correct, on peut faire les imports pour le test
+    from Model.Units import Crossbowman
+    from Utils.logs import setup_logger, logger
+
     u1 = Crossbowman('A', 0, 0)
     setup_logger(level="DEBUG", modules=["orders"])
     om = OrderManager()
