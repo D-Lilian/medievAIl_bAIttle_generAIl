@@ -20,7 +20,7 @@ class MapGenerator:
     def generate_battle_scenario(
             units_per_team: int = 100,
             formation: str = 'classic',
-            size_x: int = 200,
+            size_x: int = 120,
             size_y: int = 120
     ) -> Scenario:
         """
@@ -41,14 +41,6 @@ class MapGenerator:
         team_a_x = (size_x - engagement_distance) // 2
         team_b_x = team_a_x + engagement_distance
         center_y = size_y // 2
-
-        print(f"\n{'=' * 70}")
-        print(f"  GENERATING TACTICAL BATTLE SCENARIO")
-        print(f"{'=' * 70}")
-        print(f"Formation: {formation.upper()}")
-        print(f"Map size: {size_x}x{size_y}")
-        print(f"Units per team: {units_per_team}")
-        print(f"{'=' * 70}\n")
 
         # Generate formations
         if formation == 'classic':
@@ -529,7 +521,7 @@ class PredefinedScenarios:
         return MapGenerator.generate_battle_scenario(
             units_per_team=100,
             formation='classic',
-            size_x=200,
+            size_x=120,
             size_y=120
         )
 
@@ -539,7 +531,7 @@ class PredefinedScenarios:
         return MapGenerator.generate_battle_scenario(
             units_per_team=120,
             formation='defensive',
-            size_x=200,
+            size_x=120,
             size_y=130
         )
 
@@ -549,8 +541,8 @@ class PredefinedScenarios:
         return MapGenerator.generate_battle_scenario(
             units_per_team=150,
             formation='offensive',
-            size_x=220,
-            size_y=140
+            size_x=120,
+            size_y=120
         )
 
     @staticmethod
@@ -559,8 +551,8 @@ class PredefinedScenarios:
         return MapGenerator.generate_battle_scenario(
             units_per_team=180,
             formation='hammer_anvil',
-            size_x=240,
-            size_y=150
+            size_x=120,
+            size_y=120
         )
 
     @staticmethod
@@ -569,7 +561,7 @@ class PredefinedScenarios:
         return MapGenerator.generate_battle_scenario(
             units_per_team=100,
             formation='testudo',
-            size_x=200,
+            size_x=120,
             size_y=120
         )
 
@@ -579,29 +571,6 @@ class PredefinedScenarios:
         return MapGenerator.generate_battle_scenario(
             units_per_team=120,
             formation='hollow_square',
-            size_x=200,
-            size_y=130
-        )
-
-
-# ============ TEST ============
-
-if __name__ == "__main__":
-    print("\n" + "=" * 70)
-    print(" " * 10 + "TACTICAL BATTLE SCENARIO GENERATOR - TEST SUITE")
-    print("=" * 70)
-
-    formations = ['classic', 'defensive', 'offensive', 'hammer_anvil', 'testudo', 'hollow_square']
-
-    for form in formations:
-        print(f"\n>>> TESTING: {form.upper()} FORMATION")
-        scenario = MapGenerator.generate_battle_scenario(
-            units_per_team=100,
-            formation=form,
-            size_x=200,
+            size_x=120,
             size_y=120
         )
-
-    print("\n" + "=" * 70)
-    print(" " * 25 + "ALL TESTS COMPLETED ✅")
-    print("=" * 70 + "\n")
