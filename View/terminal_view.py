@@ -799,7 +799,7 @@ class TerminalView(ViewInterface):
         
         stats_line = (
             f"Time:{self.simulation_time:.1f}s | T1 A:{self.team1_units} D:{self.dead_team1} | "
-            f"T2 A:{self.team2_units} D:{self.dead_team2} | Total:{len(self.units_cache)} | FPS:{self.fps:.0f}"
+            f"T2 A:{self.team2_units} D:{self.dead_team2} | Total:{len(self.units_cache)}"
         )
         try:
             self.stdscr.addstr(ui_start_y + 1, 2, stats_line, curses.color_pair(ColorPair.UI.value) | curses.A_BOLD)
@@ -1081,7 +1081,8 @@ class TerminalView(ViewInterface):
         )
         
         # Load resources
-        base_dir = os.path.dirname(__file__)
+        # HTML/CSS templates are now located in Utils/
+        base_dir = os.path.join(os.path.dirname(__file__), '..', 'Utils')
         with open(os.path.join(base_dir, 'battle_report_template.html'), 'r', encoding='utf-8') as f:
             template = f.read()
         with open(os.path.join(base_dir, 'battle_report.css'), 'r', encoding='utf-8') as f:
