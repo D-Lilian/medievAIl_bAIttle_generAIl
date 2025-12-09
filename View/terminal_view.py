@@ -23,14 +23,12 @@ from typing import List, Dict
 import time
 import sys
 import os
-from collections import Counter
 
 # Add parent directory to path for Model imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import Model modules
-from Model.simulation import Simulation, DEFAULT_NUMBER_OF_TICKS_PER_SECOND
-from Model.units import Knight, Pikeman, Crossbowman, UnitType, Team as ModelTeam
+from Model.simulation import DEFAULT_NUMBER_OF_TICKS_PER_SECOND
 
 
 class Team(Enum):

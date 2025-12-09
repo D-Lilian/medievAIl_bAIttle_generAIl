@@ -97,7 +97,7 @@ class TerminalController:
         Advances the simulation state by one tick.
         
         NOTE: This logic duplicates some of `Simulation.simulate()` because
-        the Model does not expose a granular `step()` method, and we cannot
+        the Model does not expose a granular `step()` method, and we dont have time to
         modify the Model. This allows us to have interactive control over the loop.
         """
         
