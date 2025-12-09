@@ -114,6 +114,14 @@ class UniteRepr:
     status: UnitStatus
     damage_dealt: int = 0
     target_id: int = None  # ID of the target unit
+    target_name: str = None  # Human-readable target name
+    armor: dict | None = None
+    attack: dict | None = None
+    range: float | None = None
+    reload_time: float | None = None
+    reload_val: float | None = None
+    speed: float | None = None
+    accuracy: float | None = None
     
     @property
     def alive(self) -> bool:
@@ -584,6 +592,21 @@ class TerminalView(ViewInterface):
         damage_dealt = getattr(unit, 'damage_dealt', 0)
         target = getattr(unit, 'target', None)
         target_id = id(target) if target else None
+        target_name = None
+
+        if target is not None:
+            t_name = getattr(target, 'name', type(target).__name__)
+            t_team_val = getattr(target, 'equipe', getattr(target, 'team', None))
+            t_team = self._resolve_team(t_team_val) if t_team_val is not None else None
+            if t_team == Team.A:
+                target_name = f"{t_name} (Team A)"
+            elif t_team == Team.B:
+                target_name = f"{t_name} (Team B)"
+            else:
+                target_name = t_name
+
+        speed = getattr(unit, 'speed', None)
+        accuracy = getattr(unit, 'accuracy', None)
         
         return {
             'team': team, 'hp': hp, 'hp_max': hp_max, 'type': unit_type,
@@ -591,7 +614,10 @@ class TerminalView(ViewInterface):
             'armor': armor, 'attack': attack, 'range': rng,
             'reload_time': reload_time, 'reload_val': reload_val,
             'damage_dealt': damage_dealt,
-            'target_id': target_id
+            'target_id': target_id,
+            'target_name': target_name,
+            'speed': speed,
+            'accuracy': accuracy
         }
 
     def _resolve_team(self, team_val) -> Team:
@@ -656,7 +682,15 @@ class TerminalView(ViewInterface):
                 hp_max=fields['hp_max'],
                 status=UnitStatus.ALIVE if fields['alive'] else UnitStatus.DEAD,
                 damage_dealt=fields['damage_dealt'],
-                target_id=fields['target_id']
+                target_id=fields['target_id'],
+                target_name=fields['target_name'],
+                armor=fields['armor'],
+                attack=fields['attack'],
+                range=fields['range'],
+                reload_time=fields['reload_time'],
+                reload_val=fields['reload_val'],
+                speed=fields['speed'],
+                accuracy=fields['accuracy']
             )
             self.all_units_dict[uid] = repr_obj
 
@@ -918,7 +952,14 @@ class TerminalView(ViewInterface):
         hp_percent = (unit.hp / unit.hp_max) * 100 if unit.hp_max > 0 else 0
         hp_class = "hp-critical" if hp_percent < 25 else "hp-low" if hp_percent < 50 else ""
         status_label = "Alive" if unit.alive else "Dead"
-        target_info = f"Targeting: #{unit.target_id}" if unit.target_id else "Idle"
+        target_info = f"Targeting: {unit.target_name}" if unit.target_name else "Idle"
+        armor_info = ", ".join(f"{k}: {v}" for k, v in unit.armor.items()) if isinstance(unit.armor, dict) else "N/A"
+        attack_info = ", ".join(f"{k}: {v}" for k, v in unit.attack.items()) if isinstance(unit.attack, dict) else "N/A"
+        range_info = f"{unit.range}" if unit.range is not None else "—"
+        reload_info = f"{unit.reload_time:.2f}s" if unit.reload_time is not None else "—"
+        reload_prog = f"{unit.reload_val:.2f}" if unit.reload_val is not None else "—"
+        speed_info = f"{unit.speed}" if unit.speed is not None else "—"
+        acc_info = f"{unit.accuracy*100:.0f}%" if isinstance(unit.accuracy, (int, float)) else "—"
         
         # Generate unique ID for the unit
         unit_id = f"unit-{team_num}-{i}"
@@ -933,6 +974,10 @@ class TerminalView(ViewInterface):
                         <div>Pos: ({unit.x:.1f}, {unit.y:.1f})</div>
                         <div>HP: {unit.hp}/{unit.hp_max} ({hp_percent:.0f}%) | DMG: {unit.damage_dealt}</div>
                         <div>{target_info}</div>
+                        <div>Range: {range_info} | Reload: {reload_info} (prog {reload_prog})</div>
+                        <div>Speed: {speed_info} | Accuracy: {acc_info}</div>
+                        <div>Armor: {armor_info}</div>
+                        <div>Attack: {attack_info}</div>
                     </div>
                     <div class="hp-bar">
                         <div class="hp-fill {hp_class}" style="width: {hp_percent}%"></div>
