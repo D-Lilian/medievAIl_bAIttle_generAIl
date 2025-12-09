@@ -1,4 +1,14 @@
-from Model.Units import UnitType
+# -*- coding: utf-8 -*-
+"""
+@file strategies.py
+@brief Strategy Definitions - AI behaviors
+
+@details
+Defines various strategies that Generals can assign to units.
+Strategies determine how units behave in battle (e.g., attack, defend, flee).
+
+"""
+from Model.units import UnitType
 from Model.orders import FormationOrder
 from Utils.errors import WrongArguments
 from Model.orders import AttackOnSightOrder, AvoidOrder, StayInReachOrder, SacrificeOrder, \

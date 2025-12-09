@@ -1,11 +1,21 @@
+# -*- coding: utf-8 -*-
+"""
+@file orders.py
+@brief Order System - Commands for units
+
+@details
+Defines the Order class and its subclasses (Move, Attack, etc.).
+Manages the execution and lifecycle of orders given to units.
+
+"""
 # from generals import GameEngineError,WrongArguments
 
 #from Model import simulation
 
 
 from Utils.logs import logger, setup_logger
-from Model.Units import Unit
-from Model.Simulation import Simulation
+from Model.units import Unit
+from Model.simulation import Simulation
 
 
 
@@ -420,7 +430,7 @@ if __name__ == "__main__":
     sys.path.append(str(project_root))
 
     # Maintenant que le chemin est correct, on peut faire les imports pour le test
-    from Model.Units import Crossbowman
+    from Model.units import Crossbowman
     from Utils.logs import setup_logger, logger
 
     u1 = Crossbowman('A', 0, 0)

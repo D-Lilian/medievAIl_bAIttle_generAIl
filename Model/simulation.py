@@ -1,8 +1,18 @@
+# -*- coding: utf-8 -*-
+"""
+@file simulation.py
+@brief Simulation Model - Core logic of the battle simulation
+
+@details
+Manages the game loop, unit updates, and interaction between units.
+Handles time progression and game state.
+
+"""
 import time
 import random
 import math
 
-from Model.Units import *
+from Model.units import *
 
 # Number chosen to make simulation fast but realistic
 # So that reload time and tick speed are compatible

@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+@file units.py
+@brief Unit Definitions - Classes and Enums for game units
+
+@details
+Defines UnitType, Team, and the base Unit class along with specific unit implementations.
+Contains stats and attributes for all units.
+
+"""
 from enum import Enum
 
 

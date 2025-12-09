@@ -1,4 +1,14 @@
-from Model.Simulation import Simulation
+# -*- coding: utf-8 -*-
+"""
+@file simulation_controller.py
+@brief Simulation Controller - Manages the simulation execution
+
+@details
+Handles the simulation loop, speed control, and multiprocessing for multiple simulations.
+Acts as the controller in the MVC pattern.
+
+"""
+from Model.simulation import Simulation
 import multiprocessing
 import copy
 

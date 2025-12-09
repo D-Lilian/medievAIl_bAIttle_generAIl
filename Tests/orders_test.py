@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+@file orders_test.py
+@brief Order Tests - Unit tests for OrderManager
+
+@details
+Tests the OrderManager functionality, including adding, retrieving,
+and managing order priorities.
+
+"""
 import pytest
 from Model.orders import OrderManager
 

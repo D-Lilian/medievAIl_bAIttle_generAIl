@@ -1,4 +1,14 @@
-from Model.Units import Unit, UnitType, Crossbowman, Knight, Pikeman
+# -*- coding: utf-8 -*-
+"""
+@file generals.py
+@brief General Logic - AI Commanders
+
+@details
+Defines the General class which controls units using strategies.
+Generals make high-level decisions based on the game state.
+
+"""
+from Model.units import Unit, UnitType, Crossbowman, Knight, Pikeman
 from Model.strategies import *
 from Utils.errors import GameEngineError
 from Utils.logs import setup_logger, logger

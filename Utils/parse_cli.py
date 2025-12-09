@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+@file parse_cli.py
+@brief CLI Parser - Command Line Interface
+
+@details
+Parses command line arguments for running simulations, loading saves,
+or running tournaments.
+
+"""
 import argparse
 
 
