@@ -1,6 +1,7 @@
 # Terminal View Guide
 
 ## Overview
+
 The Terminal View provides an interactive curses-based interface to visualize medieval battle simulations in real-time.
 
 ## Quick Start
@@ -105,6 +106,7 @@ python Controller/main_controller.py run scenario1 daft braindead -t 10
 ```
 
 Options:
+
 - `scenario1`: Scenario name (currently uses default)
 - `daft`, `braindead`, `someiq`: AI strategies for teams A and B
 - `-t 10`: Tick speed (frames per second)
@@ -119,6 +121,7 @@ Options:
 ## Testing
 
 Run tests:
+
 ```bash
 python -m unittest Tests.terminal_view_tests -v
 python -m unittest Tests.controller_tests -v
