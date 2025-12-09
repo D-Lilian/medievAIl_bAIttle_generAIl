@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+@file orders.py
+@brief Order System - Commands for units
+
+@details
+Defines the Order class and its subclasses (Move, Attack, etc.).
+Manages the execution and lifecycle of orders given to units.
+
+"""
 # from generals import GameEngineError,WrongArguments
 
 #from Model import simulation

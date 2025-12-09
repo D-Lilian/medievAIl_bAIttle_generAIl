@@ -8,8 +8,6 @@ MVC implementation: displays the Model state without modifying it
 - Interactive mode (curses)
 - Headless mode (tests)
 
-@author Marie
-@date 2025
 
 @usage
 python terminal_view.py [--test]

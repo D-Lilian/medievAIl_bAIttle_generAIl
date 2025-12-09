@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+@file orders_benchmark.py
+@brief Order Benchmarks - Performance testing
+
+@details
+Benchmarks the performance of the OrderManager, specifically adding
+and processing large numbers of orders.
+
+"""
 import time
 import cProfile
 import random

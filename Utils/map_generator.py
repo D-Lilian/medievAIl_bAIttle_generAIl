@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+@file map_generator.py
+@brief Map Generator - Creates battle scenarios
+
+@details
+Generates symmetric battle scenarios with various tactical formations.
+Used to create balanced and interesting initial states for simulations.
+
+"""
 # map_generator.py
 
 from Model.scenario import Scenario

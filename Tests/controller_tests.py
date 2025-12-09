@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+@file controller_tests.py
+@brief Controller Tests - Unit tests for controllers
+
+@details
+Tests the functionality of the main controller and simulation controller.
+Ensures scenarios are created correctly and strategies are retrieved.
+
+"""
 import unittest
 from unittest.mock import MagicMock, patch
 import sys

@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+@file logs.py
+@brief Logging Configuration - Loguru setup
+
+@details
+Configures the logging system using Loguru.
+Defines custom formatters and context colors for different log sources.
+
+"""
 import sys
 from loguru import logger
 

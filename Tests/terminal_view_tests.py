@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+@file terminal_view_tests.py
+@brief Terminal View Tests - Unit tests for the view
+
+@details
+Tests the TerminalView components, including UnitRepr, Camera,
+and rendering logic (mocked).
+
+"""
 import unittest
 from unittest.mock import MagicMock, patch
 import sys
