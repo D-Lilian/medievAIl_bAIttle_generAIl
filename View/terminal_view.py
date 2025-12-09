@@ -6,7 +6,6 @@
 @details
 MVC implementation: displays the Model state without modifying it
 - Interactive mode (curses)
-- Headless mode (tests)
 
 
 @usage
@@ -20,11 +19,11 @@ from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 import curses
-from typing import List
+from typing import List, Dict
 import time
 import sys
-import random
 import os
+from collections import Counter
 
 # Add parent directory to path for Model imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -32,34 +31,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import Model modules
 from Model.simulation import Simulation, DEFAULT_NUMBER_OF_TICKS_PER_SECOND
 from Model.units import Knight, Pikeman, Crossbowman, UnitType, Team as ModelTeam
-
-# Monkey-patch Simulation to add a step method if it doesn't exist
-if not hasattr(Simulation, 'step'):
-    def simulation_step(self):
-        """Execute one simulation step (tick)."""
-        random.shuffle(self.scenario.units)
-
-        for unit in self.scenario.units:
-            if not self.is_unit_still_alive(unit):
-                continue
-
-            for unit_order in unit.order_manager:
-                if unit_order.Try(self):
-                    unit_order.Remove(unit_order)
-            self.as_unit_attacked = False
-            self.as_unit_moved = False
-        
-        self.tick += 1
-
-        for unit in list(self.reload_units):
-            unit.update_reload(1 / DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
-            if unit.can_attack():
-                try:
-                    self.reload_units.remove(unit)
-                except ValueError:
-                    pass
-                    
-    Simulation.step = simulation_step
 
 
 class Team(Enum):
@@ -209,10 +180,9 @@ class Camera:
         @param fast True for faster movement (when Shift is pressed)
         """
         speed = self.scroll_speed_fast if fast else self.scroll_speed_normal
-        # In rotated view, dx controls y (horizontal on screen is vertical on board)
-        # and dy controls x (vertical on screen is horizontal on board)
-        self.y += dx * speed * self.zoom_level
-        self.x += dy * speed * self.zoom_level
+        # Standard view: dx controls x, dy controls y
+        self.x += dx * speed * self.zoom_level
+        self.y += dy * speed * self.zoom_level
     
     def toggle_zoom(self):
         """
@@ -247,11 +217,11 @@ class Camera:
         avg_x = sum(u.x for u in fighting_units) / len(fighting_units)
         avg_y = sum(u.y for u in fighting_units) / len(fighting_units)
         # Set target position
-        # In rotated view: screen_x = (unit.y - camera.y) / zoom, screen_y = (unit.x - camera.x) / zoom
-        # To center avg_y on screen_x (term_w), camera.y = avg_y - (term_w / 2) * zoom
-        # To center avg_x on screen_y (term_h), camera.x = avg_x - ((term_h - ui_height) / 2) * zoom
-        self.target_x = avg_x - ((term_h - ui_height) / 2) * self.zoom_level
-        self.target_y = avg_y - (term_w / 2) * self.zoom_level
+        # Standard view:
+        # To center avg_x on screen_x (term_w), camera.x = avg_x - (term_w / 2) * zoom
+        # To center avg_y on screen_y (term_h), camera.y = avg_y - ((term_h - ui_height) / 2) * zoom
+        self.target_x = avg_x - (term_w / 2) * self.zoom_level
+        self.target_y = avg_y - ((term_h - ui_height) / 2) * self.zoom_level
     
     def update_smooth_follow(self):
         """
@@ -270,10 +240,10 @@ class Camera:
         @param term_h Terminal height
         @param ui_height UI height
         """
-        visible_w = int(term_h * self.zoom_level)  # term_h becomes width in rotated view
-        visible_h = int((term_w - ui_height) * self.zoom_level)  # term_w becomes height
-        max_x = max(0, board_height - visible_w)  # board_height for x (since x controls y)
-        max_y = max(0, board_width - visible_h)  # board_width for y
+        visible_w = int(term_w * self.zoom_level)
+        visible_h = int((term_h - ui_height) * self.zoom_level)
+        max_x = max(0, board_width - visible_w)
+        max_y = max(0, board_height - visible_h)
         self.x = max(0, min(self.x, max_x))
         self.y = max(0, min(self.y, max_y))
 
@@ -757,10 +727,10 @@ class TerminalView(ViewInterface):
         # Direct drawing (no intermediate grid)
         # Keep 1 row/column margin for the border
         for unit in self.units_cache:
-            # Screen position with zoom and camera, rotated 90 degrees
-            # Swap x and y for rotation
-            screen_x = int((unit.y - self.camera.y) / self.camera.zoom_level) + 1  # y becomes x
-            screen_y = int((unit.x - self.camera.x) / self.camera.zoom_level) + 1  # x becomes y
+            # Screen position with zoom and camera
+            # Standard view: x is x, y is y
+            screen_x = int((unit.x - self.camera.x) / self.camera.zoom_level) + 1
+            screen_y = int((unit.y - self.camera.y) / self.camera.zoom_level) + 1
             
             # Bounds check (taking the border into account)
             if 1 <= screen_x < max_x - 1 and 1 <= screen_y < game_height - 1:
@@ -950,12 +920,11 @@ class TerminalView(ViewInterface):
         hp_percent = (unit.hp / unit.hp_max) * 100 if unit.hp_max > 0 else 0
         hp_class = "hp-critical" if hp_percent < 25 else "hp-low" if hp_percent < 50 else ""
         status_label = "Alive" if unit.alive else "Dead"
-        target_info = f"Targeting: {unit.target_name}" if unit.target_name else "Idle"
+        target_info = f"{unit.target_name}" if unit.target_name else "None"
         armor_info = ", ".join(f"{k}: {v}" for k, v in unit.armor.items()) if isinstance(unit.armor, dict) else "N/A"
         attack_info = ", ".join(f"{k}: {v}" for k, v in unit.attack.items()) if isinstance(unit.attack, dict) else "N/A"
         range_info = f"{unit.range}" if unit.range is not None else "—"
         reload_info = f"{unit.reload_time:.2f}s" if unit.reload_time is not None else "—"
-        reload_prog = f"{unit.reload_val:.2f}" if unit.reload_val is not None else "—"
         speed_info = f"{unit.speed}" if unit.speed is not None else "—"
         acc_info = f"{unit.accuracy*100:.0f}%" if isinstance(unit.accuracy, (int, float)) else "—"
         
@@ -965,20 +934,58 @@ class TerminalView(ViewInterface):
         return f"""
                 <div class="unit team{team_num}" id="{unit_id}" data-unit-id="{unit_id}">
                     <div class="unit-header">
-                        <span>#{i} {unit.type} ({unit.letter})</span>
-                        <span>{status_label}</span>
+                        <span class="unit-id">#{i}</span>
+                        <span class="unit-type">{unit.type} ({unit.letter})</span>
+                        <span class="unit-status {status_label.lower()}">{status_label}</span>
                     </div>
-                    <div class="unit-details">
-                        <div>Pos: ({unit.x:.1f}, {unit.y:.1f})</div>
-                        <div>HP: {unit.hp}/{unit.hp_max} ({hp_percent:.0f}%) | DMG: {unit.damage_dealt}</div>
-                        <div>{target_info}</div>
-                        <div>Range: {range_info} | Reload: {reload_info} (prog {reload_prog})</div>
-                        <div>Speed: {speed_info} | Accuracy: {acc_info}</div>
-                        <div>Armor: {armor_info}</div>
-                        <div>Attack: {attack_info}</div>
+                    
+                    <div class="hp-bar-container">
+                        <div class="hp-bar">
+                            <div class="hp-fill {hp_class}" style="width: {hp_percent}%"></div>
+                        </div>
+                        <span class="hp-text">{unit.hp}/{unit.hp_max} HP</span>
                     </div>
-                    <div class="hp-bar">
-                        <div class="hp-fill {hp_class}" style="width: {hp_percent}%"></div>
+
+                    <div class="unit-stats-grid">
+                        <div class="stat-item" title="Position">
+                            <span class="stat-label">Pos:</span>
+                            <span>({unit.x:.1f}, {unit.y:.1f})</span>
+                        </div>
+                        <div class="stat-item" title="Damage Dealt">
+                            <span class="stat-label">Dmg:</span>
+                            <span>{unit.damage_dealt}</span>
+                        </div>
+                        <div class="stat-item" title="Target">
+                            <span class="stat-label">Tgt:</span>
+                            <span>{target_info}</span>
+                        </div>
+                        <div class="stat-item" title="Range">
+                            <span class="stat-label">Rng:</span>
+                            <span>{range_info}</span>
+                        </div>
+                        <div class="stat-item" title="Speed">
+                            <span class="stat-label">Spd:</span>
+                            <span>{speed_info}</span>
+                        </div>
+                        <div class="stat-item" title="Accuracy">
+                            <span class="stat-label">Acc:</span>
+                            <span>{acc_info}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="unit-details-advanced">
+                        <div class="detail-row">
+                            <span class="detail-label">Armor:</span>
+                            <span class="detail-value">{armor_info}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Attack:</span>
+                            <span class="detail-value">{attack_info}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Reload:</span>
+                            <span class="detail-value">{reload_info} (prog: {unit.reload_val:.2f}s)</span>
+                        </div>
                     </div>
                 </div>
 """
@@ -1051,6 +1058,53 @@ class TerminalView(ViewInterface):
         </div>
         """
 
+    def _generate_breakdown_section(self) -> str:
+        """Generate HTML for unit type breakdown."""
+        
+        def generate_table(counts: Dict[str, int], title: str, color_var: str) -> str:
+            rows = ""
+            total = sum(counts.values())
+            for unit_type, count in sorted(counts.items()):
+                percentage = (count / total * 100) if total > 0 else 0
+                rows += f"""
+                    <tr>
+                        <td>{unit_type}</td>
+                        <td>{count}</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {percentage}%; background-color: var({color_var})"></div>
+                            </div>
+                        </td>
+                    </tr>
+                """
+            return f"""
+                <div class="breakdown-card">
+                    <h4 style="color: var({color_var})">{title}</h4>
+                    <table class="breakdown-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Count</th>
+                                <th>Distribution</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows}
+                        </tbody>
+                    </table>
+                </div>
+            """
+
+        return f"""
+            <div class="breakdown-container">
+                <h3>Unit Breakdown</h3>
+                <div class="breakdown-grid">
+                    {generate_table(self.type_counts_team1, "Team 1 (Cyan)", "--team1-color")}
+                    {generate_table(self.type_counts_team2, "Team 2 (Red)", "--team2-color")}
+                </div>
+            </div>
+        """
+
     def generate_html_report(self):
         """
         Generate an HTML report with the current state of all units.
@@ -1060,9 +1114,14 @@ class TerminalView(ViewInterface):
         import os
         import webbrowser
         
+        # Prepare directory
+        reports_dir = os.path.join(os.getcwd(), "Reports")
+        os.makedirs(reports_dir, exist_ok=True)
+        
         # Prepare data
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"battle_report_{timestamp}.html"
+        filename = os.path.join(reports_dir, f"battle_report_{timestamp}.html")
+        css_filename = os.path.join(reports_dir, "battle_report.css")
         
         # Generate sections
         team1_units = [u for u in self.units_cache if u.team == Team.A]
@@ -1072,6 +1131,7 @@ class TerminalView(ViewInterface):
                         self._generate_team_section(2, team2_units)
         
         battle_map = self._generate_battle_map()
+        breakdown_section = self._generate_breakdown_section()
         
         legend_items = "\n".join(
             f"            <li><strong>{letter}</strong>: {unit_type}</li>" 
@@ -1095,6 +1155,7 @@ class TerminalView(ViewInterface):
             '{total_units}': str(len(self.units_cache)),
             '{team_sections}': team_sections,
             '{battle_map}': battle_map,
+            '{breakdown_section}': breakdown_section,
             '{legend_items}': legend_items,
             '{generation_datetime}': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
@@ -1104,7 +1165,7 @@ class TerminalView(ViewInterface):
             html_content = html_content.replace(key, value)
             
         # Write files
-        with open("battle_report.css", 'w', encoding='utf-8') as f:
+        with open(css_filename, 'w', encoding='utf-8') as f:
             f.write(css_content)
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(html_content)
@@ -1124,97 +1185,4 @@ class TerminalView(ViewInterface):
             "total_units_cached": len(self.units_cache)
         }
 
-    def run_headless(self, simulation, ticks: int = 10):
-        """Run a few ticks without curses for automated tests."""
-        for _ in range(ticks):
-            if not self.paused:
-                simulation.step() if hasattr(simulation, "step") else None
-                self.update_units_cache(simulation)
-        return self.debug_snapshot()
 
-
-def main_test():
-    """Headless test mode: python terminal_view.py --test"""
-    print("=== Headless Test Mode ===")
-    
-    # Create real simulation
-    units = []
-    units_a = []
-    units_b = []
-    
-    # Small scenario for testing
-    u1 = Knight(1, 20, 20)
-    u2 = Pikeman(2, 30, 30)
-    units = [u1, u2]
-    units_a = [u1]
-    units_b = [u2]
-    
-    simulation = Simulation(units, units_a, None, units_b, None, tickSpeed=20, size_x=120, size_y=120)
-    
-    view = TerminalView(120, 120)
-    
-    print("Simulation: 50 ticks")
-    snapshot = view.run_headless(simulation, ticks=50)
-    
-    print("\nResults:")
-    print(f"  Simulated time: {snapshot['time']:.2f}s")
-    print(f"  Team 1: {snapshot['team1_alive']} alive, {snapshot['team1_dead']} dead")
-    print(f"  Team 2: {snapshot['team2_alive']} alive, {snapshot['team2_dead']} dead")
-    print(f"  Total units: {snapshot['total_units_cached']}")
-    print("\nHeadless test: OK")
-
-
-def main_demo():
-    """Demo function for the terminal view."""
-    
-    units = []
-    units_a = []
-    units_b = []
-    
-    # Team A (Cyan) - Left side
-    for i in range(5):
-        u = Knight(1, 20, 20 + i*5)
-        units.append(u)
-        units_a.append(u)
-    
-    for i in range(5):
-        u = Pikeman(1, 25, 20 + i*5)
-        units.append(u)
-        units_a.append(u)
-        
-    # Team B (Red) - Right side
-    for i in range(5):
-        u = Knight(2, 100, 20 + i*5)
-        units.append(u)
-        units_b.append(u)
-        
-    for i in range(5):
-        u = Pikeman(2, 95, 20 + i*5)
-        units.append(u)
-        units_b.append(u)
-        
-    simulation = Simulation(units, units_a, None, units_b, None, tickSpeed=20, size_x=120, size_y=120)
-    
-    # Create the view
-    view = TerminalView(120, 120, tick_speed=20)
-    
-    try:
-        view.init_curses()
-        
-        # Main loop
-        running = True
-        while running:
-            if not view.paused:
-                simulation.step()
-            
-            running = view.update(simulation)
-            
-    finally:
-        view.cleanup()
-
-
-if __name__ == "__main__":
-    if "--test" in sys.argv:
-        main_test()
-    else:
-        main_demo()

@@ -38,29 +38,27 @@ class TestCamera(unittest.TestCase):
         self.camera = Camera(x=0, y=0, zoom_level=1)
 
     def test_move_normal(self):
-        # In rotated view logic:
-        # move(dx, dy) -> y += dx * speed, x += dy * speed
-        # dx=1 (right key) -> y increases (horizontal on screen is vertical on board)
-        # dy=1 (down key) -> x increases (vertical on screen is horizontal on board)
+        # In standard view logic:
+        # move(dx, dy) -> x += dx * speed, y += dy * speed
         
         initial_x = self.camera.x
         initial_y = self.camera.y
-        self.camera.move(1, 0, fast=False) # Move "Right" on screen -> +y on board
-        self.assertEqual(self.camera.y, initial_y + self.camera.scroll_speed_normal)
-        self.assertEqual(self.camera.x, initial_x)
-
-        self.camera.move(0, 1, fast=False) # Move "Down" on screen -> +x on board
+        self.camera.move(1, 0, fast=False) # Move "Right" -> +x
         self.assertEqual(self.camera.x, initial_x + self.camera.scroll_speed_normal)
+        self.assertEqual(self.camera.y, initial_y)
+
+        self.camera.move(0, 1, fast=False) # Move "Down" -> +y
+        self.assertEqual(self.camera.y, initial_y + self.camera.scroll_speed_normal)
 
     def test_move_fast(self):
-        initial_y = self.camera.y
+        initial_x = self.camera.x
         self.camera.move(1, 0, fast=True)
-        self.assertEqual(self.camera.y, initial_y + self.camera.scroll_speed_fast)
+        self.assertEqual(self.camera.x, initial_x + self.camera.scroll_speed_fast)
 
     def test_clamp(self):
         # Board 100x100, Terminal 20x20
-        # visible_w = term_h * zoom = 20
-        # visible_h = term_w * zoom = 20
+        # visible_w = term_w * zoom = 20
+        # visible_h = term_h * zoom = 20
         # max_x = 100 - 20 = 80
         # max_y = 100 - 20 = 80
         
@@ -102,8 +100,24 @@ class TestTerminalView(unittest.TestCase):
                 self.y = 20.0
                 self.damage_dealt = 50
                 self.target = None
+                self.armor = {'pierce': 10}
+                self.attack = {'slash': 5}
+                self.range = 5.0
+                self.reload_time = 2.0
+                self.reload = 1.0
+                self.speed = 1.0
+                self.accuracy = 0.8
         
         unit = MockUnit()
+        
+        # Mock target
+        class MockTarget:
+            def __init__(self):
+                self.name = "TargetUnit"
+                self.team = 2
+        
+        unit.target = MockTarget()
+        
         fields = self.view._extract_unit_fields(unit)
         
         self.assertEqual(fields['type'], "TestUnit")
@@ -111,6 +125,20 @@ class TestTerminalView(unittest.TestCase):
         self.assertEqual(fields['hp'], 100)
         self.assertEqual(fields['damage_dealt'], 50)
         self.assertTrue(fields['alive'])
+        
+        # New fields
+        self.assertEqual(fields['armor'], {'pierce': 10})
+        self.assertEqual(fields['attack'], {'slash': 5})
+        self.assertEqual(fields['range'], 5.0)
+        self.assertEqual(fields['reload_time'], 2.0)
+        self.assertEqual(fields['reload_val'], 1.0)
+        self.assertEqual(fields['speed'], 1.0)
+        self.assertEqual(fields['accuracy'], 0.8)
+        
+        # Target
+        self.assertIsNotNone(fields['target_id'])
+        self.assertIn("TargetUnit", fields['target_name'])
+        self.assertIn("Team B", fields['target_name'])
 
     def test_update_units_cache(self):
         # Mock simulation and units
@@ -170,9 +198,9 @@ class TestTerminalViewCurses(unittest.TestCase):
         
         view.stdscr.clear.assert_called_once()
         # Check if addstr was called for the unit
-        # Unit at 10,10. Rotated view:
-        # screen_x = (y - cam_y) + 1 = 10 + 1 = 11
-        # screen_y = (x - cam_x) + 1 = 10 + 1 = 11
+        # Unit at 10,10. Standard view:
+        # screen_x = (x - cam_x) + 1 = 10 + 1 = 11
+        # screen_y = (y - cam_y) + 1 = 10 + 1 = 11
         # addstr(y, x, str, attr)
         view.stdscr.addstr.assert_any_call(11, 11, 'K', unittest.mock.ANY)
 
@@ -189,31 +217,19 @@ class TestTerminalViewCurses(unittest.TestCase):
     def test_handle_input_move(self, mock_curses):
         view = TerminalView(100, 100)
         view.stdscr = MagicMock()
-        view.stdscr.getch.return_value = ord('z') # Up (in QWERTY/ZQSD mapping logic)
+        view.stdscr.getch.return_value = ord('z') # Up
         
-        initial_y = view.camera.y
         view.handle_input()
         
-        # 'z' calls move(0, -1) -> y += 0, x += -1 * speed (rotated logic in move)
-        # Wait, let's check move logic again:
-        # move(dx, dy): y += dx * speed, x += dy * speed
-        # 'z' -> move(0, -1) -> dx=0, dy=-1 -> y unchanged, x decreases
-        # But wait, 'z' is usually UP.
-        # In handle_input:
-        # if key == 'z': move(0, -1)
-        # In move(dx, dy): self.y += dx..., self.x += dy...
-        # So move(0, -1) -> self.x += -1 * speed.
-        # x is vertical on board (rows). Decreasing x means moving "Up" on board (lower row index).
-        # So 'z' moves Up. Correct.
+        # 'z' calls move(0, -1) -> x += 0, y += -1 * speed
+        # 'z' is UP. Decreasing y means moving "Up" on screen/board.
         
-        # Let's verify camera x changed
-        # Initial x is set in __init__ to center.
-        # Let's force it to something known
+        # Let's verify camera y changed
         view.camera.x = 50
         view.camera.y = 50
         view.handle_input()
         
-        self.assertEqual(view.camera.x, 50 - view.camera.scroll_speed_normal)
+        self.assertEqual(view.camera.y, 50 - view.camera.scroll_speed_normal)
 
 if __name__ == '__main__':
     unittest.main()
