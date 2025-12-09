@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from Controller.main_controller import create_default_scenario, get_strategy_by_name
 from Model.strategies import StrategyStart, StrategieDAFT, StrategieBrainDead, StrategieStartSomeIQ, StrategieSimpleAttackBestAvoidWorst
-from Model.Units import Unit
+from Model.Units import Unit, Team, UnitType
 
 class TestMainController(unittest.TestCase):
     
@@ -29,41 +29,54 @@ class TestMainController(unittest.TestCase):
         
         # Check teams
         for u in units_a:
-            self.assertEqual(u.team, 1)
+            self.assertEqual(u.team, Team.A)
         for u in units_b:
-            self.assertEqual(u.team, 2)
+            self.assertEqual(u.team, Team.B)
 
     def test_get_strategy_by_name_daft(self):
         """Test retrieving DAFT strategy."""
-        sS, sT = get_strategy_by_name("daft")
+        sS, sT_dict = get_strategy_by_name("daft")
         self.assertIsInstance(sS, StrategyStart)
-        self.assertIsInstance(sT, StrategieDAFT)
+        self.assertIsInstance(sT_dict, dict)
+        # All unit types should have DAFT strategy
+        for unit_type in [UnitType.KNIGHT, UnitType.PIKEMAN, UnitType.CROSSBOWMAN]:
+            self.assertIn(unit_type, sT_dict)
+            self.assertIsInstance(sT_dict[unit_type], StrategieDAFT)
 
     def test_get_strategy_by_name_braindead(self):
         """Test retrieving BrainDead strategy."""
-        sS, sT = get_strategy_by_name("braindead")
+        sS, sT_dict = get_strategy_by_name("braindead")
         self.assertIsInstance(sS, StrategyStart)
-        self.assertIsInstance(sT, StrategieBrainDead)
+        self.assertIsInstance(sT_dict, dict)
+        for unit_type in [UnitType.KNIGHT, UnitType.PIKEMAN, UnitType.CROSSBOWMAN]:
+            self.assertIn(unit_type, sT_dict)
+            self.assertIsInstance(sT_dict[unit_type], StrategieBrainDead)
 
     def test_get_strategy_by_name_someiq(self):
         """Test retrieving SomeIQ strategy."""
-        sS, sT = get_strategy_by_name("someiq")
+        sS, sT_dict = get_strategy_by_name("someiq")
         self.assertIsInstance(sS, StrategieStartSomeIQ)
-        self.assertIsInstance(sT, StrategieSimpleAttackBestAvoidWorst)
+        self.assertIsInstance(sT_dict, dict)
+        for unit_type in [UnitType.KNIGHT, UnitType.PIKEMAN, UnitType.CROSSBOWMAN]:
+            self.assertIn(unit_type, sT_dict)
+            self.assertIsInstance(sT_dict[unit_type], StrategieSimpleAttackBestAvoidWorst)
 
     def test_get_strategy_by_name_case_insensitive(self):
         """Test that strategy names are case insensitive."""
-        sS, sT = get_strategy_by_name("DAFT")
-        self.assertIsInstance(sT, StrategieDAFT)
+        sS, sT_dict = get_strategy_by_name("DAFT")
+        self.assertIsInstance(sT_dict, dict)
+        self.assertIsInstance(sT_dict[UnitType.KNIGHT], StrategieDAFT)
         
-        sS, sT = get_strategy_by_name("BrainDead")
-        self.assertIsInstance(sT, StrategieBrainDead)
+        sS, sT_dict = get_strategy_by_name("BrainDead")
+        self.assertIsInstance(sT_dict, dict)
+        self.assertIsInstance(sT_dict[UnitType.KNIGHT], StrategieBrainDead)
 
     def test_get_strategy_by_name_default(self):
         """Test that unknown names return the default strategy (DAFT)."""
-        sS, sT = get_strategy_by_name("unknown_strategy")
+        sS, sT_dict = get_strategy_by_name("unknown_strategy")
         self.assertIsInstance(sS, StrategyStart)
-        self.assertIsInstance(sT, StrategieDAFT)
+        self.assertIsInstance(sT_dict, dict)
+        self.assertIsInstance(sT_dict[UnitType.KNIGHT], StrategieDAFT)
 
 if __name__ == '__main__':
     unittest.main()

@@ -93,7 +93,9 @@ class General:
         return c
 
     def __str__(self):
-        return f"General({len(self.MyUnits)}U , sS={self.sS.__name__ if self.sS else "None"}, sT={[type(s).__name__ for s in self.sT.values()] if self.sT else "None"})"
+        sS_name = type(self.sS).__name__ if self.sS else "None"
+        sT_names = [type(s).__name__ for s in self.sT.values()] if self.sT else "None"
+        return f"General({len(self.MyUnits)}U , sS={sS_name}, sT={sT_names})"
 
 
     def CreateOrders(self): # réappliquer la stratégie par type sur chaque unité

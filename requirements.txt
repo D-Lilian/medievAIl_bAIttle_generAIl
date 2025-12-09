@@ -1,3 +1,2 @@
 # Requirements for medieval_battle_simulation
-# All dependencies are part of Python standard library
-# No external packages required
+loguru

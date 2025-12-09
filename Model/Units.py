@@ -58,12 +58,13 @@ class Unit:
         self.y = y                          # coordonnee en Y
         self.order_manager = OrderManager()  # ordres donnees par le gerenal
         self.squad_id = None
+        self.damage_dealt = 0               # total damage dealt by this unit
 
     def can_attack(self):
         """Check if the unit can perform an attack."""
         return self.reload <= 0
 
-    def attack(self):
+    def perform_attack(self):
         """Perform an attack if the unit can attack. Resets reload timer."""
         if self.can_attack():
             self.reload = self.reload_time

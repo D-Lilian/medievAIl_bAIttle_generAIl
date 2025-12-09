@@ -10,10 +10,15 @@ from Model.orders import AttackOnSightOrder, AvoidOrder, StayInReachOrder, Sacri
 class StrategyStart:
     def __init__(self):
         pass
-    def ApplyOrder(self, unit):
+    
+    def __call__(self, general):
+        """Make StrategyStart callable so it can be invoked as sS(general)."""
+        return self.apply_order(general)
+    
+    def apply_order(self, general):
         # Ici donne a une troupe random par exemple le fait de se déplacer a l'autre bout de la map
-        self.unit = unit
-        raise NotImplemented #attaquer tout le monde par défaut pas sure
+        # Default implementation does nothing
+        pass
 
 class StrategyTroup:
     def __init__(self, general, favoriteTroup, hatedTroup):

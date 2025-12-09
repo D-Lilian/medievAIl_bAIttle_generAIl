@@ -32,34 +32,34 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import Model modules
-from Model.Simulation import Simulation
-from Model.Units import Knight, Pikeman, Crossbowman, UnitType
+from Model.Simulation import Simulation, DEFAULT_NUMBER_OF_TICKS_PER_SECOND
+from Model.Units import Knight, Pikeman, Crossbowman, UnitType, Team as ModelTeam
 
 # Monkey-patch Simulation to add a step method if it doesn't exist
 if not hasattr(Simulation, 'step'):
     def simulation_step(self):
         """Execute one simulation step (tick)."""
-        random.shuffle(self.units)
+        random.shuffle(self.scenario.units)
 
-        for unit in self.units:
-            if unit.hp <= 0:
+        for unit in self.scenario.units:
+            if not self.is_unit_still_alive(unit):
                 continue
-            enemy = self.get_nearest_enemy_unit(unit)
-            if enemy is None:
-                unit.target = None
-                continue
-            unit.target = enemy
-            if self.is_in_reach(unit, enemy) and unit.reload <= 0:
-                self.attack_unit(unit, enemy)
-                unit.reload = unit.reload_time
-            else:
-                self.move_unit_towards_coordinates(unit, enemy.x, enemy.y)
+
+            for unit_order in unit.order_manager:
+                if unit_order.Try(self):
+                    unit_order.Remove(unit_order)
+            self.as_unit_attacked = False
+            self.as_unit_moved = False
         
         self.tick += 1
 
-        if self.tick % 5 == 0:
-            for unit in self.units:
-                self.reload_unit(unit)
+        for unit in list(self.reload_units):
+            unit.update_reload(1 / DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
+            if unit.can_attack():
+                try:
+                    self.reload_units.remove(unit)
+                except ValueError:
+                    pass
                     
     Simulation.step = simulation_step
 
@@ -598,12 +598,19 @@ class TerminalView(ViewInterface):
         """Resolve team value to Team enum."""
         if isinstance(team_val, Team):
             return team_val
-        if team_val in (1, 'A', 'a'):
+        # Handle Model.Units.Team enum
+        if hasattr(team_val, 'name'):
+            if team_val.name == 'A' or team_val.value == 0:
+                return Team.A
+            return Team.B
+        if team_val in (1, 'A', 'a', 0):
             return Team.A
         return Team.B
 
     def _get_units_from_simulation(self, simulation) -> list:
         """Retrieve units list from simulation."""
+        if hasattr(simulation, 'scenario') and hasattr(simulation.scenario, 'units'):
+            return simulation.scenario.units
         if hasattr(simulation, 'units'):
             return simulation.units
         if hasattr(simulation, 'board') and hasattr(simulation.board, 'units'):
@@ -683,8 +690,10 @@ class TerminalView(ViewInterface):
         # Update simulation time
         if hasattr(simulation, 'elapsed_time'):
             self.simulation_time = simulation.elapsed_time
-        elif hasattr(simulation, 'tick') and hasattr(simulation, 'tickSpeed'):
-             self.simulation_time = simulation.tick / simulation.tickSpeed
+        elif hasattr(simulation, 'tick') and hasattr(simulation, 'tick_speed'):
+             self.simulation_time = simulation.tick / simulation.tick_speed
+        elif hasattr(simulation, 'tick'):
+             self.simulation_time = simulation.tick / DEFAULT_NUMBER_OF_TICKS_PER_SECOND
     
     def draw_map(self):
         """
