@@ -1,3 +1,5 @@
 # Requirements for medieval_battle_simulation
 loguru
-loguru
+matplotlib
+pandas
+plotly

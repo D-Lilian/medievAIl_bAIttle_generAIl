@@ -207,7 +207,7 @@ class Simulation:
         if type_target == UnitType.NONE:
             return None
 
-        enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
+        enemy_units = self.scenario.units_b if unit.team == Team.A else self.scenario.units_a
         nearest_unit = None
         nearest_distance = float('inf')
         for enemy in enemy_units:
@@ -224,7 +224,7 @@ class Simulation:
         if type_target == UnitType.NONE:
             return None
 
-        enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
+        enemy_units = self.scenario.units_b if unit.team == Team.A else self.scenario.units_a
         nearest_unit = None
         nearest_distance = float('inf')
         for target_unit in enemy_units:
@@ -241,7 +241,7 @@ class Simulation:
         """Return the nearest enemy unit in reach of the given unit."""
         if not self.is_unit_still_alive(unit) or type_target == UnitType.NONE:
             return None
-        enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
+        enemy_units = self.scenario.units_b if unit.team == Team.A else self.scenario.units_a
         nearest_unit = None
         nearest_distance = float('inf')
         for target_unit in enemy_units:
@@ -259,7 +259,7 @@ class Simulation:
         if type_target == UnitType.NONE:
             return None
 
-        friendly_units = self.scenario.units_a if unit.team == "A" else self.scenario.units_b
+        friendly_units = self.scenario.units_a if unit.team == Team.A else self.scenario.units_b
         nearest_unit = None
         nearest_distance = float('inf')
         for target_unit in friendly_units:
@@ -278,7 +278,7 @@ class Simulation:
 
     def get_nearest_enemy_with_attributes(self, unit, attribute):
         """Return the nearest enemy unit with the lowest value of the given attribute."""
-        enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
+        enemy_units = self.scenario.units_b if unit.team == Team.A else self.scenario.units_a
         nearest_unit = None
         best_attribute_value = float('inf')
         for target_unit in enemy_units:
@@ -304,8 +304,8 @@ class Simulation:
             damage = max(1, base_damage * elevation_modifier * accuracy_modifier)
             target_unit.hp -= damage
 
-            attacker_unit.perform_attack()
-            attacker_unit.damage_dealt += damage
+            attacker_unit.do_attack()  # Reset reload timer
+            attacker_unit.damage_dealt = getattr(attacker_unit, 'damage_dealt', 0) + damage
             self.reload_units.append(attacker_unit)
             self.as_unit_attacked = True
             return True

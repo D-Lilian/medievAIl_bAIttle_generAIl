@@ -73,7 +73,7 @@ class Unit:
         """Check if the unit can perform an attack."""
         return self.reload <= 0
 
-    def attack(self):
+    def do_attack(self):
         """Perform an attack if the unit can attack. Resets reload timer."""
         if self.can_attack():
             self.reload = self.reload_time
