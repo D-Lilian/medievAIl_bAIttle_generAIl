@@ -2,7 +2,7 @@ import time
 import random
 import math
 
-from Model.Units import *
+from Model.units import *
 
 # Number chosen to make simulation fast but realistic
 # So that reload time and tick speed are compatible

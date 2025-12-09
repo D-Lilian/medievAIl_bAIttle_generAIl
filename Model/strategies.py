@@ -1,4 +1,4 @@
-from Model.Units import UnitType
+from Model.units import UnitType
 from Model.orders import FormationOrder
 from Utils.errors import WrongArguments
 from Model.orders import AttackOnSightOrder, AvoidOrder, StayInReachOrder, SacrificeOrder, \

@@ -1,4 +1,4 @@
-from Model.Simulation import Simulation
+from Model.simulation import Simulation
 import multiprocessing
 import copy
 

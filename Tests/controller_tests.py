@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from Controller.main_controller import create_default_scenario, get_strategy_by_name
 from Model.strategies import StrategyStart, StrategieDAFT, StrategieBrainDead, StrategieStartSomeIQ, StrategieSimpleAttackBestAvoidWorst
-from Model.Units import Unit, Team, UnitType
+from Model.units import Unit, Team, UnitType
 
 class TestMainController(unittest.TestCase):
     

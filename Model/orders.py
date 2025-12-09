@@ -4,8 +4,8 @@
 
 
 from Utils.logs import logger, setup_logger
-from Model.Units import Unit
-from Model.Simulation import Simulation
+from Model.units import Unit
+from Model.simulation import Simulation
 
 
 
@@ -420,7 +420,7 @@ if __name__ == "__main__":
     sys.path.append(str(project_root))
 
     # Maintenant que le chemin est correct, on peut faire les imports pour le test
-    from Model.Units import Crossbowman
+    from Model.units import Crossbowman
     from Utils.logs import setup_logger, logger
 
     u1 = Crossbowman('A', 0, 0)

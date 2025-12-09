@@ -1,6 +1,6 @@
 import unittest
-from Model.Simulation import Simulation
-from Model.Scenario import Scenario
+from Model.simulation import Simulation
+from Model.scenario import Scenario
 
 
 class MockUnit:

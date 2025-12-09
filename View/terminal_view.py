@@ -32,8 +32,8 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import Model modules
-from Model.Simulation import Simulation, DEFAULT_NUMBER_OF_TICKS_PER_SECOND
-from Model.Units import Knight, Pikeman, Crossbowman, UnitType, Team as ModelTeam
+from Model.simulation import Simulation, DEFAULT_NUMBER_OF_TICKS_PER_SECOND
+from Model.units import Knight, Pikeman, Crossbowman, UnitType, Team as ModelTeam
 
 # Monkey-patch Simulation to add a step method if it doesn't exist
 if not hasattr(Simulation, 'step'):
