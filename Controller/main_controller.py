@@ -6,7 +6,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from Controller.ParseCLI import args
-from Model.simulation import Simulation
+from Model.Simulation import Simulation
 from Model.Units import Knight, Pikeman, Crossbowman, UnitType
 from Model.generals import General
 from Model.strategies import StrategyStart, StrategieDAFT, StrategieBrainDead, StrategieStartSomeIQ, StrategieSimpleAttackBestAvoidWorst
