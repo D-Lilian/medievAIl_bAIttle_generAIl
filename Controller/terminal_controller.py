@@ -5,8 +5,8 @@
 
 @details
 Controls the terminal view display. Communicates with the simulation
-ONLY through SimulationController. Can receive a Simulation from eval.py
-but delegates all simulation operations to SimulationController.
+ONLY through SimulationController. Receives SimulationController and
+Scenario from eval.py.
 
 Implements the "Game Loop" pattern for the terminal interface.
 
@@ -16,7 +16,7 @@ from typing import Optional
 
 from Controller.simulation_controller import SimulationController
 from View.terminal_view import TerminalView
-from Model.simulation import Simulation
+from Model.scenario import Scenario
 
 
 class TerminalController:
@@ -34,26 +34,21 @@ class TerminalController:
     - UnitCacheManager: Unit data extraction and caching
     """
 
-    def __init__(self, simulation: Simulation, view: Optional[TerminalView] = None, tick_speed: int = 20):
+    def __init__(self, sim_controller: SimulationController, scenario: Scenario, view: Optional[TerminalView] = None):
         """
         @brief Initialize the controller.
 
-        @param simulation Simulation instance (passed from eval.py)
+        @param sim_controller SimulationController instance (from eval.py)
+        @param scenario Scenario instance (from eval.py)
         @param view Optional TerminalView instance. If None, a new one is created.
-        @param tick_speed Initial simulation speed (ticks per second)
         """
-        # Use SimulationController as intermediary
-        self.sim_controller = SimulationController()
-        self.sim_controller.simulation = Simulation(simulation, tick_speed=tick_speed, paused=True, unlocked=True)
-
-        # Store scenario reference for view initialization
-        scenario = self.sim_controller.simulation.scenario
+        self.sim_controller = sim_controller
 
         # Dependency Injection: Allow passing an existing view, or create a default one
         if view:
             self.view = view
         else:
-            self.view = TerminalView(scenario.size_x, scenario.size_y, tick_speed=tick_speed)
+            self.view = TerminalView(scenario.size_x, scenario.size_y, tick_speed=sim_controller.get_tick_speed())
 
         self.running = False
 
@@ -81,9 +76,13 @@ class TerminalController:
                 self.running = self.view.update(self.sim_controller.simulation)
 
                 # 2. Sync speed from view to simulation controller
-                #    ViewState.tick_speed <-> Simulation.tick_speed
-                if self.view.tick_speed != self.sim_controller.simulation.tick_speed:
-                    self.sim_controller.simulation.tick_speed = self.view.tick_speed
+                #    ViewState.tick_speed <-> Simulation.tick_speed (via SimulationController)
+                if self.view.tick_speed != self.sim_controller.get_tick_speed():
+                    # Adjust tick speed via controller methods
+                    while self.sim_controller.get_tick_speed() < self.view.tick_speed:
+                        self.sim_controller.increase_tick()
+                    while self.sim_controller.get_tick_speed() > self.view.tick_speed:
+                        self.sim_controller.decrease_tick()
 
                 # 3. Sync pause state
                 #    ViewState.paused <-> Simulation.paused (via SimulationController)
@@ -94,29 +93,38 @@ class TerminalController:
             self.view.cleanup()
 
 
-def run_terminal_view(simulation: Simulation, tick_speed: int = 20) -> None:
+def run_terminal_view(sim_controller: SimulationController, scenario: Scenario) -> None:
     """
-    @brief Helper function to launch the terminal view with a simulation.
+    @brief Helper function to launch the terminal view.
 
     @details
     Entry point for external callers (e.g., eval.py).
-    Creates a TerminalController and runs the interactive terminal view.
+    Creates a TerminalController with the SimulationController and Scenario, then runs the interactive terminal view.
+    Tick speed is retrieved from sim_controller.get_tick_speed().
 
-    @param simulation Simulation instance (from eval.py)
-    @param tick_speed Display speed (ticks per second), default 20
+    @param sim_controller SimulationController instance (from eval.py)
+    @param scenario Scenario instance (from eval.py)
 
     @code
     from Controller.terminal_controller import run_terminal_view
-    run_terminal_view(simulation, tick_speed=20)
+    from Controller.simulation_controller import SimulationController
+    
+    sim_controller = SimulationController()
+    sim_controller.create_simulation(scenario, tickSpeed=20, paused=True, unlocked=True)
+    run_terminal_view(sim_controller, scenario)
     @endcode
     """
-    controller = TerminalController(simulation, tick_speed=tick_speed)
+    controller = TerminalController(sim_controller, scenario)
     controller.run()
 
 
 if __name__ == "__main__":
-    print("Usage: Import run_terminal_view and pass a Simulation from eval.py")
+    print("Usage: Import run_terminal_view and pass SimulationController + Scenario")
     print("")
     print("  from Controller.terminal_controller import run_terminal_view")
-    print("  run_terminal_view(simulation, tick_speed=20)")
+    print("  from Controller.simulation_controller import SimulationController")
+    print("  ")
+    print("  sim_controller = SimulationController()")
+    print("  sim_controller.create_simulation(scenario, tickSpeed=20, paused=True, unlocked=True)")
+    print("  run_terminal_view(sim_controller, scenario)")
     raise SystemExit(1)
