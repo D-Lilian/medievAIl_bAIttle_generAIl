@@ -8,7 +8,7 @@ MVC implementation: displays the Model state without modifying it.
 Refactored following SOLID and KISS principles.
 
 @controls
-P(pause) M(zoom) ZQSD(scroll +Maj=fast) F1-F4(panels) TAB(report) ESC(quit)
+P(pause) M(zoom) A(auto-cam) ZQSD(scroll +Maj=fast) F1-F4(panels) TAB(report) ESC(quit)
 """
 
 from dataclasses import dataclass, field
@@ -447,8 +447,8 @@ class MapRenderer(BaseRenderer):
         max_y, max_x = self.stdscr.getmaxyx()
         game_height = max_y - (5 if show_ui else 0)
 
-        # Clear and draw border
-        self.stdscr.clear()
+        # Erase (not clear) to avoid flickering
+        self.stdscr.erase()
         self._draw_border(max_x, game_height)
 
         # Draw units
@@ -911,9 +911,26 @@ class TerminalView(ViewInterface):
     def _update_camera(self) -> None:
         """
         @brief Update camera position.
+        @details If auto_follow is enabled, centers camera on units barycenter.
         """
         max_y, max_x = self.stdscr.getmaxyx()
         ui_h = 5 if self.state.show_ui else 0
+        
+        # Auto-follow: center camera on units barycenter
+        if self.state.auto_follow and self.unit_cache.units:
+            alive_units = [u for u in self.unit_cache.units if u.alive]
+            if alive_units:
+                center_x = sum(u.x for u in alive_units) / len(alive_units)
+                center_y = sum(u.y for u in alive_units) / len(alive_units)
+                
+                # Calculate visible area
+                visible_w = (max_x - 2) * self.camera.zoom_level
+                visible_h = (max_y - ui_h - 2) * self.camera.zoom_level
+                
+                # Center camera on barycenter
+                self.camera.x = int(center_x - visible_w / 2)
+                self.camera.y = int(center_y - visible_h / 2)
+        
         self.camera.clamp(self.board_width, self.board_height, max_x, max_y, ui_h)
 
     def _render(self) -> None:
@@ -933,7 +950,9 @@ class TerminalView(ViewInterface):
         if self.state.paused:
             self.ui_renderer.draw_pause_overlay()
 
-        self.stdscr.refresh()
+        # Use noutrefresh + doupdate for double buffering (prevents flickering)
+        self.stdscr.noutrefresh()
+        curses.doupdate()
 
     def _control_framerate(self) -> None:
         """

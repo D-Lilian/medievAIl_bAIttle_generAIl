@@ -44,15 +44,10 @@ class TerminalController:
         """
         # Use SimulationController as intermediary
         self.sim_controller = SimulationController()
-        self.sim_controller.simulation = simulation
-
-        # Configure simulation for interactive terminal mode
-        self.sim_controller.simulation.tick_speed = tick_speed
-        self.sim_controller.simulation.paused = True
-        self.sim_controller.simulation.unlocked = True
+        self.sim_controller.simulation = Simulation(simulation, tick_speed=tick_speed, paused=True, unlocked=True)
 
         # Store scenario reference for view initialization
-        scenario = simulation.scenario
+        scenario = self.sim_controller.simulation.scenario
 
         # Dependency Injection: Allow passing an existing view, or create a default one
         if view:
