@@ -50,6 +50,9 @@ class SimulationController:
         if self.simulation.tick_speed > 1:
             self.simulation.tick_speed -= 1
 
+    def get_tick_speed(self):
+        return self.simulation.tick_speed
+
     def start_multiple_simulations(self, scenario, number_of_simulation):
         """"""
         output = []
