@@ -66,52 +66,52 @@ class StrategieStartBrainDead(StrategyStart):
         #unit.order_manager.Add(AttackOnReachOrder, 0) # On push/insere/add un ordre de priorité 0
 
 #############################################################################################################
-# SomeIQ (VERSION AMÉLIORÉE - LE TUEUR DE DAFT)
+# SomeIQ 
 #############################################################################################################
 
 # 1. ARBALÉTRIERS : Ils visent les Piquiers (lents) et fuient les Chevaliers
 class StrategieCrossbowmanSomeIQ(StrategyTroup): 
     def __init__(self):
-        # Cible favorite : PIKEMAN (car ils n'ont pas d'armure de tir)
-        # Ennemi détesté : KNIGHT (car ils chargent vite)
+        # Cible favorite PIKEMAN car ils n'ont pas d'armure de tir
+        # Ennemi détesté KNIGHT car ils chargent vite
         super().__init__(None, UnitType.PIKEMAN, UnitType.KNIGHT)
 
     def apply_order(self, general, unit):
-        # Priorité 0 (Absolue) : Fuir si un Chevalier est trop près
+        #priorité 0 fuir si un Chevalier est trop près
         unit.order_manager.Add(AvoidOrder(unit, UnitType.KNIGHT), 0)
-        #  Tirer sur les pikeman
+        #tirer sur les pikeman
         unit.order_manager.Add(AttackNearestTroupOmniscient(unit, UnitType.PIKEMAN), 1)
         #sinn tirer sur n'importe qui
         unit.order_manager.Add(AttackNearestTroupOmniscient(unit, UnitType.ALL), 2)
 
 
-# 2. CHEVALIERS : Ils ignorent les tanks et foncent sur les Arbalétriers
+
 class StrategieKnightSomeIQ(StrategyTroup):
     def __init__(self):
-        # Cible favorite : CROSSBOWMAN 
+        #Cible favorite CROSSBOWMAN 
         super().__init__(None, UnitType.CROSSBOWMAN, UnitType.PIKEMAN)
     
     def apply_order(self, general, unit):
-        # On utilise Omniscient pour foncer direct sur les archers adverses
-        # On contourne la ligne de front si possible
+        #pour foncer direct sur les archers adverses
+        #contourne la ligne de front si possible
         unit.order_manager.Add(AttackNearestTroupOmniscient(unit, UnitType.CROSSBOWMAN), 0)
         
-        # Si plus d'archers, on nettoie le reste
+        #si plus d'archers le reste
         unit.order_manager.Add(AttackNearestTroupOmniscient(unit, UnitType.ALL), 1)
 
 
-# 3. PIQUIERS : Ils protègent l'équipe en tuant les Chevaliers adverses
+#protègent l'équipe en tuant les Chevaliers adverses
 class StrategiePikemanSomeIQ(StrategyTroup):
     def __init__(self):
-        # Cible favorite : KNIGHT (Bonus de dégâts énorme)
+        #cible favorite KNIGHT 
         super().__init__(None, UnitType.KNIGHT, UnitType.CROSSBOWMAN)
 
     def apply_order(self, general, unit):
-        # Priorité 1 : Tuer les chevaux (C'est leur job !)
-        # On ne reste plus passif à attendre, on va les chercher.
+        #priorité 1 Tuer les chevaux 
+        #on ne reste plus passif à attendre on va les chercher
         unit.order_manager.Add(AttackNearestTroupOmniscient(unit, UnitType.KNIGHT), 0)
         
-        # Priorité 2 : Tuer le reste
+        #priorité 2 Tuer le reste
         unit.order_manager.Add(AttackNearestTroupOmniscient(unit, UnitType.ALL), 1)
 
 
