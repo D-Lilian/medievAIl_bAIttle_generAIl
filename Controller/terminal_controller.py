@@ -78,11 +78,18 @@ class TerminalController:
                 # 2. Sync speed from view to simulation controller
                 #    ViewState.tick_speed <-> Simulation.tick_speed (via SimulationController)
                 if self.view.tick_speed != self.sim_controller.get_tick_speed():
-                    # Adjust tick speed via controller methods
-                    while self.sim_controller.get_tick_speed() < self.view.tick_speed:
+                    # Adjust tick speed via controller methods, with a maximum iteration guard to prevent infinite loops
+                    max_sync_steps = 1000
+                    sync_steps = 0
+                    while self.sim_controller.get_tick_speed() < self.view.tick_speed and sync_steps < max_sync_steps:
                         self.sim_controller.increase_tick()
-                    while self.sim_controller.get_tick_speed() > self.view.tick_speed:
+                        sync_steps += 1
+                    while self.sim_controller.get_tick_speed() > self.view.tick_speed and sync_steps < max_sync_steps:
                         self.sim_controller.decrease_tick()
+                        sync_steps += 1
+                    if sync_steps == max_sync_steps:
+                        # Optionally, log a warning or handle the error as needed
+                        pass
 
                 # 3. Sync pause state
                 #    ViewState.paused <-> Simulation.paused (via SimulationController)
