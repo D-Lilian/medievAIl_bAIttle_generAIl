@@ -109,7 +109,7 @@ class SimulationController:
         @param output Output of the simulation.
         """
         self.isSimulationRunning = False
-        self.output = output
+        self.result = output
 
     def start_multiple_simulations(self, scenario, number_of_simulation):
         """
