@@ -447,7 +447,7 @@ class MapRenderer(BaseRenderer):
         max_y, max_x = self.stdscr.getmaxyx()
         game_height = max_y - (5 if show_ui else 0)
 
-        # Erase (not clear) to avoid flickering
+        # Prepare screen for redraw; flicker is prevented by double buffering (noutrefresh/doupdate)
         self.stdscr.erase()
         self._draw_border(max_x, game_height)
 
