@@ -110,7 +110,7 @@ def run_terminal_view(sim_controller: SimulationController, scenario: Scenario) 
     from Controller.simulation_controller import SimulationController
     
     sim_controller = SimulationController()
-    sim_controller.create_simulation(scenario, tickSpeed=20, paused=True, unlocked=True)
+    sim_controller.initialize_simulation(scenario, tickSpeed=20, paused=True, unlocked=True)
     run_terminal_view(sim_controller, scenario)
     @endcode
     """
@@ -125,6 +125,6 @@ if __name__ == "__main__":
     print("  from Controller.simulation_controller import SimulationController")
     print("  ")
     print("  sim_controller = SimulationController()")
-    print("  sim_controller.create_simulation(scenario, tickSpeed=20, paused=True, unlocked=True)")
+    print("  sim_controller.initialize_simulation(scenario, tickSpeed=20, paused=True, unlocked=True)")
     print("  run_terminal_view(sim_controller, scenario)")
     raise SystemExit(1)
