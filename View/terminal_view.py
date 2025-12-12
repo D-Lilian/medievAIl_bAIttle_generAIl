@@ -228,11 +228,28 @@ def resolve_team(team_val) -> Team:
     @param team_val The team value to convert
     @return Team.A or Team.B
     """
+    # If already a Team enum, return as is
     if isinstance(team_val, Team):
         return team_val
+    # If it has a 'name' attribute, check for 'A' or 'B'
     if hasattr(team_val, 'name'):
-        return Team.A if team_val.name == 'A' or getattr(team_val, 'value', 1) == 0 else Team.B
-    return Team.A if team_val in (1, 'A', 'a', 0) else Team.B
+        if team_val.name == 'A':
+            return Team.A
+        elif team_val.name == 'B':
+            return Team.B
+    # If it has a 'value' attribute, use it if it matches Team.A or Team.B
+    if hasattr(team_val, 'value'):
+        if getattr(team_val, 'value') == Team.A.value:
+            return Team.A
+        elif getattr(team_val, 'value') == Team.B.value:
+            return Team.B
+    # Accept integer or string representations
+    if team_val in (1, 'A', 'a'):
+        return Team.A
+    elif team_val in (2, 'B', 'b'):
+        return Team.B
+    # Fallback: default to Team.B (safer than Team.A)
+    return Team.B
 
 
 # =============================================================================
