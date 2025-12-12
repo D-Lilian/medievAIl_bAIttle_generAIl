@@ -69,8 +69,8 @@ class UnitRepr:
     damage_dealt: int = 0
     target_name: Optional[str] = None
     # Optional detailed stats for reports
-    armor: Optional[dict] = None
-    attack: Optional[dict] = None
+    armor: Optional[Dict[str, int]] = None
+    attack: Optional[Dict[str, int]] = None
     range: Optional[float] = None
     reload_time: Optional[float] = None
     reload_val: Optional[float] = None
