@@ -1099,7 +1099,13 @@ class TerminalView(ViewInterface):
         @return HTML string
         """
         def table(counts: Dict[str, int], title: str, color: str) -> str:
-            total = sum(counts.values()) or 1
+            total = sum(counts.values())
+            if total == 0:
+                return f'''
+                <div class="breakdown-card">
+                    <h4 style="color:var({color})">{title}</h4>
+                    <div class="no-units-message">No units</div>
+                </div>'''
             rows = "".join(
                 f'<tr><td>{t}</td><td>{c}</td><td><div class="progress-bar">'
                 f'<div class="progress-fill" style="width:{c/total*100}%;background:var({color})"></div>'
