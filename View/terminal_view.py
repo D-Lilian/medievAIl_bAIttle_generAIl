@@ -14,7 +14,7 @@ P(pause) M(zoom) A(auto-cam) ZQSD(scroll +Maj=fast) F1-F4(panels) TAB(report) ES
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import List, Dict, Optional, Callable
+from typing import List, Dict, Optional, Callable, Any
 import curses
 import time
 
@@ -69,8 +69,8 @@ class UnitRepr:
     damage_dealt: int = 0
     target_name: Optional[str] = None
     # Optional detailed stats for reports
-    armor: Optional[dict] = None
-    attack: Optional[dict] = None
+    armor: Optional[Dict[str, Any]] = None
+    attack: Optional[Dict[str, Any]] = None
     range: Optional[float] = None
     reload_time: Optional[float] = None
     reload_val: Optional[float] = None
