@@ -8,7 +8,7 @@ MVC implementation: displays the Model state without modifying it.
 Refactored following SOLID and KISS principles.
 
 @controls
-P(pause) M(zoom) A(auto-cam) ZQSD(scroll +Maj=fast) F1-F4(panels) TAB(report) ESC(quit)
+P(pause) M(zoom) A(auto-cam) ZQSD(scroll +Maj=fast) F1-F4(panels) TAB(report) ESC/Q(quit)
 """
 
 from dataclasses import dataclass, field
@@ -142,7 +142,7 @@ class ViewState:
     show_unit_types: bool = True    ##< F2: Show unit types panel
     show_sim_info: bool = True      ##< F3: Show simulation info panel
     auto_follow: bool = False  ##< Whether camera auto-follows units
-    tick_speed: int = 40  ##< Simulation tick speed
+    tick_speed: int = DEFAULT_NUMBER_OF_TICKS_PER_SECOND  ##< Simulation tick speed
 
     def toggle_all_panels(self) -> None:
         """
@@ -248,8 +248,8 @@ def resolve_team(team_val) -> Team:
         return Team.A
     elif team_val in (2, 'B', 'b'):
         return Team.B
-    # Fallback: default to Team.B (safer than Team.A)
-    return Team.B
+    # Fallback: default to Team.A for unknown values
+    return Team.A
 
 
 # =============================================================================
@@ -263,7 +263,7 @@ class InputHandler:
     """
 
     # Key mappings for cleaner code
-    QUIT_KEYS = {27}  # ESC
+    QUIT_KEYS = {27, ord('q'), ord('Q')}  # ESC or Q
     PAUSE_KEYS = {ord('p'), ord('P')}
     ZOOM_KEYS = {ord('m'), ord('M')}
     AUTO_FOLLOW_KEYS = {ord('a'), ord('A')}
@@ -547,7 +547,7 @@ class UIRenderer(BaseRenderer):
             follow_str = 'AUTO' if state.auto_follow else 'MANUAL'
             text = (f"Time:{stats.simulation_time:.1f}s | {pause_str} | "
                     f"Zoom:x{camera.zoom_level} | Cam:({camera.x},{camera.y}) | "
-                    f"{follow_str} | Tick:{state.tick_speed}")
+                    f"{follow_str} | Tick:{state.tick_speed} | FPS:{stats.fps:.0f}")
             self.safe_addstr(line, 2, text)
             line += 1
 
@@ -794,12 +794,12 @@ class TerminalView(ViewInterface):
     - Dependency Inversion: Uses abstract interfaces where possible
     """
 
-    def __init__(self, board_width: int, board_height: int, tick_speed: int = 40):
+    def __init__(self, board_width: int, board_height: int, tick_speed: int = DEFAULT_NUMBER_OF_TICKS_PER_SECOND):
         """
         @brief Initialize terminal view.
         @param board_width Board width
         @param board_height Board height
-        @param tick_speed Initial tick speed
+        @param tick_speed Initial tick speed (defaults to DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
         """
         self.board_width = board_width
         self.board_height = board_height
@@ -999,7 +999,6 @@ class TerminalView(ViewInterface):
 
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = os.path.join(reports_dir, f"battle_report_{timestamp}.html")
-        css_filename = os.path.join(reports_dir, "battle_report.css")
 
         # Generate content
         team1 = [u for u in self.unit_cache.units if u.team == Team.A]
@@ -1010,12 +1009,10 @@ class TerminalView(ViewInterface):
         breakdown = self._gen_breakdown()
         legend = self._gen_legend()
 
-        # Load templates
+        # Load template (CSS is referenced via relative path in template)
         base_dir = os.path.join(os.path.dirname(__file__), '..', 'Utils')
         with open(os.path.join(base_dir, 'battle_report_template.html'), 'r', encoding='utf-8') as f:
             template = f.read()
-        with open(os.path.join(base_dir, 'battle_report.css'), 'r', encoding='utf-8') as f:
-            css = f.read()
 
         # Fill template
         html = template.replace('{timestamp}', timestamp)
@@ -1030,9 +1027,7 @@ class TerminalView(ViewInterface):
         html = html.replace('{generation_datetime}',
                             datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-        # Write files
-        with open(css_filename, 'w', encoding='utf-8') as f:
-            f.write(css)
+        # Write HTML file only (CSS is in Utils/)
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(html)
 

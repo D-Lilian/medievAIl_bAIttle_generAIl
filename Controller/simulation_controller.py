@@ -47,18 +47,18 @@ class SimulationController:
         self.isSimulationRunning = False
         self.result = None
 
-    def initialize_simulation(self, scenario, tickSpeed=5, paused=False, unlocked=False):
+    def initialize_simulation(self, scenario, tick_speed=5, paused=False, unlocked=False):
         """
         @brief Initializes the simulation with the given scenario.
 
         @param scenario Scenario instance to simulate.
-        @param tickSpeed Initial tick speed for the simulation.
+        @param tick_speed Initial tick speed for the simulation.
         @param paused Initial paused state of the simulation.
         @param unlocked Initial unlocked state of the simulation.
         """
         self.simulation = Simulation(
             scenario,
-            tick_speed=tickSpeed,
+            tick_speed=tick_speed,
             paused=paused,
             unlocked=unlocked
         )
@@ -80,16 +80,24 @@ class SimulationController:
 
     def increase_tick(self):
         """
-        @brief Increases the tick speed of the simulation.
+        @brief Increases the tick speed of the simulation by 1.
         """
         self.simulation.tick_speed += 1
 
     def decrease_tick(self):
         """
-        @brief Decreases the tick speed of the simulation, ensuring it doesn't go below 1.
+        @brief Decreases the tick speed of the simulation by 1, ensuring it doesn't go below 1.
         """
         if self.simulation.tick_speed > 1:
             self.simulation.tick_speed -= 1
+
+    def set_tick_speed(self, value: int):
+        """
+        @brief Sets the tick speed of the simulation directly.
+        
+        @param value New tick speed value (minimum 1).
+        """
+        self.simulation.tick_speed = max(1, value)
 
     def get_tick_speed(self):
         """

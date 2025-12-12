@@ -72,24 +72,14 @@ class TerminalController:
 
             while self.running:
                 # 1. Update View (Render current state & Handle Input)
-                #    Returns False when user requests quit (ESC)
+                #    Returns False when user requests quit (ESC or Q)
                 self.running = self.view.update(self.sim_controller.simulation)
 
                 # 2. Sync speed from view to simulation controller
                 #    ViewState.tick_speed <-> Simulation.tick_speed (via SimulationController)
                 if self.view.tick_speed != self.sim_controller.get_tick_speed():
-                    # Adjust tick speed via controller methods, with a maximum iteration guard to prevent infinite loops
-                    max_sync_steps = 1000
-                    sync_steps = 0
-                    while self.sim_controller.get_tick_speed() < self.view.tick_speed and sync_steps < max_sync_steps:
-                        self.sim_controller.increase_tick()
-                        sync_steps += 1
-                    while self.sim_controller.get_tick_speed() > self.view.tick_speed and sync_steps < max_sync_steps:
-                        self.sim_controller.decrease_tick()
-                        sync_steps += 1
-                    if sync_steps == max_sync_steps:
-                        # Optionally, log a warning or handle the error as needed
-                        pass
+                    # Use set_tick_speed for efficient direct sync
+                    self.sim_controller.set_tick_speed(self.view.tick_speed)
 
                 # 3. Sync pause state
                 #    ViewState.paused <-> Simulation.paused (via SimulationController)
@@ -117,7 +107,7 @@ def run_terminal_view(sim_controller: SimulationController, scenario: Scenario) 
     from Controller.simulation_controller import SimulationController
     
     sim_controller = SimulationController()
-    sim_controller.initialize_simulation(scenario, tickSpeed=20, paused=True, unlocked=True)
+    sim_controller.initialize_simulation(scenario, tick_speed=20, paused=True, unlocked=True)
     run_terminal_view(sim_controller, scenario)
     @endcode
     """
@@ -132,6 +122,6 @@ if __name__ == "__main__":
     print("  from Controller.simulation_controller import SimulationController")
     print("  ")
     print("  sim_controller = SimulationController()")
-    print("  sim_controller.initialize_simulation(scenario, tickSpeed=20, paused=True, unlocked=True)")
+    print("  sim_controller.initialize_simulation(scenario, tick_speed=20, paused=True, unlocked=True)")
     print("  run_terminal_view(sim_controller, scenario)")
     raise SystemExit(1)

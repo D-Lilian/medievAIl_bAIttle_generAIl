@@ -238,8 +238,9 @@ class TestResolveFunctions(unittest.TestCase):
         @brief Test integer team conversion.
         """
         self.assertEqual(resolve_team(1), Team.A)
-        self.assertEqual(resolve_team(0), Team.A)
         self.assertEqual(resolve_team(2), Team.B)
+        # Unknown values fall back to Team.A
+        self.assertEqual(resolve_team(0), Team.A)
 
     def test_resolve_team_string(self):
         """
@@ -447,6 +448,117 @@ class TestMapRenderer(unittest.TestCase):
         renderer = MapRenderer(stdscr)
         # Should not raise
         renderer.safe_addstr(0, 0, "test")
+
+
+# =============================================================================
+# INTEGRATION TESTS - Verify components work together correctly
+# =============================================================================
+
+class TestTickSpeedConsistency(unittest.TestCase):
+    """
+    @brief Tests for tick_speed consistency across components.
+    """
+
+    def test_viewstate_default_matches_constant(self):
+        """
+        @brief ViewState default tick_speed matches DEFAULT_NUMBER_OF_TICKS_PER_SECOND.
+        """
+        from Model.simulation import DEFAULT_NUMBER_OF_TICKS_PER_SECOND
+        state = ViewState()
+        self.assertEqual(state.tick_speed, DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
+
+    def test_terminalview_default_tick_speed(self):
+        """
+        @brief TerminalView default tick_speed matches DEFAULT_NUMBER_OF_TICKS_PER_SECOND.
+        """
+        from Model.simulation import DEFAULT_NUMBER_OF_TICKS_PER_SECOND
+        view = TerminalView(100, 100)
+        self.assertEqual(view.tick_speed, DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
+
+    def test_simulation_controller_has_set_tick_speed(self):
+        """
+        @brief SimulationController has set_tick_speed method for efficient sync.
+        """
+        from Controller.simulation_controller import SimulationController
+        controller = SimulationController()
+        self.assertTrue(hasattr(controller, 'set_tick_speed'))
+
+    def test_simulation_controller_uses_snake_case(self):
+        """
+        @brief SimulationController.initialize_simulation uses snake_case naming.
+        """
+        from Controller.simulation_controller import SimulationController
+        import inspect
+        sig = inspect.signature(SimulationController.initialize_simulation)
+        param_names = list(sig.parameters.keys())
+        self.assertIn('tick_speed', param_names)
+
+
+class TestQuitKeys(unittest.TestCase):
+    """
+    @brief Tests for quit key functionality.
+    """
+
+    def test_quit_keys_include_esc_and_q(self):
+        """
+        @brief QUIT_KEYS includes ESC and Q as documented.
+        """
+        self.assertIn(27, InputHandler.QUIT_KEYS)
+        self.assertIn(ord('q'), InputHandler.QUIT_KEYS)
+        self.assertIn(ord('Q'), InputHandler.QUIT_KEYS)
+
+    def test_esc_quits(self):
+        """
+        @brief ESC key returns False to quit.
+        """
+        stdscr = MagicMock()
+        handler = InputHandler(stdscr, ViewState(), Camera(), 100, 100)
+        stdscr.getch.return_value = 27
+        self.assertFalse(handler.process())
+
+    def test_q_quits(self):
+        """
+        @brief Q key returns False to quit.
+        """
+        stdscr = MagicMock()
+        handler = InputHandler(stdscr, ViewState(), Camera(), 100, 100)
+        stdscr.getch.return_value = ord('q')
+        self.assertFalse(handler.process())
+
+
+class TestAutoFollow(unittest.TestCase):
+    """
+    @brief Tests for auto-follow feature.
+    """
+
+    def test_auto_follow_disables_on_manual_movement(self):
+        """
+        @brief Manual camera movement disables auto-follow.
+        """
+        stdscr = MagicMock()
+        state = ViewState()
+        state.auto_follow = True
+        handler = InputHandler(stdscr, state, Camera(), 100, 100)
+        
+        stdscr.getch.return_value = ord('z')
+        handler.process()
+        
+        self.assertFalse(state.auto_follow)
+
+    def test_auto_follow_toggle_with_a_key(self):
+        """
+        @brief A key toggles auto-follow.
+        """
+        stdscr = MagicMock()
+        state = ViewState()
+        handler = InputHandler(stdscr, state, Camera(), 100, 100)
+        
+        stdscr.getch.return_value = ord('a')
+        handler.process()
+        self.assertTrue(state.auto_follow)
+        
+        handler.process()
+        self.assertFalse(state.auto_follow)
 
 
 if __name__ == '__main__':
