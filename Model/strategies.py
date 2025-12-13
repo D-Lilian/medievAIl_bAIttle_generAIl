@@ -1,4 +1,4 @@
-from Model.Units import UnitType
+from Model.units import UnitType
 from Model.orders import FormationOrder
 from Utils.errors import WrongArguments
 from Model.orders import AttackOnSightOrder, AvoidOrder, StayInReachOrder, SacrificeOrder, \
@@ -37,7 +37,6 @@ class StrategieDAFT(StrategyTroup):
         super().__init__(general, UnitType.ALL, UnitType.NONE)
 
     def apply_order(self, general, unit):
-        print("Applying order")
         unit.order_manager.Add(AttackNearestTroupOmniscient(unit, self.favoriteTroup), 0)
 
 ## Deprecated

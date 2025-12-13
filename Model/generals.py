@@ -1,5 +1,5 @@
-from Model.Units import Unit, UnitType, Crossbowman, Knight, Pikeman
-from Model.Strategies import *
+from Model.units import Unit, UnitType, Crossbowman, Knight, Pikeman
+from Model.strategies import *
 from Utils.errors import GameEngineError
 from Utils.logs import setup_logger, logger
 

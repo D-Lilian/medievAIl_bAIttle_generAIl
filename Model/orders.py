@@ -4,8 +4,8 @@
 
 
 from Utils.logs import logger, setup_logger
-from Model.Units import Unit
-from Model.Simulation import Simulation
+from Model.units import Unit
+from Model.simulation import Simulation
 
 
 
@@ -83,12 +83,12 @@ class AvoidOrder(Order):
         self.typeUnits = typeUnits
 
     def Try(self, simu):
-        target = simu.get_nearest_enemy_in_sight(self.unit, type_units=self.typeUnits)
+        target = simu.get_nearest_enemy_in_sight(self.unit, type_target=self.typeUnits)
         if target is None:
             return False # Il ya aucune enemy nearby
 
         if simu.is_in_reach(target, self.unit):
-            if simu.move_one_step_towards_dir(self.unit, target, 180):
+            if simu.move_one_step_from_target_in_direction(self.unit, target, 180):
                 return False
         else:
             return False
@@ -126,7 +126,7 @@ class MoveTowardEnemyWithSpecificAttribute(Order):
         current_target = None
 
         if self.fixed and self.target:
-            if simu.is_unit_still_alive(self.target):
+            if self.target > 0:
                 current_target = self.target
             else:
                 self.target = None
@@ -214,6 +214,7 @@ class AttackNearestTroupOmniscient(Order):
     def Try(self, simu):
         target = simu.get_nearest_enemy_unit(self.unit, type_target=self.typeTarget)
         if target is None:
+            self.log.debug(f"Aucune cible trouvée pour {self.unit}")
             return False
 
         if simu.is_in_reach(self.unit, target):
@@ -420,7 +421,7 @@ if __name__ == "__main__":
     sys.path.append(str(project_root))
 
     # Maintenant que le chemin est correct, on peut faire les imports pour le test
-    from Model.Units import Crossbowman
+    from Model.units import Crossbowman
     from Utils.logs import setup_logger, logger
 
     u1 = Crossbowman('A', 0, 0)

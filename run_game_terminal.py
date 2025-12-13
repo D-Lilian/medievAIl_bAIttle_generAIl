@@ -4,12 +4,12 @@ import time
 
 try:
     from View.terminal_view import TerminalView
-    from Model.Simulation import Simulation
-    from Model.Scenario import Scenario
-    from Model.Units import Unit, Knight, Pikeman, Crossbowman, UnitType
+    from Model.simulation import Simulation
+    from Model.scenario import Scenario
+    from Model.units import Unit, Knight, Pikeman, Crossbowman, UnitType
     from Model.generals import General
     
-    from Model.Strategies import (
+    from Model.strategies import (
         StrategieDAFT, 
         StrategieBrainDead,
         StrategieKnightSomeIQ, 

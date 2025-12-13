@@ -1,16 +1,27 @@
+# -*- coding: utf-8 -*-
+"""
+@file simulation.py
+@brief Simulation Model - Core logic of the battle simulation
+
+@details
+Manages the game loop, unit updates, and interaction between units.
+Handles time progression and game state.
+
+"""
 import time
 import random
 import math
 
-from Model.Units import *
+from Model.units import *
 
 # Number chosen to make simulation fast but realistic
 # So that reload time and tick speed are compatible
 DEFAULT_NUMBER_OF_TICKS_PER_SECOND = 5
 
+
 class Simulation:
 
-    def __init__(self, scenario, tick_speed = 5, paused = False, unlocked = False):
+    def __init__(self, scenario, tick_speed=5, paused=False, unlocked=False):
         self.scenario = scenario
         self.reload_units = []
 
@@ -23,10 +34,11 @@ class Simulation:
         self.as_unit_attacked = False
 
         self.types_present = self.type_present_in_team()
+        self.spatial_grid = SpatialGrid(scenario.size_x, scenario.size_y, cell_size=20)
 
     ## ----------- Simulation functions -------------
 
-    def simulate(self):
+    def simulate(self, on_end=None):
         """Run the simulation until a team wins or time runs out."""
         self.scenario.general_a.BeginStrategy()
         self.scenario.general_b.BeginStrategy()
@@ -34,10 +46,16 @@ class Simulation:
         self.scenario.general_b.CreateOrders()
 
         while not self.finished():
+            # Reconstruire la grille spatiale chaque tick
+            self.spatial_grid.clear()
+            for unit in self.scenario.units:
+                if unit.hp > 0:
+                    self.spatial_grid.insert(unit)
+
             random.shuffle(self.scenario.units)
 
             for unit in self.scenario.units:
-                if not self.is_unit_still_alive(unit):
+                if not unit.hp > 0:
                     continue
 
                 for unit_order in unit.order_manager:
@@ -46,6 +64,7 @@ class Simulation:
                 self.as_unit_attacked = False
                 self.as_unit_moved = False
             self.tick += 1
+            # print("Tick :", self.tick)
 
             for unit in list(self.reload_units):
                 unit.update_reload(1 / DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
@@ -76,9 +95,12 @@ class Simulation:
 
         # Simulation ended, return results
         # Can be expanded to return more detailed results in the future
-        return {
+        output = {
             'ticks': self.tick
         }
+        if callable(on_end):
+            on_end(output)
+        return output
 
     def finished(self):
         """Check if the simulation has finished."""
@@ -86,17 +108,17 @@ class Simulation:
         count_b = 0
 
         for unit in self.scenario.units_a:
-            if self.is_unit_still_alive(unit):
+            if unit.hp > 0:
                 count_a += 1
         for unit in self.scenario.units_b:
-            if self.is_unit_still_alive(unit):
+            if unit.hp > 0:
                 count_b += 1
 
         if count_a == 0 or count_b == 0:
             print("Ticks : ", self.tick, "Team A units left:", count_a, "  | Team B units left:", count_b)
             return True
 
-        return self.tick >= self.tick_speed * 120
+        return self.tick >= DEFAULT_NUMBER_OF_TICKS_PER_SECOND * 480
 
     ## ----------- Movement functions -------------
 
@@ -114,134 +136,214 @@ class Simulation:
             move_y = math.sin(move_angle) * attacker_unit.speed
 
             return self.move_unit_towards_coordinates(attacker_unit, attacker_unit.x + move_x, attacker_unit.y + move_y)
-        return None
+        return False
 
     def move_unit_towards_coordinates(self, attacker_unit, target_x, target_y):
-        """Move a unit towards target coordinates, up to its max distance."""
-        if attacker_unit in self.scenario.units and self.is_unit_still_alive(attacker_unit) and not self.as_unit_moved:
+        """Déplace une unité vers les coordonnées cibles avec contournement latéral si blocage."""
+        if (attacker_unit not in self.scenario.units or
+                not attacker_unit.hp > 0 or
+                self.as_unit_moved):
+            return False
 
-            final_x = attacker_unit.x
-            final_y = attacker_unit.y
+        orig_x, orig_y = attacker_unit.x, attacker_unit.y
+        dx, dy = target_x - orig_x, target_y - orig_y
+        dist_sq = dx * dx + dy * dy
 
-            distance_to_target = self.distance_between_coordinates(target_x, target_y, attacker_unit.x, attacker_unit.y)
-            dx = target_x - attacker_unit.x
-            dy = target_y - attacker_unit.y
+        if dist_sq <= 0:
+            return False
 
-            if distance_to_target > 0:
-                move_distance = min(attacker_unit.speed, distance_to_target)
+        distance_to_target = dist_sq**0.5
+        move_distance = min(attacker_unit.speed, distance_to_target)
+        dir_x, dir_y = dx / distance_to_target, dy / distance_to_target
 
-                move_x = (dx / distance_to_target) * move_distance
-                move_y = (dy / distance_to_target) * move_distance
+        # Directions alternatives : directe, puis latérales ±45° et ±90°
+        alternative_angles = [0, math.pi / 4, -math.pi / 4, math.pi / 2, -math.pi / 2]
 
-                new_x = attacker_unit.x + move_x
-                new_y = attacker_unit.y + move_y
+        for angle_offset in alternative_angles:
+            # Calcul de la direction avec rotation
+            cos_a, sin_a = math.cos(angle_offset), math.sin(angle_offset)
+            test_dir_x = dir_x * cos_a - dir_y * sin_a
+            test_dir_y = dir_x * sin_a + dir_y * cos_a
 
-                collision_occurred = False
-                for other in self.scenario.units:
-                    if other is not attacker_unit and self.is_unit_still_alive(other):
+            # Tentatives avec réduction progressive de la distance
+            for attempt in range(3):
+                scale = 1.0 - 0.2 * attempt
+                candidate_x = orig_x + test_dir_x * move_distance * scale
+                candidate_y = orig_y + test_dir_y * move_distance * scale
 
-                        dist = self.distance_between_coordinates(new_x, new_y, other.x, other.y)
-                        min_distance = attacker_unit.size + other.size
+                # Vérifier les bornes
+                candidate_x = max(0, min(candidate_x, self.scenario.size_x))
+                candidate_y = max(0, min(candidate_y, self.scenario.size_y))
 
-                        if dist < min_distance:
-                            collision_occurred = True
+                # Résolution des collisions
+                sep_x, sep_y = self._resolve_collisions_minimal(
+                    candidate_x, candidate_y, attacker_unit
+                )
 
-                            if dist > 0:
-                                ux = (new_x - other.x) / dist
-                                uy = (new_y - other.y) / dist
-                                final_x = other.x + ux * min_distance
-                                final_y = other.y + uy * min_distance
-                            else:
-                                angle = random.random() * 2 * math.pi
-                                final_x = other.x + math.cos(angle) * min_distance
-                                final_y = other.y + math.sin(angle) * min_distance
-                            break
+                final_x = max(0, min(candidate_x + sep_x, self.scenario.size_x))
+                final_y = max(0, min(candidate_y + sep_y, self.scenario.size_y))
 
-                if not collision_occurred:
-                    final_x = new_x
-                    final_y = new_y
+                # Vérifier si position valide
+                if not self._has_collision(final_x, final_y, attacker_unit):
+                    actual_moved = math.hypot(final_x - orig_x, final_y - orig_y)
+                    if actual_moved > 0.1:  # Mouvement minimal requis
+                        attacker_unit.x, attacker_unit.y = final_x, final_y
+                        self.as_unit_moved = True
+                        attacker_unit.distance_moved += actual_moved
+                        return True
 
-                final_x = max(0, min(final_x, self.scenario.size_x))
-                final_y = max(0, min(final_y, self.scenario.size_y))
+        return False
 
-                attacker_unit.x = final_x
-                attacker_unit.y = final_y
+    def _resolve_collisions_minimal(self, x, y, unit):
+        """Résolution des collisions avec recherche spatiale optimisée."""
+        sep_x = sep_y = 0.0
+        separation_factor = 0.3
+        search_radius = unit.size * 3  # Rayon de recherche limité
 
-                self.as_unit_moved = True
-                attacker_unit.distance_moved += move_distance
+        # Utiliser la grille spatiale au lieu de parcourir toutes les unités
+        nearby_units = self.spatial_grid.query_radius(x, y, search_radius)
+
+        for other in nearby_units:
+            if other is unit or other.hp <= 0:
+                continue
+
+            dx, dy = x - other.x, y - other.y
+            dist_sq = dx * dx + dy * dy
+            min_dist = unit.size + other.size
+
+            if dist_sq < min_dist * min_dist:
+                if dist_sq > 1e-6:
+                    dist = dist_sq**0.5
+                    overlap = (min_dist - dist) * separation_factor
+                    ux, uy = dx / dist, dy / dist
+                else:
+                    angle = random.random() * 2 * math.pi
+                    overlap = min_dist * separation_factor
+                    ux, uy = math.cos(angle), math.sin(angle)
+
+                sep_x += ux * overlap
+                sep_y += uy * overlap
+
+        return sep_x, sep_y
+
+    def _has_collision(self, x, y, unit):
+        """Vérifie rapidement s'il y a collision à cette position."""
+        search_radius = unit.size * 3
+        nearby = self.spatial_grid.query_radius(x, y, search_radius)
+
+        for other in nearby:
+            if other is unit or other.hp <= 0:
+                continue
+            dx, dy = x - other.x, y - other.y
+            min_dist_sq = (unit.size + other.size) ** 2
+            if dx * dx + dy * dy < min_dist_sq - 0.1:
                 return True
         return False
+
 
     ## ----------- Combat functions -------------
 
     def is_in_sight(self, attacker_unit, target_unit):
         """Check if target is within sight of the attacker."""
-        if attacker_unit in self.scenario.units and target_unit in self.scenario.units and self.is_unit_still_alive(attacker_unit) and self.is_unit_still_alive(target_unit):
-            center_distance = self.distance_between_coordinates(attacker_unit.x, attacker_unit.y, target_unit.x, target_unit.y)
+        if (attacker_unit in self.scenario.units and
+                target_unit in self.scenario.units and
+                attacker_unit.hp > 0 and
+                target_unit.hp > 0):
+            center_distance = ((target_unit.x - attacker_unit.x) ** 2 +
+                               (target_unit.y - attacker_unit.y) ** 2) ** 0.5
             surface_distance = center_distance - (attacker_unit.size + target_unit.size)
-
             return surface_distance <= attacker_unit.sight
         return False
 
     def is_in_reach(self, attacker_unit, target_unit):
         """Check if target is within range of the attacker."""
-        if attacker_unit in self.scenario.units and target_unit in self.scenario.units and self.is_unit_still_alive(attacker_unit) and self.is_unit_still_alive(target_unit):
-            center_distance = self.distance_between_coordinates(attacker_unit.x, attacker_unit.y, target_unit.x, target_unit.y)
+        if (attacker_unit in self.scenario.units and
+                target_unit in self.scenario.units and
+                attacker_unit.hp > 0 and
+                target_unit.hp > 0):
+            center_distance = ((target_unit.x - attacker_unit.x) ** 2 +
+                               (target_unit.y - attacker_unit.y) ** 2) ** 0.5
             surface_distance = center_distance - (attacker_unit.size + target_unit.size)
-
             return surface_distance <= attacker_unit.range
         return False
 
     def get_nearest_enemy_unit(self, unit, type_target=UnitType.ALL):
-        """Return the nearest enemy unit of the given unit."""
         if type_target == UnitType.NONE:
             return None
 
-        enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
-        nearest_unit = None
-        nearest_distance = float('inf')
-        for enemy in enemy_units:
-            if not self.is_unit_still_alive(enemy) or (type_target is not UnitType.ALL and enemy.unit_type != type_target):
-                continue
-            distance = self.distance_between_coordinates(unit.x, unit.y, enemy.x, enemy.y)
-            if distance < nearest_distance:
-                nearest_distance = distance
-                nearest_unit = enemy
-        return nearest_unit
+        search_radius = unit.sight
+        max_radius = max(self.scenario.size_x, self.scenario.size_y)
+
+        while search_radius <= max_radius:
+            nearby = self.spatial_grid.query_radius(unit.x, unit.y, search_radius)
+
+            nearest_unit = None
+            nearest_distance = float('inf')
+
+            for enemy in nearby:
+                if enemy.team == unit.team or not enemy.hp > 0:
+                    continue
+                if type_target != UnitType.ALL and enemy.unit_type != type_target:
+                    continue
+
+                distance = ((unit.x - enemy.x) ** 2 + (unit.y - enemy.y) ** 2) ** 0.5
+                if distance < nearest_distance:
+                    nearest_distance = distance
+                    nearest_unit = enemy
+
+            if nearest_unit:
+                return nearest_unit
+
+            search_radius *= 2
+        return None
 
     def get_nearest_enemy_in_sight(self, unit, type_target=UnitType.ALL):
         """Return the nearest enemy unit in sight of the given unit."""
         if type_target == UnitType.NONE:
             return None
 
-        enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
+        nearby = self.spatial_grid.query_radius(unit.x, unit.y, unit.sight)
+
         nearest_unit = None
         nearest_distance = float('inf')
-        for target_unit in enemy_units:
-            if (type_target is not UnitType.ALL and target_unit.unit_type != type_target) or not self.is_unit_still_alive(target_unit):
+
+        for target_unit in nearby:
+            if target_unit.team == unit.team or not target_unit.hp > 0:
                 continue
+            if type_target != UnitType.ALL and target_unit.unit_type != type_target:
+                continue
+
             if self.is_in_sight(unit, target_unit):
-                distance = self.distance_between_coordinates(unit.x, unit.y, target_unit.x, target_unit.y)
+                distance = ((unit.x - target_unit.x) ** 2 + (unit.y - target_unit.y) ** 2) ** 0.5
                 if distance < nearest_distance:
                     nearest_distance = distance
                     nearest_unit = target_unit
+
         return nearest_unit
 
     def get_nearest_enemy_in_reach(self, unit, type_target=UnitType.ALL):
         """Return the nearest enemy unit in reach of the given unit."""
-        if not self.is_unit_still_alive(unit) or type_target == UnitType.NONE:
+        if not unit.hp > 0 or type_target == UnitType.NONE:
             return None
-        enemy_units = self.scenario.units_b if unit.team == "A" else self.scenario.units_a
+
+        search_radius = unit.range + max(u.size for u in self.scenario.units)
+        nearby = self.spatial_grid.query_radius(unit.x, unit.y, search_radius)
+
         nearest_unit = None
         nearest_distance = float('inf')
-        for target_unit in enemy_units:
-            if (type_target is not UnitType.ALL and target_unit.unit_type != type_target) or not self.is_unit_still_alive(target_unit):
+
+        for target_unit in nearby:
+            if target_unit.team == unit.team or not target_unit.hp > 0:
                 continue
+            if type_target != UnitType.ALL and target_unit.unit_type != type_target:
+                continue
+
             if self.is_in_reach(unit, target_unit):
-                distance = self.distance_between_coordinates(unit.x, unit.y, target_unit.x, target_unit.y)
+                distance = ((unit.x - target_unit.x) ** 2 + (unit.y - target_unit.y) ** 2) ** 0.5
                 if distance < nearest_distance:
                     nearest_distance = distance
                     nearest_unit = target_unit
+
         return nearest_unit
 
     def get_nearest_friendly_in_sight(self, unit, type_target=UnitType.ALL):
@@ -249,17 +351,25 @@ class Simulation:
         if type_target == UnitType.NONE:
             return None
 
-        friendly_units = self.scenario.units_a if unit.team == "A" else self.scenario.units_b
+        nearby = self.spatial_grid.query_radius(unit.x, unit.y, unit.sight)
+
         nearest_unit = None
         nearest_distance = float('inf')
-        for target_unit in friendly_units:
-            if (type_target is not UnitType.ALL and target_unit.unit_type != type_target) or not self.is_unit_still_alive(target_unit):
+
+        for target_unit in nearby:
+            if target_unit is unit or target_unit.team != unit.team:
                 continue
+            if not target_unit.hp > 0:
+                continue
+            if type_target != UnitType.ALL and target_unit.unit_type != type_target:
+                continue
+
             if self.is_in_sight(unit, target_unit):
-                distance = self.distance_between_coordinates(unit.x, unit.y, target_unit.x, target_unit.y)
+                distance = ((unit.x - target_unit.x) ** 2 + (unit.y - target_unit.y) ** 2) ** 0.5
                 if distance < nearest_distance:
                     nearest_distance = distance
                     nearest_unit = target_unit
+
         return nearest_unit
 
     def is_unit_still_alive(self, unit):
@@ -272,7 +382,7 @@ class Simulation:
         nearest_unit = None
         best_attribute_value = float('inf')
         for target_unit in enemy_units:
-            if not self.is_unit_still_alive(target_unit):
+            if not target_unit.hp > 0:
                 continue
             attr_value = getattr(target_unit, attribute, None)
             if attr_value is not None and attr_value < best_attribute_value:
@@ -282,7 +392,7 @@ class Simulation:
 
     def attack_unit(self, attacker_unit, target_unit):
         """Perform an attack on a target unit if possible."""
-        if attacker_unit.can_attack() and self.is_in_reach(attacker_unit, target_unit) and self.is_unit_still_alive(attacker_unit) and self.is_unit_still_alive(target_unit):
+        if attacker_unit.can_attack() and self.is_in_reach(attacker_unit, target_unit) and attacker_unit.hp > 0 and target_unit.hp > 0:
             elevation_modifier = 1.0
             accuracy_modifier = attacker_unit.accuracy
             base_damage = 0
@@ -345,9 +455,16 @@ class Simulation:
         """Move the unit into the specified formation with the given units."""
         if type_formation == 'ROND':
             if not self.is_in_formation(unit, units, type_formation):
-                target_cords = self.distance_for_unit_in_formation(unit, units)
-                
-                self.move_unit_towards_coordinates(unit, target_cords[0], target_cords[1])
+                nearby_formation_units = self.spatial_grid.query_radius(
+                    unit.x, unit.y, 50
+                )
+                nearby_formation_units = [u for u in nearby_formation_units if u in units]
+
+                if nearby_formation_units:
+                    target_cords = self.distance_for_unit_in_formation(
+                        unit, nearby_formation_units
+                    )
+                    self.move_unit_towards_coordinates(unit, target_cords[0], target_cords[1])
 
     ## ----------- Distance functions -------------
 
@@ -357,8 +474,8 @@ class Simulation:
 
     @staticmethod
     def compare_position(unit, x, y):
-        return math.isclose(unit.x, x, abs_tol=(unit.speed/2)) and math.isclose(unit.y, y, abs_tol=(unit.speed/2))
-    
+        return math.isclose(unit.x, x, abs_tol=(unit.speed / 2)) and math.isclose(unit.y, y, abs_tol=(unit.speed / 2))
+
     @staticmethod
     def distance_for_unit_in_formation(unit, units):
         center_x = sum(u.x for u in units) / len(units)
@@ -371,3 +488,38 @@ class Simulation:
         target_y = center_y + math.sin(angle) * desired_distance
 
         return target_x, target_y
+
+
+class SpatialGrid:
+    def __init__(self, width, height, cell_size=10):
+        self.cell_size = cell_size
+        self.cols = int(width / cell_size) + 1
+        self.rows = int(height / cell_size) + 1
+        self.grid = {}
+
+    def _get_cell(self, x, y):
+        return (int(x / self.cell_size), int(y / self.cell_size))
+
+    def insert(self, unit):
+        cell = self._get_cell(unit.x, unit.y)
+        if cell not in self.grid:
+            self.grid[cell] = []
+        self.grid[cell].append(unit)
+
+    def query_radius(self, x, y, radius):
+        cells_to_check = set()
+        cell_radius = int(radius / self.cell_size) + 1
+        center_col, center_row = self._get_cell(x, y)
+
+        for dc in range(-cell_radius, cell_radius + 1):
+            for dr in range(-cell_radius, cell_radius + 1):
+                cells_to_check.add((center_col + dc, center_row + dr))
+
+        nearby = []
+        for cell in cells_to_check:
+            if cell in self.grid:
+                nearby.extend(self.grid[cell])
+        return nearby
+
+    def clear(self):
+        self.grid.clear()

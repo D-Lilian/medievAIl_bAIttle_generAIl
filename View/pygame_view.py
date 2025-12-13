@@ -8,14 +8,16 @@ BASE_TILE_HEIGHT = 32
 MAP_SIZE = 120
 
 class PygameView:
-    def __init__(self, simulation, width=800, height=600):
+    def __init__(self, scenario, simulation_controller, width=800, height=600):
         # 1. Centrage de la fenêtre
         os.environ['SDL_VIDEO_CENTERED'] = '1'
         
         pygame.init()
-        self.width = width
+        self.scenario = scenario
+        self.simulation_controller = simulation_controller
+
         self.height = height
-        
+        self.width = width
         self.screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
         pygame.display.set_caption("MedievAIl Battle - 2.5D (Sprites Heroes II)")
 
@@ -42,9 +44,9 @@ class PygameView:
         self.flipped_units = {} # Mémorise qui regarde à gauche
 
         # Centrage initial
-        if simulation.board.units:
-            avg_x = sum(u.x for u in simulation.board.units) / len(simulation.board.units)
-            avg_y = sum(u.y for u in simulation.board.units) / len(simulation.board.units)
+        if scenario.units:
+            avg_x = sum(u.x for u in scenario.units) / len(scenario.units)
+            avg_y = sum(u.y for u in scenario.units) / len(scenario.units)
             self.center_camera_on(avg_x, avg_y)
         else:
             self.center_camera_on(60, 60)
@@ -62,10 +64,12 @@ class PygameView:
     def center_camera_on(self, target_x, target_y):
         tile_w = BASE_TILE_WIDTH * self.zoom_level
         tile_h = BASE_TILE_HEIGHT * self.zoom_level
-        screen_x = (target_x - target_y) * (tile_w / 2)
-        screen_y = (target_x + target_y) * (tile_h / 2)
-        self.cam_x = (self.width // 2) - screen_x
-        self.cam_y = (self.height // 2) - screen_y
+        iso_x = (target_x - target_y) * (tile_w / 2)
+        iso_y = (target_x + target_y) * (tile_h / 2)
+
+        screen_w, screen_h = self.screen.get_size()
+        self.cam_x = (screen_w / 2) - iso_x
+        self.cam_y = (screen_h / 2) - iso_y
 
     def load_sprites(self):
         # Charge le sol
@@ -107,11 +111,18 @@ class PygameView:
         for event in events:
             if event.type == pygame.QUIT: return False
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE: return False
-                if event.key == pygame.K_p: self.paused = not self.paused
+                if event.key == pygame.K_ESCAPE:
+                    return False
+                if event.key == pygame.K_p:
+                    self.paused = not self.paused
+                    self.simulation_controller.toggle_pause()
                 if event.key == pygame.K_F9: return "SWITCH"
                 if event.key == pygame.K_c and hasattr(self, 'last_avg_x'):
                     self.center_camera_on(self.last_avg_x, self.last_avg_y)
+                if event.key == pygame.K_KP_PLUS :
+                    self.simulation_controller.increase_tick()
+                if event.key == pygame.K_KP_MINUS :
+                    self.simulation_controller.decrease_tick()
 
             if event.type == pygame.MOUSEWHEEL:
                 if event.y > 0: self.zoom_level = min(3.0, self.zoom_level + 0.1)
@@ -129,11 +140,7 @@ class PygameView:
             self.last_mouse_pos = mouse_pos
         return True
 
-    def update(self, simulation):
-        res = self.handle_input()
-        if res is False: return False
-        if res == "SWITCH": return "SWITCH"
-
+    def update(self):
         self.screen.fill(self.BG_COLOR)
 
         curr_w = int(BASE_TILE_WIDTH * self.zoom_level) + 1
@@ -158,7 +165,7 @@ class PygameView:
                         self.screen.blit(scaled_ground, (sx - half_w, sy))
 
         # --- DESSIN DES UNITÉS ---
-        visible_units = [u for u in simulation.board.units if u.hp > 0]
+        visible_units = [u for u in self.scenario.units if u.hp > 0]
         visible_units.sort(key=lambda u: u.x + u.y)
         
         if visible_units:
@@ -223,26 +230,27 @@ class PygameView:
                     pygame.draw.rect(self.screen, bar_color, (rect.centerx - bw/2, rect.top - bh - 4, bw * hp_pct, bh))
 
         # --- DESSIN HUD & MINIMAP ---
-        self.draw_minimap(simulation)
+        self.draw_minimap()
 
         fps = int(self.clock.get_fps())
-        t1 = self.font.render(f"FPS: {fps} | Zoom: {int(self.zoom_level*100)}%", True, (255,255,255))
+        t1 = self.font.render(f"FPS: {fps} | "
+                              f"Zoom: {int(self.zoom_level*100)}% | "
+                              f"Tick speed: {self.simulation_controller.get_tick_speed()} | "
+                              f"Tick: {self.simulation_controller.get_tick()}", True, (255,255,255))
         self.screen.blit(t1, (10, 10))
 
         pygame.display.flip()
-        self.clock.tick(15)
         return True
 
     # --- MINIMAP (Code précédent inchangé) ---
-    def draw_minimap(self, simulation):
+    def draw_minimap(self):
         minimap_size = 200
         margin = 20
         minimap_surf = pygame.Surface((minimap_size, minimap_size))
         minimap_surf.fill((20, 80, 20)) # Vert sombre
         
         ratio = minimap_size / MAP_SIZE
-        
-        for unit in simulation.board.units:
+        for unit in self.scenario.units:
             if unit.hp <= 0: continue
             mx = int(unit.x * ratio)
             my = int(unit.y * ratio)
@@ -269,6 +277,29 @@ class PygameView:
 
         pygame.draw.rect(self.screen, (255, 255, 255), (dest_rect.x-2, dest_rect.y-2, dest_rect.w+4, dest_rect.h+4), 2)
         self.screen.blit(minimap_surf, dest_rect)
+
+    def run(self):
+        running = True
+        while running:
+            self.clock.tick(60)
+            res = self.handle_input()
+            if res is False: return False
+            if res == "SWITCH": return "SWITCH"
+            if not self.paused:
+                result = self.update()
+                if result is False:
+                    running = False
+                elif result == "SWITCH":
+                    running = False
+                    return "SWITCH"
+            else:
+                # Affiche juste le texte "PAUSED" centré horizontalement à partir de la taille réelle de la fenêtre
+                pause_text = self.font.render("PAUSED - Appuyez sur 'P' pour reprendre", True, (255, 0, 0))
+                screen_w, _ = self.screen.get_size()
+                self.screen.blit(pause_text, (screen_w // 2 - pause_text.get_width() // 2, 10))
+                pygame.display.flip()
+        pygame.quit()
+        sys.exit()
 
     def cleanup(self):
         pygame.quit()

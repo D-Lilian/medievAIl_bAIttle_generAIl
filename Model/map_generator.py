@@ -1,7 +1,7 @@
 # map_generator.py
 
-from Scenario import Scenario
-from Units import Crossbowman, Knight, Pikeman
+from scenario import Scenario
+from units import Crossbowman, Knight, Pikeman
 import random
 import math
 

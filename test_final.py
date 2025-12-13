@@ -4,11 +4,11 @@ import time
 # --- 1. IMPORTS ---
 try:
     from View.terminal_view import TerminalView, UniteRepr, Team, UnitStatus
-    from Model.Simulation import Simulation
+    from Model.simulation import Simulation
     from Model.orders import OrderManager, MoveOrder
 except ImportError as e:
     print(f"❌ ERREUR D'IMPORT : {e}")
-    print("Vérifie que 'generals.py' et 'Units.py' sont bien dans le dossier Model")
+    print("Vérifie que 'generals.py' et 'units.py' sont bien dans le dossier Model")
     print("Vérifie que 'terminal_view.py' est bien dans le dossier View")
     sys.exit(1)
 
