@@ -54,6 +54,17 @@ if __name__ == "__main__":
                     }
             )
 
+    RPC = General(
+        units_b,
+        units_a,
+        sS=None,
+        sT={  # TODO: Fix the strategies to use the enum
+            UnitType.KNIGHT: StrategieKnightSomeIQ(),
+            UnitType.PIKEMAN: StrategiePikemanSomeIQ(),
+            UnitType.CROSSBOWMAN: StrategieCrossbowmanSomeIQ(),
+        }
+    )
+
     SOMEIQ = General(
         units_a,
         units_b,
