@@ -26,7 +26,7 @@ def main():
     tick_speed = 30
     
     # CRÉATION DE LA VUE (Petite fenêtre 800x600)
-    view = PygameView(scenario, simulation_controller, width=800, height=600)
+    view = PygameView(Scenario, SimulationController, width=800, height=600)
 
 
 if __name__ == "__main__":

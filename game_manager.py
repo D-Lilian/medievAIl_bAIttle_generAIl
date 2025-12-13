@@ -94,7 +94,7 @@ if __name__ == "__main__":
                     }
             )
 
-    scenario = Scenario(units, units_a, units_b, SOMEIQ, DAFT2, size_x=120, size_y=120)
+    scenario = Scenario(units, units_a, units_b, SOMEIQ, RPC, size_x=120, size_y=120)
 
     # Partie de mesure de temps d'execution
     # start_time = time.perf_counter()

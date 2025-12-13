@@ -315,7 +315,7 @@ class OrderManager:
 
     def Add(self, order, priority, squad_id=None):
         if priority in self._by_priority:
-            raise ValueError("Priority already used")
+            raise ValueError(f"Priority already used {priority} by order {self._by_priority[priority].order}")
         node = _Node(order)
         self._by_priority[priority] = node
         self._by_order[order] = priority
