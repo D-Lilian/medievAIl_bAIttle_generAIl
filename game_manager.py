@@ -70,11 +70,16 @@ if __name__ == "__main__":
         units_b,
         sS=None,
         sT={  # TODO: Fix the strategies to use the enum
-            UnitType.KNIGHT: StrategieKnightSomeIQ(),
-            UnitType.PIKEMAN: StrategiePikemanSomeIQ(),
-            UnitType.CROSSBOWMAN: StrategieCrossbowmanSomeIQ(),
-        }
-    )
+            UnitType.KNIGHT: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.CROSSBOWMAN, hatedTroup=UnitType.PIKEMAN),
+            UnitType.PIKEMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.KNIGHT, hatedTroup=UnitType.CROSSBOWMAN),
+            UnitType.CROSSBOWMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.PIKEMAN, hatedTroup=UnitType.KNIGHT),
+        })
+
+
+
+
+
+
 
     DAFT2 = General(units_b,
                     units_a,
