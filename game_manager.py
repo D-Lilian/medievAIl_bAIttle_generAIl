@@ -24,7 +24,7 @@ if __name__ == "__main__":
             temp = Pikeman("A", 10 + i % 20, 10 + i % 5)
         else:
             temp = Crossbowman("A", 10 + i % 20, 10 + i % 5)
-        temp.order_manager= OrderManager()
+        #temp.order_manager= OrderManager()
         temp.size = 0.4
         units_a.append(temp)
         units.append(temp)
@@ -36,7 +36,7 @@ if __name__ == "__main__":
             temp = Pikeman("B", 10 + i % 20, 50 + i % 5)
         else:
             temp = Crossbowman("B", 10 + i % 20, 50 + i % 5)
-        temp.order_manager= OrderManager()
+        #temp.order_manager= OrderManager()
         temp.size = 0.4
         units_b.append(temp)
         units.append(temp)
