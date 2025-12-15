@@ -746,6 +746,48 @@ class UnitCacheManager:
                     if candidate is not None:
                         target = candidate
                         break
+            
+            # Fallback: infer target from order type if still None
+            if target is None:
+                for order in order_manager:
+                    order_type = type(order).__name__
+                    
+                    # AttackOnSightOrder / AttackNearestTroupOmniscient
+                    if order_type in ('AttackOnSightOrder', 'AttackNearestTroupOmniscient'):
+                        type_target = getattr(order, 'typeTarget', UnitType.ALL)
+                        if order_type == 'AttackOnSightOrder':
+                            target = simulation.get_nearest_enemy_in_sight(unit, type_target=type_target)
+                        else:
+                            target = simulation.get_nearest_enemy_unit(unit, type_target=type_target)
+                        if target:
+                            break
+                    
+                    # AttackOnReachOrder
+                    elif order_type == 'AttackOnReachOrder':
+                        type_target = getattr(order, 'typeTarget', UnitType.ALL)
+                        target = simulation.get_nearest_enemy_in_reach(unit, type_target=type_target)
+                        if target:
+                            break
+                    
+                    # AvoidOrder / StayInFriendlySpaceOrder (target is reference point)
+                    elif order_type == 'AvoidOrder':
+                        type_units = getattr(order, 'typeUnits', UnitType.ALL)
+                        target = simulation.get_nearest_enemy_in_sight(unit, type_units=type_units)
+                        if target:
+                            break
+                    elif order_type == 'StayInFriendlySpaceOrder':
+                        type_units = getattr(order, 'typeUnits', UnitType.ALL)
+                        target = simulation.get_nearest_friendly_in_sight(unit, type_target=type_units)
+                        if target:
+                            break
+                    
+                    # MoveTowardEnemyWithSpecificAttribute
+                    elif order_type == 'MoveTowardEnemyWithSpecificAttribute':
+                        attr_name = getattr(order, 'attribute_name', None)
+                        if attr_name:
+                            target = simulation.get_nearest_enemy_with_attributes(unit, attr_name)
+                            if target:
+                                break
 
         target_name = None
         target_uid = None
@@ -1055,7 +1097,14 @@ class TerminalView(ViewInterface):
         team1 = [u for u in self.unit_cache.units if u.team == Team.A]
         team2 = [u for u in self.unit_cache.units if u.team == Team.B]
 
-        team_sections = self._gen_team_section(1, team1) + self._gen_team_section(2, team2)
+        # Build map of uid -> display_id (e.g. "#1")
+        uid_display_map = {}
+        for i, u in enumerate(team1, 1):
+            uid_display_map[u.uid] = f"#{i}"
+        for i, u in enumerate(team2, 1):
+            uid_display_map[u.uid] = f"#{i}"
+
+        team_sections = self._gen_team_section(1, team1, uid_display_map) + self._gen_team_section(2, team2, uid_display_map)
         battle_map = self._gen_battle_map(team1, team2)
         breakdown = self._gen_breakdown()
         legend = self._gen_legend()
@@ -1106,12 +1155,13 @@ class TerminalView(ViewInterface):
             # If anything fails, silently ignore — report file was created
             pass
 
-    def _gen_unit_html(self, i: int, unit: UnitRepr, team: int) -> str:
+    def _gen_unit_html(self, i: int, unit: UnitRepr, team: int, uid_map: Dict[int, str] = None) -> str:
         """
         @brief Generate HTML for single unit.
         @param i Unit index
         @param unit Unit representation
         @param team Team number
+        @param uid_map Map of unit UIDs to display IDs
         @return HTML string
         """
         hp_pct = unit.hp_percent
@@ -1131,9 +1181,20 @@ class TerminalView(ViewInterface):
                 return "None"
             return "<br>".join(f"<b>{k}:</b> {format_val(v)}" for k, v in d.items())
 
-        target_attr = f' data-target-id="unit-{unit.target_uid}"' if unit.target_uid is not None else ''
+        # Format target name with ID if available
+        display_target = unit.target_name or 'None'
+        if unit.target_uid is not None and uid_map and unit.target_uid in uid_map:
+            # Insert ID before (Team X) or append it
+            # unit.target_name is like "Pikeman (Team A)"
+            # We want "Pikeman #3 (Team A)"
+            if " (" in display_target:
+                parts = display_target.split(" (", 1)
+                display_target = f"{parts[0]} {uid_map[unit.target_uid]} ({parts[1]}"
+            else:
+                display_target = f"{display_target} {uid_map[unit.target_uid]}"
+
         return f'''
-        <div class="unit team{team}" id="{uid}" data-unit-id="{uid}"{target_attr}>
+        <div class="unit team{team}" id="{uid}" data-unit-id="{uid}">
             <div class="unit-header">
                 <span class="unit-id">#{i}</span>
                 <span class="unit-type">{unit.type}</span>
@@ -1167,7 +1228,7 @@ class TerminalView(ViewInterface):
                     <span class="stat-icon">◎</span>
                     <span class="stat-content">
                         <span class="stat-label">Target</span>
-                        <span class="stat-value">{unit.target_name or 'None'}</span>
+                        <span class="stat-value">{display_target}</span>
                     </span>
                 </div>
                 <div class="stat-item">
@@ -1187,14 +1248,15 @@ class TerminalView(ViewInterface):
             </div>
         </div>'''
 
-    def _gen_team_section(self, team: int, units: List[UnitRepr]) -> str:
+    def _gen_team_section(self, team: int, units: List[UnitRepr], uid_map: Dict[int, str] = None) -> str:
         """
         @brief Generate HTML for team section.
         @param team Team number
         @param units List of units
+        @param uid_map Map of unit UIDs to display IDs
         @return HTML string
         """
-        units_html = "".join(self._gen_unit_html(i, u, team) for i, u in enumerate(units, 1))
+        units_html = "".join(self._gen_unit_html(i, u, team, uid_map) for i, u in enumerate(units, 1))
         return f'''
         <div class="team-section">
             <details open>
@@ -1213,12 +1275,10 @@ class TerminalView(ViewInterface):
         dots = ""
         for i, u in enumerate(team1, 1):
             if u.alive:
-                targ = f' data-target-id="unit-{u.target_uid}"' if u.target_uid is not None else ''
-                dots += f'<div class="unit-cell team1" data-unit-id="unit-{u.uid}"{targ} onclick="selectUnit(\'unit-{u.uid}\')" style="grid-column:{int(u.x)+1};grid-row:{int(u.y)+1}">{u.letter}</div>'
+                dots += f'<div class="unit-cell team1" data-unit-id="unit-{u.uid}" onclick="selectUnit(\'unit-{u.uid}\')" style="grid-column:{int(u.x)+1};grid-row:{int(u.y)+1}">{u.letter}</div>'
         for i, u in enumerate(team2, 1):
             if u.alive:
-                targ = f' data-target-id="unit-{u.target_uid}"' if u.target_uid is not None else ''
-                dots += f'<div class="unit-cell team2" data-unit-id="unit-{u.uid}"{targ} onclick="selectUnit(\'unit-{u.uid}\')" style="grid-column:{int(u.x)+1};grid-row:{int(u.y)+1}">{u.letter}</div>'
+                dots += f'<div class="unit-cell team2" data-unit-id="unit-{u.uid}" onclick="selectUnit(\'unit-{u.uid}\')" style="grid-column:{int(u.x)+1};grid-row:{int(u.y)+1}">{u.letter}</div>'
 
         return f'''
         <div class="battle-map-container">
