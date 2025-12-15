@@ -75,7 +75,7 @@ class ReportGenerator:
         html = html.replace('{simulation_time}', f"{stats.simulation_time:.2f}")
         html = html.replace('{team1_units}', f"{stats.team1_alive:.2f}")
         html = html.replace('{team2_units}', f"{stats.team2_alive:.2f}")
-        html = html.replace('{total_units}', f"{len(units):.2f}")
+        html = html.replace('{total_units}', f"{len(units)}")
         html = html.replace('{team_sections}', team_sections)
         html = html.replace('{battle_map}', battle_map)
         html = html.replace('{breakdown_section}', breakdown)
