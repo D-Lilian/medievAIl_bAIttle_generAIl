@@ -54,9 +54,15 @@ class TerminalController:
             self.view = TerminalView(scenario.size_x, scenario.size_y, tick_speed=sim_controller.get_tick_speed())
 
         # Connect save callback
-        self.view.on_quick_save = self.save_load.save_game
+        self.view.on_quick_save = self._handle_save
 
         self.running = False
+
+    def _handle_save(self):
+        """Handle save request and notify view."""
+        self.save_load.save_game()
+        self.view.state.notification = "Game Saved!"
+        self.view.state.notification_time = __import__('time').time()
 
     def run(self):
         """
@@ -75,7 +81,7 @@ class TerminalController:
         try:
             self.view.init_curses()
             # Connect save callback to input handler
-            self.view.input_handler.on_quick_save = self.save_load.save_game
+            self.view.input_handler.on_quick_save = self._handle_save
             self.running = True
 
             while self.running:

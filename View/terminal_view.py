@@ -143,6 +143,8 @@ class ViewState:
     show_sim_info: bool = True      ##< F3: Show simulation info panel
     auto_follow: bool = False  ##< Whether camera auto-follows units
     tick_speed: int = 5 ##< Simulation tick speed
+    notification: Optional[str] = None ##< Temporary notification message
+    notification_time: float = 0.0 ##< Time when notification was set
 
     def toggle_all_panels(self) -> None:
         """
@@ -356,8 +358,8 @@ class InputHandler:
             self.state.toggle_all_panels()
             return True
 
-        # F11: Save
-        if key == curses.KEY_F11 and self.on_quick_save:
+        # E: Save
+        if key in (ord('e'), ord('E')) and self.on_quick_save:
             self.on_quick_save()
             return True
 
@@ -555,8 +557,26 @@ class UIRenderer(BaseRenderer):
                 line += 1
 
         # Help line
-        help_text = "P:Pause M:Zoom +/-:Tick ZQSD:Scroll(+Maj) F1-F4:Panels TAB:Report ESC:Quit"
+        help_text = "P:Pause M:Zoom +/-:Tick ZQSD:Scroll(+Maj) F1-F4:Panels E:Save TAB:Report ESC:Quit"
         self.safe_addstr(line, 2, help_text, ui_attr)
+
+        # Notification overlay
+        if state.notification:
+            if time.time() - state.notification_time < 3.0:  # Show for 3 seconds
+                self._draw_notification(state.notification)
+            else:
+                state.notification = None
+
+    def _draw_notification(self, msg: str) -> None:
+        """
+        @brief Draw notification message.
+        @param msg Message to display
+        """
+        max_y, max_x = self.stdscr.getmaxyx()
+        cx, cy = max_x // 2 - len(msg) // 2, 2  # Top center
+        
+        attr = curses.color_pair(ColorPair.UI.value) | curses.A_BOLD | curses.A_REVERSE
+        self.safe_addstr(cy, cx, f" {msg} ", attr)
 
     def _build_type_summary(self, stats: Stats) -> str:
         """

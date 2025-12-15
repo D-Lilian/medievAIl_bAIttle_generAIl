@@ -90,7 +90,7 @@ Built following SOLID principles with a clean MVC separation of concerns:
 
 **Persistence & Reports**:
 
-- **Quick Save (F11)**: Saves scenario state to timestamped `.pkl` files in `save/` directory
+- **Quick Save (E)**: Saves scenario state to timestamped `.pkl` files in `save/` directory
 - **HTML Reports (Tab)**: Generates comprehensive battle reports with:
   - Interactive unit cards with detailed stats (HP, damage, position, target, speed, range, etc.)
   - Visual battlefield map with clickable unit positions

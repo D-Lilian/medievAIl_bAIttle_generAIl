@@ -28,9 +28,10 @@ class SaveLoad:
 
                 with open(filename, 'wb') as file:
                     pickle.dump(data, file)
-                print(f"Game successfully saved to {filename}.")
+                # print(f"Game successfully saved to {filename}.")
             except Exception as e:
-                print(f"Error saving game: {e}")
+                # print(f"Error saving game: {e}")
+                pass
 
     @staticmethod
     def load_game(self, filename: str) -> Scenario | None:
