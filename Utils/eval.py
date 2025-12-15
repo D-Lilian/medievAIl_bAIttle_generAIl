@@ -4,7 +4,7 @@ from Controller.simulation_controller import SimulationController
 from Model.scenario import Scenario
 from Model.units import Knight, Pikeman, Team
 from Utils.map_generator import MapGenerator
-from Utils.map_generator import PredefinedScenarios
+from Utils.predefined_scenarios import PredefinedScenarios
 # Fabrique d'IA: à partir d'un nom, créer un General avec les stratégies correspondantes
 from Model.generals import General
 from Model.strategies import (

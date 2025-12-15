@@ -17,6 +17,7 @@ from typing import Optional
 from Controller.simulation_controller import SimulationController
 from View.terminal_view import TerminalView
 from Model.scenario import Scenario
+from Utils.save_load import SaveLoad
 
 
 class TerminalController:
@@ -43,12 +44,17 @@ class TerminalController:
         @param view Optional TerminalView instance. If None, a new one is created.
         """
         self.sim_controller = sim_controller
+        self.scenario = scenario
+        self.save_load = SaveLoad(scenario)
 
         # Dependency Injection: Allow passing an existing view, or create a default one
         if view:
             self.view = view
         else:
             self.view = TerminalView(scenario.size_x, scenario.size_y, tick_speed=sim_controller.get_tick_speed())
+
+        # Connect save callback
+        self.view.on_quick_save = self.save_load.save_game
 
         self.running = False
 
@@ -68,6 +74,8 @@ class TerminalController:
         """
         try:
             self.view.init_curses()
+            # Connect save callback to input handler
+            self.view.input_handler.on_quick_save = self.save_load.save_game
             self.running = True
 
             while self.running:
@@ -75,17 +83,27 @@ class TerminalController:
                 #    Returns False when user requests quit (ESC or Q)
                 self.running = self.view.update(self.sim_controller.simulation)
 
-                # 2. Sync speed from view to simulation controller
+                # 2. Check if simulation is finished (one team eliminated)
+                sim = self.sim_controller.simulation
+                team1_alive = [u for u in sim.scenario.units_a if u.hp > 0]
+                team2_alive = [u for u in sim.scenario.units_b if u.hp > 0]
+                
+                if not team1_alive or not team2_alive:
+                    self.running = False
+                    # Pause simulation so we can see the final state
+                    if not sim.paused:
+                        self.sim_controller.toggle_pause()
+
+                # 3. Sync speed from view to simulation controller
                 #    ViewState.tick_speed <-> Simulation.tick_speed (via SimulationController)
                 if self.view.tick_speed != self.sim_controller.get_tick_speed():
                     # Use set_tick_speed for efficient direct sync
                     self.sim_controller.set_tick_speed(self.view.tick_speed)
 
-                # 3. Sync pause state
+                # 4. Sync pause state
                 #    ViewState.paused <-> Simulation.paused (via SimulationController)
                 if self.view.paused != self.sim_controller.simulation.paused:
                     self.sim_controller.toggle_pause()
-
         finally:
             self.view.cleanup()
 

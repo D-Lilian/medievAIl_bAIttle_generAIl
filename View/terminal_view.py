@@ -5,20 +5,18 @@
 
 @details
 MVC implementation: displays the Model state without modifying it.
-Refactored following SOLID and KISS principles.
 
 @controls
-P(pause) M(zoom) A(auto-cam) ZQSD(scroll +Maj=fast) F1-F4(panels) TAB(report) ESC/Q(quit)
+P(pause) M(zoom) A(auto-cam) ZQSD(scroll +Maj=fast) F1-F4(panels) TAB(report) ESC(quit)
 """
 
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 from enum import Enum, auto
+from Model.units import UnitType
 from typing import List, Dict, Optional, Callable
 import curses
 import time
-
-from Model.simulation import DEFAULT_NUMBER_OF_TICKS_PER_SECOND
 
 
 # =============================================================================
@@ -60,6 +58,7 @@ class UnitRepr:
     """
     type: str
     team: Team
+    uid: int
     letter: str
     x: float
     y: float
@@ -68,6 +67,7 @@ class UnitRepr:
     status: UnitStatus
     damage_dealt: int = 0
     target_name: Optional[str] = None
+    target_uid: Optional[int] = None
     # Optional detailed stats for reports
     armor: Optional[dict] = None
     attack: Optional[dict] = None
@@ -142,7 +142,7 @@ class ViewState:
     show_unit_types: bool = True    ##< F2: Show unit types panel
     show_sim_info: bool = True      ##< F3: Show simulation info panel
     auto_follow: bool = False  ##< Whether camera auto-follows units
-    tick_speed: int = DEFAULT_NUMBER_OF_TICKS_PER_SECOND  ##< Simulation tick speed
+    tick_speed: int = 5 ##< Simulation tick speed
 
     def toggle_all_panels(self) -> None:
         """
@@ -263,7 +263,7 @@ class InputHandler:
     """
 
     # Key mappings for cleaner code
-    QUIT_KEYS = {27, ord('q'), ord('Q')}  # ESC or Q
+    QUIT_KEYS = {27}  # ESC only
     PAUSE_KEYS = {ord('p'), ord('P')}
     ZOOM_KEYS = {ord('m'), ord('M')}
     AUTO_FOLLOW_KEYS = {ord('a'), ord('A')}
@@ -290,7 +290,6 @@ class InputHandler:
         self.board_height = board_height
         self.on_report_requested: Optional[Callable] = None
         self.on_quick_save: Optional[Callable] = None
-        self.on_quick_load: Optional[Callable] = None
 
     def process(self) -> bool:
         """
@@ -357,12 +356,9 @@ class InputHandler:
             self.state.toggle_all_panels()
             return True
 
-        # F11/F12: Save/Load (placeholders)
+        # F11: Save
         if key == curses.KEY_F11 and self.on_quick_save:
             self.on_quick_save()
-            return True
-        if key == curses.KEY_F12 and self.on_quick_load:
-            self.on_quick_load()
             return True
 
         # Report
@@ -547,7 +543,7 @@ class UIRenderer(BaseRenderer):
             follow_str = 'AUTO' if state.auto_follow else 'MANUAL'
             text = (f"Time:{stats.simulation_time:.1f}s | {pause_str} | "
                     f"Zoom:x{camera.zoom_level} | Cam:({camera.x},{camera.y}) | "
-                    f"{follow_str} | Tick:{state.tick_speed} | FPS:{stats.fps:.0f}")
+                    f"{follow_str} | Tick:{state.tick_speed}")
             self.safe_addstr(line, 2, text)
             line += 1
 
@@ -640,6 +636,12 @@ class UnitCacheManager:
         self.units: List[UnitRepr] = []
         self._all_units: Dict[int, UnitRepr] = {}
         self._hp_memory: Dict[int, int] = {}
+        self._target_memory: Dict[int, str] = {}
+        # Wall-clock tracking for displayed simulation time
+        self._wall_start: float | None = None
+        self._wall_accum: float = 0.0
+        self._last_wall: float | None = None
+        self._last_paused: bool = False
 
     def update(self, simulation, stats: Stats) -> None:
         """
@@ -658,7 +660,7 @@ class UnitCacheManager:
 
             uid = id(unit)
             current_ids.add(uid)
-            repr_unit = self._create_repr(unit, uid)
+            repr_unit = self._create_repr(unit, uid, simulation)
             self._all_units[uid] = repr_unit
 
         # Mark missing as dead
@@ -672,7 +674,7 @@ class UnitCacheManager:
         for unit in self.units:
             stats.add_unit(unit)
 
-        # Update time
+        # Update time (wall-clock, pause-aware) to display stable elapsed time
         stats.simulation_time = self._get_time(simulation)
 
     def _get_units(self, simulation) -> list:
@@ -693,14 +695,29 @@ class UnitCacheManager:
         @param simulation Simulation object
         @return Time in seconds
         """
-        if hasattr(simulation, 'elapsed_time'):
-            return simulation.elapsed_time
-        if hasattr(simulation, 'tick'):
-            tick_speed = getattr(simulation, 'tick_speed', DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
-            return simulation.tick / tick_speed
-        return 0.0
+        now = time.perf_counter()
 
-    def _create_repr(self, unit, uid: int) -> UnitRepr:
+        # Initialize clocks
+        if self._wall_start is None:
+            self._wall_start = now
+            self._last_wall = now
+            self._last_paused = getattr(simulation, 'paused', False)
+            return 0.0
+
+        paused = getattr(simulation, 'paused', False)
+
+        # Accumulate wall-clock only when not paused
+        if not paused:
+            if self._last_wall is not None:
+                self._wall_accum += max(0.0, now - self._last_wall)
+
+        # Update last wall time regardless (so resume starts from here)
+        self._last_wall = now
+        self._last_paused = paused
+
+        return self._wall_accum
+
+    def _create_repr(self, unit, uid: int, simulation) -> UnitRepr:
         """
         @brief Create UnitRepr from model unit.
         @param unit Model unit object
@@ -712,16 +729,36 @@ class UnitCacheManager:
         team = resolve_team(getattr(unit, 'team', getattr(unit, 'equipe', 1)))
         unit_type = getattr(unit, 'name', type(unit).__name__)
 
-        target = getattr(unit, 'target', None)
+        # Resolve target strictly from orders: prefer order.current_target, then order.target
+        target = None
+        order_manager = getattr(unit, 'order_manager', None)
+
+        if order_manager:
+            for order in order_manager:
+                if hasattr(order, 'current_target'):
+                    candidate = getattr(order, 'current_target')
+                    if candidate is not None:
+                        target = candidate
+                        break
+            if target is None:
+                for order in order_manager:
+                    candidate = getattr(order, 'target', None)
+                    if candidate is not None:
+                        target = candidate
+                        break
+
         target_name = None
-        if target:
+        target_uid = None
+        if target is not None:
             t_name = getattr(target, 'name', type(target).__name__)
             t_team = resolve_team(getattr(target, 'team', getattr(target, 'equipe', None)))
             target_name = f"{t_name} (Team {'A' if t_team == Team.A else 'B'})"
+            target_uid = id(target)
 
         return UnitRepr(
             type=unit_type,
             team=team,
+            uid=uid,
             letter=resolve_letter(unit_type),
             x=getattr(unit, 'x', 0.0),
             y=getattr(unit, 'y', 0.0),
@@ -730,6 +767,7 @@ class UnitCacheManager:
             status=UnitStatus.ALIVE if hp > 0 else UnitStatus.DEAD,
             damage_dealt=getattr(unit, 'damage_dealt', 0),
             target_name=target_name,
+            target_uid=target_uid,
             armor=getattr(unit, 'armor', None),
             attack=getattr(unit, 'attack', None),
             range=getattr(unit, 'range', None),
@@ -794,7 +832,7 @@ class TerminalView(ViewInterface):
     - Dependency Inversion: Uses abstract interfaces where possible
     """
 
-    def __init__(self, board_width: int, board_height: int, tick_speed: int = DEFAULT_NUMBER_OF_TICKS_PER_SECOND):
+    def __init__(self, board_width: int, board_height: int, tick_speed: int = 5):
         """
         @brief Initialize terminal view.
         @param board_width Board width
@@ -819,6 +857,10 @@ class TerminalView(ViewInterface):
         self.ui_renderer: Optional[UIRenderer] = None
         self.debug_renderer: Optional[DebugRenderer] = None
         self.unit_cache = UnitCacheManager()
+
+        # Callbacks
+        self.on_quick_save: Optional[Callable] = None
+        self.on_report_requested: Optional[Callable] = None
 
         # FPS tracking
         self._last_frame = time.perf_counter()
@@ -975,12 +1017,21 @@ class TerminalView(ViewInterface):
         """
         @brief Control framerate and compute FPS.
         """
+        target_frame = 1.0 / max(1, self.state.tick_speed)
+        start = self._last_frame
         now = time.perf_counter()
-        dt = now - self._last_frame
-        if dt > 0:
-            self.stats.fps = 1.0 / dt
-        self._last_frame = now
-        time.sleep(max(0.0, 1.0 / self.state.tick_speed))
+        work_time = now - start
+
+        # Sleep the remaining budget to keep a steady frame time
+        sleep_time = max(0.0, target_frame - work_time)
+        if sleep_time > 0:
+            time.sleep(sleep_time)
+
+        end = time.perf_counter()
+        frame_time = end - start
+        if frame_time > 0:
+            self.stats.fps = 1.0 / frame_time
+        self._last_frame = end
 
     # =========================================================================
     # HTML REPORT GENERATION
@@ -1009,17 +1060,21 @@ class TerminalView(ViewInterface):
         breakdown = self._gen_breakdown()
         legend = self._gen_legend()
 
-        # Load template (CSS is referenced via relative path in template)
+        # Load template and CSS
         base_dir = os.path.join(os.path.dirname(__file__), '..', 'Utils')
         with open(os.path.join(base_dir, 'battle_report_template.html'), 'r', encoding='utf-8') as f:
             template = f.read()
+        
+        with open(os.path.join(base_dir, 'battle_report.css'), 'r', encoding='utf-8') as f:
+            css_content = f.read()
 
         # Fill template
         html = template.replace('{timestamp}', timestamp)
+        html = html.replace('<link rel="stylesheet" href="battle_report.css">', f'<style>{css_content}</style>')
         html = html.replace('{simulation_time}', f"{self.stats.simulation_time:.2f}")
-        html = html.replace('{team1_units}', str(self.stats.team1_alive))
-        html = html.replace('{team2_units}', str(self.stats.team2_alive))
-        html = html.replace('{total_units}', str(len(self.unit_cache.units)))
+        html = html.replace('{team1_units}', f"{self.stats.team1_alive:.2f}")
+        html = html.replace('{team2_units}', f"{self.stats.team2_alive:.2f}")
+        html = html.replace('{total_units}', f"{len(self.unit_cache.units):.2f}")
         html = html.replace('{team_sections}', team_sections)
         html = html.replace('{battle_map}', battle_map)
         html = html.replace('{breakdown_section}', breakdown)
@@ -1031,7 +1086,25 @@ class TerminalView(ViewInterface):
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(html)
 
-        webbrowser.open('file://' + os.path.abspath(filename))
+        # Open the generated report in the user's default browser without
+        # printing messages from system opener (xdg-open / open) to the terminal.
+        try:
+            import subprocess
+            import sys
+            # Use platform-specific opener while silencing stdout/stderr
+            if sys.platform.startswith('linux'):
+                subprocess.Popen(['xdg-open', filename], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            elif sys.platform == 'darwin':
+                subprocess.Popen(['open', filename], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            elif os.name == 'nt':
+                # Windows: os.startfile doesn't print to terminal
+                os.startfile(filename)
+            else:
+                # Fallback to webbrowser (may print in some environments)
+                webbrowser.open('file://' + os.path.abspath(filename))
+        except Exception:
+            # If anything fails, silently ignore — report file was created
+            pass
 
     def _gen_unit_html(self, i: int, unit: UnitRepr, team: int) -> str:
         """
@@ -1044,25 +1117,73 @@ class TerminalView(ViewInterface):
         hp_pct = unit.hp_percent
         hp_class = "hp-critical" if hp_pct < 25 else "hp-low" if hp_pct < 50 else ""
         status = "Alive" if unit.alive else "Dead"
-        uid = f"unit-{team}-{i}"
+        uid = f"unit-{unit.uid}"
 
+        # Helper for stats
+
+        def format_val(val):
+            if isinstance(val, float):
+                return f"{val:.2f}"
+            return val
+
+        def format_dict(d):
+            if not d:
+                return "None"
+            return "<br>".join(f"<b>{k}:</b> {format_val(v)}" for k, v in d.items())
+
+        target_attr = f' data-target-id="unit-{unit.target_uid}"' if unit.target_uid is not None else ''
         return f'''
-        <div class="unit team{team}" id="{uid}">
+        <div class="unit team{team}" id="{uid}" data-unit-id="{uid}"{target_attr}>
             <div class="unit-header">
                 <span class="unit-id">#{i}</span>
-                <span class="unit-type">{unit.type} ({unit.letter})</span>
+                <span class="unit-type">{unit.type}</span>
                 <span class="unit-status {status.lower()}">{status}</span>
             </div>
             <div class="hp-bar-container">
-                <div class="hp-bar">
-                    <div class="hp-fill {hp_class}" style="width: {hp_pct}%"></div>
+                <div class="hp-info">
+                    <span class="hp-label">♥ Health</span>
+                    <span class="hp-text">{format_val(unit.hp)}/{format_val(unit.hp_max)}</span>
                 </div>
-                <span class="hp-text">{unit.hp}/{unit.hp_max} HP</span>
+                <div class="hp-bar">
+                    <div class="hp-fill {hp_class}" style="width: {hp_pct:.2f}%"></div>
+                </div>
             </div>
             <div class="unit-stats-grid">
-                <div class="stat-item"><span class="stat-label">Pos:</span>({unit.x:.1f}, {unit.y:.1f})</div>
-                <div class="stat-item"><span class="stat-label">Dmg:</span>{unit.damage_dealt}</div>
-                <div class="stat-item"><span class="stat-label">Tgt:</span>{unit.target_name or 'None'}</div>
+                <div class="stat-item">
+                    <span class="stat-icon">⌖</span>
+                    <span class="stat-content">
+                        <span class="stat-label">Position</span>
+                        <span class="stat-value">({format_val(unit.x)}, {format_val(unit.y)})</span>
+                    </span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">⚔</span>
+                    <span class="stat-content">
+                        <span class="stat-label">Damage</span>
+                        <span class="stat-value">{format_val(unit.damage_dealt)}</span>
+                    </span>
+                </div>
+                <div class="stat-item stat-item-full">
+                    <span class="stat-icon">◎</span>
+                    <span class="stat-content">
+                        <span class="stat-label">Target</span>
+                        <span class="stat-value">{unit.target_name or 'None'}</span>
+                    </span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">➤</span>
+                    <span class="stat-content">
+                        <span class="stat-label">Speed</span>
+                        <span class="stat-value">{format_val(unit.speed)}</span>
+                    </span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">☈</span>
+                    <span class="stat-content">
+                        <span class="stat-label">Range</span>
+                        <span class="stat-value">{format_val(unit.range)}</span>
+                    </span>
+                </div>
             </div>
         </div>'''
 
@@ -1092,10 +1213,12 @@ class TerminalView(ViewInterface):
         dots = ""
         for i, u in enumerate(team1, 1):
             if u.alive:
-                dots += f'<div class="unit-cell team1" style="grid-column:{int(u.x)+1};grid-row:{int(u.y)+1}">{u.letter}</div>'
+                targ = f' data-target-id="unit-{u.target_uid}"' if u.target_uid is not None else ''
+                dots += f'<div class="unit-cell team1" data-unit-id="unit-{u.uid}"{targ} onclick="selectUnit(\'unit-{u.uid}\')" style="grid-column:{int(u.x)+1};grid-row:{int(u.y)+1}">{u.letter}</div>'
         for i, u in enumerate(team2, 1):
             if u.alive:
-                dots += f'<div class="unit-cell team2" style="grid-column:{int(u.x)+1};grid-row:{int(u.y)+1}">{u.letter}</div>'
+                targ = f' data-target-id="unit-{u.target_uid}"' if u.target_uid is not None else ''
+                dots += f'<div class="unit-cell team2" data-unit-id="unit-{u.uid}"{targ} onclick="selectUnit(\'unit-{u.uid}\')" style="grid-column:{int(u.x)+1};grid-row:{int(u.y)+1}">{u.letter}</div>'
 
         return f'''
         <div class="battle-map-container">
@@ -1167,5 +1290,3 @@ class TerminalView(ViewInterface):
             "types_team2": dict(self.stats.type_counts_team2),
             "total_units_cached": len(self.unit_cache.units)
         }
-
-
