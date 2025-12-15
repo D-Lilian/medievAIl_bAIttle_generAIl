@@ -34,16 +34,19 @@ The Terminal View is an interactive, real-time visualization of medieval battles
 
 Built following SOLID principles with a clean MVC separation of concerns:
 
-**View Layer** (`View/terminal_view.py`):
+**View Layer** (Refactored into `View/` module):
 
-- **TerminalView**: Main view class coordinating all rendering components and report generation
-- **InputHandler**: Processes keyboard input with configurable callbacks for actions
-- **MapRenderer**: Renders the battlefield grid with units positioned using team-based coloring
-- **UIRenderer**: Displays informational panels (statistics, controls, simulation state) and pause overlay
-- **DebugRenderer**: Shows detailed unit debugging information overlay
-- **UnitCacheManager**: Manages unit data extraction, caching, and conversion to view representations with wall-clock time tracking
-- **ViewState**: Centralized state management for pause, zoom, panels, and tick speed
-- **Camera**: Handles viewport positioning, zoom levels, and auto-follow mode
+- **TerminalView** (`View/terminal_view.py`): Main facade class coordinating all components
+- **InputHandler** (`View/input_handler.py`): Processes keyboard input with configurable callbacks
+- **Renderers** (`View/renderers/`):
+  - **MapRenderer**: Renders the battlefield grid
+  - **UIRenderer**: Displays informational panels and overlays
+  - **DebugRenderer**: Shows debug info
+- **UnitCacheManager** (`View/unit_cache.py`): Manages unit data extraction and caching
+- **ReportGenerator** (`View/report_generator.py`): Handles HTML report generation
+- **State** (`View/state.py`): `ViewState` and `Camera` classes
+- **Stats** (`View/stats.py`): Statistics tracking
+- **Data Types** (`View/data_types.py`): Enums and data classes (`UnitRepr`, `Team`, etc.)
 
 **Controller Layer** (`Controller/terminal_controller.py`):
 

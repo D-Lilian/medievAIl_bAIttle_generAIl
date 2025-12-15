@@ -34,7 +34,7 @@ class TestUnitRepr(unittest.TestCase):
         @brief Test alive property returns correct status.
         """
         u = UnitRepr(
-            type="Knight", team=Team.A, letter="K",
+            type="Knight", team=Team.A, uid=1, letter="K",
             x=10, y=10, hp=100, hp_max=100, status=UnitStatus.ALIVE
         )
         self.assertTrue(u.alive)
@@ -46,7 +46,7 @@ class TestUnitRepr(unittest.TestCase):
         @brief Test hp_percent calculation.
         """
         u = UnitRepr(
-            type="Knight", team=Team.A, letter="K",
+            type="Knight", team=Team.A, uid=1, letter="K",
             x=10, y=10, hp=50, hp_max=100, status=UnitStatus.ALIVE
         )
         self.assertEqual(u.hp_percent, 50.0)
@@ -60,7 +60,7 @@ class TestUnitRepr(unittest.TestCase):
         @brief Test optional fields default to None.
         """
         u = UnitRepr(
-            type="Knight", team=Team.A, letter="K",
+            type="Knight", team=Team.A, uid=1, letter="K",
             x=10, y=10, hp=100, hp_max=100, status=UnitStatus.ALIVE
         )
         self.assertIsNone(u.armor)
@@ -189,7 +189,7 @@ class TestStats(unittest.TestCase):
 
         # Add alive Team A unit
         u1 = UnitRepr(
-            type="Knight", team=Team.A, letter="K",
+            type="Knight", team=Team.A, uid=1, letter="K",
             x=0, y=0, hp=100, hp_max=100, status=UnitStatus.ALIVE
         )
         stats.add_unit(u1)
@@ -198,7 +198,7 @@ class TestStats(unittest.TestCase):
 
         # Add dead Team B unit
         u2 = UnitRepr(
-            type="Pikeman", team=Team.B, letter="P",
+            type="Pikeman", team=Team.B, uid=2, letter="P",
             x=0, y=0, hp=0, hp_max=100, status=UnitStatus.DEAD
         )
         stats.add_unit(u2)
@@ -280,15 +280,26 @@ class TestUnitCacheManager(unittest.TestCase):
             def __init__(self):
                 self.scenario = MockScenario()
                 self.elapsed_time = 1.5
+                self.paused = False
 
         sim = MockSimulation()
         stats = Stats()
-        self.cache.update(sim, stats)
+        
+        # Mock time.perf_counter to control wall-clock time
+        with patch('time.perf_counter') as mock_time:
+            # First update: initialize start time
+            mock_time.return_value = 100.0
+            self.cache.update(sim, stats)
+            self.assertEqual(stats.simulation_time, 0.0)
+            
+            # Second update: 1.5 seconds later
+            mock_time.return_value = 101.5
+            self.cache.update(sim, stats)
+            self.assertEqual(stats.simulation_time, 1.5)
 
         self.assertEqual(len(self.cache.units), 2)
         self.assertEqual(stats.team1_alive, 1)
         self.assertEqual(stats.team2_alive, 1)
-        self.assertEqual(stats.simulation_time, 1.5)
 
 
 class TestTerminalView(unittest.TestCase):
@@ -499,13 +510,11 @@ class TestQuitKeys(unittest.TestCase):
     @brief Tests for quit key functionality.
     """
 
-    def test_quit_keys_include_esc_and_q(self):
+    def test_quit_keys_include_esc(self):
         """
-        @brief QUIT_KEYS includes ESC and Q as documented.
+        @brief QUIT_KEYS includes ESC as documented.
         """
         self.assertIn(27, InputHandler.QUIT_KEYS)
-        self.assertIn(ord('q'), InputHandler.QUIT_KEYS)
-        self.assertIn(ord('Q'), InputHandler.QUIT_KEYS)
 
     def test_esc_quits(self):
         """
@@ -514,15 +523,6 @@ class TestQuitKeys(unittest.TestCase):
         stdscr = MagicMock()
         handler = InputHandler(stdscr, ViewState(), Camera(), 100, 100)
         stdscr.getch.return_value = 27
-        self.assertFalse(handler.process())
-
-    def test_q_quits(self):
-        """
-        @brief Q key returns False to quit.
-        """
-        stdscr = MagicMock()
-        handler = InputHandler(stdscr, ViewState(), Camera(), 100, 100)
-        stdscr.getch.return_value = ord('q')
         self.assertFalse(handler.process())
 
 

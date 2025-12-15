@@ -29,10 +29,10 @@ class TerminalController:
     Does NOT interact directly with Simulation - uses SimulationController as intermediary.
     
     Uses the refactored TerminalView which follows SOLID principles:
-    - ViewState: Centralized state management
-    - InputHandler: Keyboard input processing
-    - MapRenderer/UIRenderer/DebugRenderer: Separate rendering components
-    - UnitCacheManager: Unit data extraction and caching
+    - ViewState (`View/state.py`): Centralized state management
+    - InputHandler (`View/input_handler.py`): Keyboard input processing
+    - Renderers (`View/renderers/`): Separate rendering components (Map, UI, Debug)
+    - UnitCacheManager (`View/unit_cache.py`): Unit data extraction and caching
     """
 
     def __init__(self, sim_controller: SimulationController, scenario: Scenario, view: Optional[TerminalView] = None):
