@@ -62,7 +62,6 @@ class Unit:
         self.size = size                    # taille de l'unite
         self.sight = sight                  # Distance champ de vision
         self.speed = speed                  # vitesse de deplacement
-        self.distance_moved = 0             # distance parcourue lors du dernier deplacement
         self.accuracy = accuracy            # precision de l'unite
         self.reload = reload                # avanncement du rechargement, peut attaquer a 0
         self.reload_time = reload_time      # temps pour recharger
