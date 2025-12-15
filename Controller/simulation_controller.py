@@ -20,6 +20,7 @@ def run_simulation_worker_multiprocessing(scenario, output, idx, tickSpeed=5):
     @param scenario Scenario instance to simulate.
     @param output List to store the results of the simulation.
     @param idx Index of the simulation (for identification in output).
+    @param tickSpeed Tick speed for the simulation (controls simulation step rate).
     """
     scenario_copy = copy.deepcopy(scenario)
     sim = Simulation(
