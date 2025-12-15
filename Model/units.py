@@ -57,7 +57,7 @@ class Unit:
         self.team = team                    # choix de l'equipe
         self.armor = armor                  # valeur de l'armure
         self.attack = attack                # nombre de degats infliges
-        self.damage_dealt = 0               # degats infliges lors de la derniere attaque
+        self.damage_dealt = 0               # degats totaux infliges par l'unité (cumulés sur sa vie)
         self.range = range                  # portee de l'unite
         self.size = size                    # taille de l'unite
         self.sight = sight                  # Distance champ de vision
