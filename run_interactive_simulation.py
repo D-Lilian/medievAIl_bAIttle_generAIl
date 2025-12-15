@@ -57,7 +57,7 @@ def main():
         terminal_controller = TerminalController(sim_controller, scenario)
         terminal_controller.run()
     except KeyboardInterrupt:
-        pass
+        print("Simulation interrupted by user.")
     except Exception as e:
         print(f"An error occurred: {e}")
         import traceback
