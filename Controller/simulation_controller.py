@@ -13,7 +13,7 @@ import multiprocessing
 import threading
 import copy
 
-def run_simulation_worker_multiprocessing(scenario, output, idx, tickSpeed=5):
+def run_simulation_worker_multiprocessing(scenario, output, idx, tick_speed=5):
     """
     @brief Function to run a simulation in a separate process for multiprocessing.
 
@@ -24,16 +24,12 @@ def run_simulation_worker_multiprocessing(scenario, output, idx, tickSpeed=5):
     scenario_copy = copy.deepcopy(scenario)
     sim = Simulation(
         scenario_copy,
-        tick_speed=tickSpeed,
+        tick_speed=tick_speed,
         unlocked=True,
         paused = False
     )
-    import time
-    start_time = time.perf_counter()
     result = sim.simulate()
-    end_time = time.perf_counter()
-    print(f"\nMain execution time: {end_time - start_time:.6f} seconds")
-    output.append((idx, result))
+    output.append((idx, result, scenario_copy))
     return
 
 class SimulationController:
@@ -51,7 +47,7 @@ class SimulationController:
         self.isSimulationRunning = False
         self.result = None
 
-    def initialize_simulation(self, scenario, tickSpeed=10, paused=False, unlocked=False):
+    def initialize_simulation(self, scenario, tick_speed=10, paused=False, unlocked=False):
         """
         @brief Initializes the simulation with the given scenario.
 
@@ -62,7 +58,7 @@ class SimulationController:
         """
         self.simulation = Simulation(
             scenario,
-            tick_speed=tickSpeed,
+            tick_speed=tick_speed,
             paused=paused,
             unlocked=unlocked
         )
@@ -113,7 +109,7 @@ class SimulationController:
         @param output Output of the simulation.
         """
         self.isSimulationRunning = False
-        self.output = output
+        self.result = output
 
     def start_multiple_simulations(self, scenario, number_of_simulation):
         """
