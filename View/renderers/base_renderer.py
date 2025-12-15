@@ -35,6 +35,7 @@ class BaseRenderer(ABC):
         try:
             self.stdscr.addstr(y, x, text, attr)
         except curses.error:
+            # Ignore errors when writing at the screen edges (intentional)
             pass
 
     def safe_addch(self, y: int, x: int, ch: str, attr: int = 0) -> None:
