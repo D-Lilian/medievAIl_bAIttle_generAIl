@@ -180,7 +180,7 @@ Provides dynamic view that follows the action. Manual movement disables auto-fol
 - ESC delay minimized with `ESCDELAY=25` environment variable
 - Non-blocking input with `nodelay(True)` curses mode
 - Shift key detection for fast camera movement
-- Function key support (F1-F12) for panel toggles and actions
+- Function key support (F1-F4) for panel toggles and actions
 
 ### 2.5D View
 
