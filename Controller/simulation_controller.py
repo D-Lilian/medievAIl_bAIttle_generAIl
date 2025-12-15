@@ -10,9 +10,18 @@ Acts as the controller in the MVC pattern.
 """
 from Model.simulation import Simulation
 import multiprocessing
+import threading
 import copy
 
-def run_simulation_worker(scenario, output, idx, tickSpeed=5):
+def run_simulation_worker_multiprocessing(scenario, output, idx, tickSpeed=5):
+    """
+    @brief Function to run a simulation in a separate process for multiprocessing.
+
+    @param scenario Scenario instance to simulate.
+    @param output List to store the results of the simulation.
+    @param idx Index of the simulation (for identification in output).
+    @param tickSpeed Tick speed for the simulation (controls simulation step rate).
+    """
     scenario_copy = copy.deepcopy(scenario)
     sim = Simulation(
         scenario_copy,
@@ -27,41 +36,109 @@ def run_simulation_worker(scenario, output, idx, tickSpeed=5):
 class SimulationController:
 
     def __init__(self):
+        """
+        @brief Initialize the controller.
+
+        @details Sets up initial state for the simulation controller.
+        simulation is the current simulation instance.
+        isSimulationRunning indicates if a simulation is currently running.
+        result stores the output of the simulation.
+        """
         self.simulation = None
         self.isSimulationRunning = False
+        self.result = None
 
+    def initialize_simulation(self, scenario, tick_speed=5, paused=False, unlocked=False):
+        """
+        @brief Initializes the simulation with the given scenario.
 
-    def start_simulation(self, scenario, tickSpeed=5, paused=False, unlocked=False):
+        @param scenario Scenario instance to simulate.
+        @param tick_speed Initial tick speed for the simulation.
+        @param paused Initial paused state of the simulation.
+        @param unlocked Initial unlocked state of the simulation.
+        """
         self.simulation = Simulation(
             scenario,
-            tick_speed=tickSpeed,
+            tick_speed=tick_speed,
             paused=paused,
             unlocked=unlocked
         )
-        return self.simulation.simulate()
+
+    def start_simulation(self):
+        """
+        @brief Starts the simulation in a separate thread.
+        """
+        thread = threading.Thread(target=self.simulation.simulate, args=(self.on_simulation_end,))
+        thread.start()
+        self.isSimulationRunning = True
+        return
 
     def toggle_pause(self):
+        """
+        @brief Toggles the paused state of the simulation.
+        """
         self.simulation.paused = not self.simulation.paused
 
     def increase_tick(self):
+        """
+        @brief Increases the tick speed of the simulation by 1.
+        """
         self.simulation.tick_speed += 1
 
     def decrease_tick(self):
+        """
+        @brief Decreases the tick speed of the simulation by 1, ensuring it doesn't go below 1.
+        """
         if self.simulation.tick_speed > 1:
             self.simulation.tick_speed -= 1
 
+    def set_tick_speed(self, value: int):
+        """
+        @brief Sets the tick speed of the simulation directly.
+        
+        @param value New tick speed value (minimum 1).
+        """
+        self.simulation.tick_speed = max(1, value)
+
+    def get_tick_speed(self):
+        """
+        @brief Retrieves the current tick speed of the simulation.
+        """
+        return self.simulation.tick_speed
+
+    def get_tick(self):
+        """
+        @brief Retrieves the current tick of the simulation.
+        """
+        return self.simulation.tick
+
+    def on_simulation_end(self, output):
+        """
+        @brief Callback function when the simulation ends.
+        @param output Output of the simulation.
+        """
+        self.isSimulationRunning = False
+        self.result = output
+
     def start_multiple_simulations(self, scenario, number_of_simulation):
-        """"""
+        """
+        @brief Starts multiple simulations in parallel using multiprocessing.
+
+        @param scenario Scenario instance to simulate.
+        @param number_of_simulation Number of simulations to run in parallel.
+        """
         output = []
         jobs = []
+        self.isSimulationRunning = True
         for p in range(number_of_simulation):
-            process = multiprocessing.Process(target=run_simulation_worker, args=(scenario, output, p))
+            process = multiprocessing.Process(target=run_simulation_worker_multiprocessing, args=(scenario, output, p))
             jobs.append(process)
             process.start()
 
         for p in jobs:
             p.join()
 
-        return output
+        self.isSimulationRunning = False
+        self.result = output
 
 

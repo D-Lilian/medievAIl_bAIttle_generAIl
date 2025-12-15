@@ -1,3 +1,7 @@
 # Requirements for medieval_battle_simulation
+
+# Logging
 loguru
-loguru
+
+# Testing (optional, for running tests with pytest)
+pytest

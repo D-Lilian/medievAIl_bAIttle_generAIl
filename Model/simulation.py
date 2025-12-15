@@ -36,7 +36,7 @@ class Simulation:
 
     ## ----------- Simulation functions -------------
 
-    def simulate(self):
+    def simulate(self, on_end=None):
         """Run the simulation until a team wins or time runs out."""
         self.scenario.general_a.BeginStrategy()
         self.scenario.general_b.BeginStrategy()
@@ -86,9 +86,12 @@ class Simulation:
 
         # Simulation ended, return results
         # Can be expanded to return more detailed results in the future
-        return {
+        output = {
             'ticks': self.tick
         }
+        if callable(on_end):
+            on_end(output)
+        return output
 
     def finished(self):
         """Check if the simulation has finished."""

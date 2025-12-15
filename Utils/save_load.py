@@ -1,4 +1,5 @@
-import os, pickle
+import os
+import pickle
 from datetime import datetime
 from Model.scenario import Scenario 
 
@@ -27,9 +28,10 @@ class SaveLoad:
 
                 with open(filename, 'wb') as file:
                     pickle.dump(data, file)
-                print(f"Game successfully saved to {filename}.")
+                # print(f"Game successfully saved to {filename}.")
             except Exception as e:
-                print(f"Error saving game: {e}")
+                # print(f"Error saving game: {e}")
+                pass
 
     @staticmethod
     def load_game(self, filename: str) -> Scenario | None:
@@ -55,7 +57,7 @@ class SaveLoad:
                     return loaded_scenario
 
             except FileNotFoundError:
-                print(f"Save file not found.")
+                print("Save file not found.")
 
             except Exception as e:
                 print(f"Error loading game: {e}")

@@ -1,191 +1,156 @@
 # -*- coding: utf-8 -*-
 """
 @file terminal_controller.py
-@brief Terminal Controller - Manages the simulation execution
+@brief Terminal Controller - Manages the terminal view for simulation display
 
 @details
-Controls the flow of the simulation when running in terminal mode.
-Handles user input passed from the view and updates the model accordingly.
-Implements the "Game Loop" pattern.
+Controls the terminal view display. Communicates with the simulation
+ONLY through SimulationController. Receives SimulationController and
+Scenario from eval.py.
 
+Implements the "Game Loop" pattern for the terminal interface.
+
+@note Compatible with SOLID/KISS refactored terminal_view.py
 """
-import random
-import sys
-import os
 from typing import Optional
 
-# Add parent directory to path for Model imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from Model.simulation import Simulation, DEFAULT_NUMBER_OF_TICKS_PER_SECOND
+from Controller.simulation_controller import SimulationController
 from View.terminal_view import TerminalView
 from Model.scenario import Scenario
-from Model.units import Knight, Pikeman, Team
+from Utils.save_load import SaveLoad
+
 
 class TerminalController:
     """
-    @brief Controller for the Terminal View
+    @brief Controller for the Terminal View.
 
     @details
-    Orchestrates the interaction between the Simulation (Model) and the TerminalView (View).
-    It runs the main loop, handles timing, and updates the model state.
+    Orchestrates the interaction between SimulationController and TerminalView.
+    Does NOT interact directly with Simulation - uses SimulationController as intermediary.
+    
+    Uses the refactored TerminalView which follows SOLID principles:
+    - ViewState (`View/state.py`): Centralized state management
+    - InputHandler (`View/input_handler.py`): Keyboard input processing
+    - Renderers (`View/renderers/`): Separate rendering components (Map, UI, Debug)
+    - UnitCacheManager (`View/unit_cache.py`): Unit data extraction and caching
     """
 
-    def __init__(self, scenario: Scenario, view: Optional[TerminalView] = None, tick_speed: int = 5):
+    def __init__(self, sim_controller: SimulationController, scenario: Scenario, view: Optional[TerminalView] = None):
         """
-        @brief Initialize the controller
+        @brief Initialize the controller.
 
-        @param scenario The battle scenario to simulate
+        @param sim_controller SimulationController instance (from eval.py)
+        @param scenario Scenario instance (from eval.py)
         @param view Optional TerminalView instance. If None, a new one is created.
-        @param tick_speed Initial simulation speed (ticks per second)
         """
+        self.sim_controller = sim_controller
         self.scenario = scenario
-        self.simulation = Simulation(scenario, tick_speed=tick_speed, paused=True, unlocked=True)
-        
+        self.save_load = SaveLoad(scenario)
+
         # Dependency Injection: Allow passing an existing view, or create a default one
         if view:
             self.view = view
         else:
-            self.view = TerminalView(scenario.size_x, scenario.size_y, tick_speed=tick_speed)
-            
+            self.view = TerminalView(scenario.size_x, scenario.size_y, tick_speed=sim_controller.get_tick_speed())
+
+        # Connect save callback
+        self.view.on_quick_save = self._handle_save
+
         self.running = False
+
+    def _handle_save(self):
+        """Handle save request and notify view."""
+        self.save_load.save_game()
+        self.view.state.notification = "Game Saved!"
+        self.view.state.notification_time = __import__('time').time()
 
     def run(self):
         """
-        @brief Run the simulation loop
-        
+        @brief Run the terminal view loop.
+
         @details
-        Starts the curses application and enters the main game loop.
-        Synchronizes the view and the model.
+        Starts the curses application and enters the main display loop.
+        View updates are synced with simulation state via SimulationController.
+        
+        The TerminalView.update() method handles:
+        - Input processing (via InputHandler)
+        - Unit cache update (via UnitCacheManager)
+        - Rendering (via MapRenderer, UIRenderer, DebugRenderer)
+        - Framerate control
         """
         try:
             self.view.init_curses()
+            # Connect save callback to input handler
+            self.view.input_handler.on_quick_save = self._handle_save
             self.running = True
-            
-            # Initialize generals (AI)
-            self._initialize_generals()
 
             while self.running:
-                # 1. Update Model (if not paused)
-                if not self.view.paused and not self.simulation.finished():
-                    self._step()
-                
-                # 2. Update View (Render & Handle Input)
-                self.running = self.view.update(self.simulation)
-                
-                # 3. Sync Control State (Speed)
-                if self.view.tick_speed != self.simulation.tick_speed:
-                    self.simulation.tick_speed = self.view.tick_speed
+                # 1. Update View (Render current state & Handle Input)
+                #    Returns False when user requests quit (ESC or Q)
+                self.running = self.view.update(self.sim_controller.simulation)
 
+                # 2. Check if simulation is finished (one team eliminated)
+                sim = self.sim_controller.simulation
+                team1_alive = [u for u in sim.scenario.units_a if u.hp > 0]
+                team2_alive = [u for u in sim.scenario.units_b if u.hp > 0]
+                
+                if not team1_alive or not team2_alive:
+                    self.running = False
+                    # Pause simulation so we can see the final state
+                    if not sim.paused:
+                        self.sim_controller.toggle_pause()
+
+                # 3. Sync speed from view to simulation controller
+                #    ViewState.tick_speed <-> Simulation.tick_speed (via SimulationController)
+                if self.view.tick_speed != self.sim_controller.get_tick_speed():
+                    # Use set_tick_speed for efficient direct sync
+                    self.sim_controller.set_tick_speed(self.view.tick_speed)
+
+                # 4. Sync pause state
+                #    ViewState.paused <-> Simulation.paused (via SimulationController)
+                if self.view.paused != self.sim_controller.simulation.paused:
+                    self.sim_controller.toggle_pause()
         finally:
+            # Switch to headless mode: unpause and unlock speed so it finishes
+            if self.sim_controller and self.sim_controller.simulation:
+                self.sim_controller.simulation.paused = False
+                self.sim_controller.simulation.unlocked = True
+
             self.view.cleanup()
 
-    def _initialize_generals(self):
-        """Initialize the AI generals for both teams."""
-        if self.scenario.general_a:
-            self.scenario.general_a.BeginStrategy()
-            self.scenario.general_a.CreateOrders()
-        if self.scenario.general_b:
-            self.scenario.general_b.BeginStrategy()
-            self.scenario.general_b.CreateOrders()
 
-    def _step(self):
-        """
-        @brief Execute one simulation step (tick)
-        
-        @details
-        Advances the simulation state by one tick.
-        
-        NOTE: This logic duplicates some of `Simulation.simulate()` because
-        the Model does not expose a granular `step()` method, and we dont have time to
-        modify the Model. This allows us to have interactive control over the loop.
-        """
-        
-        # 1. Randomize unit order for fairness
-        random.shuffle(self.scenario.units)
+def run_terminal_view(sim_controller: SimulationController, scenario: Scenario) -> None:
+    """
+    @brief Helper function to launch the terminal view.
 
-        # 2. Process Unit Orders
-        for unit in self.scenario.units:
-            if not self.simulation.is_unit_still_alive(unit):
-                continue
+    @details
+    Entry point for external callers (e.g., eval.py).
+    Creates a TerminalController with the SimulationController and Scenario, then runs the interactive terminal view.
+    Tick speed is retrieved from sim_controller.get_tick_speed().
 
-            for unit_order in unit.order_manager:
-                if unit_order.Try(self.simulation):
-                    unit_order.Remove(unit_order)
-            
-            # Reset flags (used for rendering/logic)
-            self.simulation.as_unit_attacked = False
-            self.simulation.as_unit_moved = False
-        
-        self.simulation.tick += 1
+    @param sim_controller SimulationController instance (from eval.py)
+    @param scenario Scenario instance (from eval.py)
 
-        # 3. Handle Reload Times
-        for unit in list(self.simulation.reload_units):
-            unit.update_reload(1 / DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
-            if unit.can_attack():
-                try:
-                    self.simulation.reload_units.remove(unit)
-                except ValueError:
-                    pass
-        
-        # 4. General (AI) Logic - Every second (approx)
-        if self.simulation.tick % DEFAULT_NUMBER_OF_TICKS_PER_SECOND == 0:
-            self._update_generals()
+    @code
+    from Controller.terminal_controller import run_terminal_view
+    from Controller.simulation_controller import SimulationController
+    
+    sim_controller = SimulationController()
+    sim_controller.initialize_simulation(scenario, tick_speed=20, paused=True, unlocked=True)
+    run_terminal_view(sim_controller, scenario)
+    @endcode
+    """
+    controller = TerminalController(sim_controller, scenario)
+    controller.run()
 
-    def _update_generals(self):
-        """Update the Generals' knowledge and orders."""
-        types = self.simulation.type_present_in_team()
-        
-        if self.scenario.general_a:
-            for types_present in types.get("A", []):
-                if types_present not in self.simulation.types_present.get("A", []):
-                    self.scenario.general_a.notify(types_present)
-            self.scenario.general_a.CreateOrders()
-            
-        if self.scenario.general_b:
-            for types_present in types.get("B", []):
-                if types_present not in self.simulation.types_present.get("B", []):
-                    self.scenario.general_b.HandleUnitTypeDepleted(types_present)
-            self.scenario.general_b.CreateOrders()
-        
-        self.simulation.types_present = types
 
 if __name__ == "__main__":
-    # Demo scenario if run directly
-    units = []
-    units_a = []
-    units_b = []
-    
-    # Team A (Cyan) - Left side
-    for i in range(5):
-        u = Knight(Team.A, 20, 20 + i*5)
-        units.append(u)
-        units_a.append(u)
-    
-    for i in range(5):
-        u = Pikeman(Team.A, 25, 20 + i*5)
-        units.append(u)
-        units_a.append(u)
-        
-    # Team B (Red) - Right side
-    for i in range(5):
-        u = Knight(Team.B, 100, 20 + i*5)
-        units.append(u)
-        units_b.append(u)
-        
-    for i in range(5):
-        u = Pikeman(Team.B, 95, 20 + i*5)
-        units.append(u)
-        units_b.append(u)
-    
-    # Mock generals for demo
-    class MockGeneral:
-        def BeginStrategy(self): pass
-        def CreateOrders(self): pass
-        def notify(self, t): pass
-        def HandleUnitTypeDepleted(self, t): pass
-
-    scenario = Scenario(units, units_a, units_b, MockGeneral(), MockGeneral(), size_x=120, size_y=120)
-    
-    controller = TerminalController(scenario, tick_speed=20)
-    controller.run()
+    print("Usage: Import run_terminal_view and pass SimulationController + Scenario")
+    print("")
+    print("  from Controller.terminal_controller import run_terminal_view")
+    print("  from Controller.simulation_controller import SimulationController")
+    print("  ")
+    print("  sim_controller = SimulationController()")
+    print("  sim_controller.initialize_simulation(scenario, tick_speed=20, paused=True, unlocked=True)")
+    print("  run_terminal_view(sim_controller, scenario)")
+    raise SystemExit(1)
