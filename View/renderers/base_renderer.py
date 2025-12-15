@@ -49,4 +49,5 @@ class BaseRenderer(ABC):
         try:
             self.stdscr.addch(y, x, ch, attr)
         except curses.error:
+            # Ignore errors when drawing outside the window bounds; this is expected in some layouts.
             pass
