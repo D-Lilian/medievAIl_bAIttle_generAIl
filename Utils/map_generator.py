@@ -8,11 +8,9 @@ Generates symmetric battle scenarios with various tactical formations.
 Used to create balanced and interesting initial states for simulations.
 
 """
-# map_generator.py
 
 from Model.scenario import Scenario
 from Model.units import Crossbowman, Knight, Pikeman
-import random
 import math
 
 
@@ -520,67 +518,3 @@ class MapGenerator:
         return composition
 
 
-# ============ PREDEFINED SCENARIOS ============
-
-class PredefinedScenarios:
-    """Collection of balanced, tactically sound scenarios."""
-
-    @staticmethod
-    def classic_medieval_battle() -> Scenario:
-        """100v100 - Classic Medieval Battle (Agincourt style)"""
-        return MapGenerator.generate_battle_scenario(
-            units_per_team=100,
-            formation='classic',
-            size_x=120,
-            size_y=120
-        )
-
-    @staticmethod
-    def defensive_siege() -> Scenario:
-        """120v120 - Defensive Formation (Shield Wall)"""
-        return MapGenerator.generate_battle_scenario(
-            units_per_team=120,
-            formation='defensive',
-            size_x=120,
-            size_y=130
-        )
-
-    @staticmethod
-    def cavalry_charge() -> Scenario:
-        """150v150 - Offensive Wedge (Heavy Cavalry)"""
-        return MapGenerator.generate_battle_scenario(
-            units_per_team=150,
-            formation='offensive',
-            size_x=120,
-            size_y=120
-        )
-
-    @staticmethod
-    def cannae_envelopment() -> Scenario:
-        """180v180 - Hammer and Anvil (Hannibal's Tactics)"""
-        return MapGenerator.generate_battle_scenario(
-            units_per_team=180,
-            formation='hammer_anvil',
-            size_x=120,
-            size_y=120
-        )
-
-    @staticmethod
-    def roman_legion() -> Scenario:
-        """100v100 - Testudo Formation (Roman Tactics)"""
-        return MapGenerator.generate_battle_scenario(
-            units_per_team=100,
-            formation='testudo',
-            size_x=120,
-            size_y=120
-        )
-
-    @staticmethod
-    def british_square() -> Scenario:
-        """120v120 - Hollow Square (Anti-Cavalry)"""
-        return MapGenerator.generate_battle_scenario(
-            units_per_team=120,
-            formation='hollow_square',
-            size_x=120,
-            size_y=120
-        )
