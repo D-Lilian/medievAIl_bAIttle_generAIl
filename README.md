@@ -76,6 +76,7 @@ Built following SOLID principles with a clean MVC separation of concerns:
 - **Variable Speed**: Adjust from 1-240 ticks/second with +/- keys (default: 5 tps)
 - **Bidirectional Sync**: View and simulation controller maintain synchronized pause and speed state
 - **End Detection**: Simulation auto-pauses when one team is eliminated
+- **Headless Mode**: Exiting the view (ESC) switches simulation to headless mode (unpaused, max speed) to finish in background
 
 **UI & Information**:
 
@@ -85,6 +86,7 @@ Built following SOLID principles with a clean MVC separation of concerns:
 - **F4 - Toggle All**: Show/hide all panels simultaneously
 - **Pause Overlay**: Visual indicator when simulation is paused
 - **Help Bar**: Always-visible control reminder at bottom of screen
+- **Smart Target Inference**: View automatically deduces unit targets from orders (even implicit ones like AttackOnSight)
 
 **Persistence & Reports**:
 
@@ -93,7 +95,7 @@ Built following SOLID principles with a clean MVC separation of concerns:
   - Interactive unit cards with detailed stats (HP, damage, position, target, speed, range, etc.)
   - Visual battlefield map with clickable unit positions
   - Unit breakdown by type with progress bars
-  - Click-to-select functionality: clicking a unit highlights both the unit and its current target
+  - Enhanced target display: Shows target name and ID (e.g., "Pikeman #3")
   - Automatic browser launch with timestamp-based filenames
   - Modern CSS styling with team colors, gradients, and hover effects
 

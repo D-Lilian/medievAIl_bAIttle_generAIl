@@ -105,6 +105,11 @@ class TerminalController:
                 if self.view.paused != self.sim_controller.simulation.paused:
                     self.sim_controller.toggle_pause()
         finally:
+            # Switch to headless mode: unpause and unlock speed so it finishes
+            if self.sim_controller and self.sim_controller.simulation:
+                self.sim_controller.simulation.paused = False
+                self.sim_controller.simulation.unlocked = True
+
             self.view.cleanup()
 
 
