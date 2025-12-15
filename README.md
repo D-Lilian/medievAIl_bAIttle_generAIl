@@ -127,7 +127,7 @@ Complete keyboard mapping for terminal view interaction:
 | **F2** | Toggle Unit Types | Show/hide unit type breakdown panel |
 | **F3** | Toggle Sim Info | Show/hide simulation status and performance panel |
 | **F4** | Toggle All Panels | Show/hide all UI panels at once |
-| **F11** | Quick Save | Save current game state to timestamped file |
+| **E** | Quick Save | Save current game state to timestamped file |
 | **Tab** | Generate Report | Create detailed HTML battle report and open in browser |
 | **Ctrl+D** | Debug Mode | Toggle detailed debug information overlay |
 | **ESC** | Exit | Close terminal view and end simulation |
