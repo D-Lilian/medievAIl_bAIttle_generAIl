@@ -12,6 +12,8 @@ class SaveLoad:
                 data = {
                     'scenario': {
                         'units': self.scenario.units,
+                        'units_a': self.scenario.units_a,
+                        'units_b': self.scenario.units_b,
                         'size_x': self.scenario.size_x,
                         'size_y': self.scenario.size_y,
                         'general_a': self.scenario.general_a,
