@@ -20,6 +20,7 @@ from Model.orders import AttackOnSightOrder, AvoidOrder, StayInReachOrder, Sacri
 class StrategyStart:
     def __init__(self):
         pass
+
     def ApplyOrder(self, unit):
         # Ici donne a une troupe random par exemple le fait de se déplacer a l'autre bout de la map
         self.unit = unit
@@ -98,9 +99,9 @@ class StrategieSimpleAttackBestAvoidWorst(StrategyTroup): #focus Pikeman (faible
         super().__init__(None, favoriteTroup, hatedTroup)
 
     def apply_order(self, general, unit):
-        unit.order_manager.Add(AttackNearestTroupOmniscient(unit,self.favoriteTroup), 0)
-        unit.order_manager.Add(AvoidOrder(unit,self.hatedTroup),1)
-        unit.order_manager.Add(AttackNearestTroupOmniscient(unit,UnitType.ALL), 2)
+        unit.order_manager.AddMaxPriority(AttackNearestTroupOmniscient(unit,self.favoriteTroup))
+        unit.order_manager.AddMaxPriority(AttackNearestTroupOmniscient(unit,UnitType.ALL))
+        #unit.order_manager.Add(AvoidOrder(unit,self.hatedTroup),2)
 
 
 
@@ -137,14 +138,6 @@ class StrategiePikemanSomeIQ(StrategyTroup):
 # Strategie générique (Backups)
 #############################################################################################################
 
-class StrategieSimpleAttackBestAvoidWorst(StrategyTroup):
-    def __init__(self, favoriteTroup=UnitType.ALL, hatedTroup=UnitType.NONE):
-        super().__init__(None, favoriteTroup, hatedTroup)
-
-    def apply_order(self, general, unit):
-        unit.order_manager.Add(AttackNearestTroupOmniscient(unit,self.favoriteTroup), 0)
-        unit.order_manager.Add(AvoidOrder(unit,self.hatedTroup),1)
-        unit.order_manager.Add(AttackNearestTroupOmniscient(unit,UnitType.ALL), 2)
 
 # --- Fallbacks ---
 class StrategieCrossbowmanFallbackSomeIQ(StrategyTroup):
@@ -210,6 +203,9 @@ class StrategieNoTroupFallbackSomeIQ:
         #for unit in general.MyUnits:
         #    unit.order_manager.FlushOrders()
 
+
+
+
 class StrategieStartSomeIQ(StrategyStart):
     """
     On envoi un mec se sacrifier, on recule toutes les troupes de 10 cases
@@ -218,7 +214,7 @@ class StrategieStartSomeIQ(StrategyStart):
         # ON fait reculer tout le monde
         for unit in general.MyUnits:
             #unit.order_manager.Add(MoveOneStepFromRef(unit, 10, "WORLD"), 180)
-            unit.order_manager.Add(MoveByStepOrder(unit, 10, 180))
+            unit.order_manager.Add(MoveByStepOrder(unit, 10, 180), 0)
         #StrategySquad(nb_crossbowmen=20).build_squad(general)
         #StrategySquad(nb_crossbowmen=20)
         #StrategySquad(nb_crossbowmen=20)
@@ -226,24 +222,29 @@ class StrategieStartSomeIQ(StrategyStart):
         # On fait une squad crossbow à gauche,
         squad1 = general.generate_squad({UnitType.CROSSBOWMAN:20, UnitType.PIKEMAN:5})
         for unit in squad1:
-            unit.order_manager.AddMaxPriority(MoveByStepOrder(unit, 50, 90), squad_id=squad1.squad_id)
-            unit.order_manager.AddMaxPriority(FormationOrder(unit, squad1), squad_id=squad1.squad_id)
+            unit.order_manager.AddMaxPriority(MoveByStepOrder(unit, 50, 90), squad_id=squad1[0].squad_id)
+            unit.order_manager.AddMaxPriority(FormationOrder(unit, squad1), squad_id=squad1[0].squad_id)
 
         # On fait une squad crossbow à droite,
         squad2 = general.generate_squad({UnitType.CROSSBOWMAN:20, UnitType.PIKEMAN:5})
         for unit in squad2:
-            unit.order_manager.AddMaxPriority(MoveByStepOrder(unit, 50, -90), squad_id=squad2.squad_id)
-            unit.order_manager.AddMaxPriority(FormationOrder(unit, squad2), squad_id=squad2.squad_id)
+            unit.order_manager.AddMaxPriority(MoveByStepOrder(unit, 50, -90), squad_id=squad2[0].squad_id)
+            unit.order_manager.AddMaxPriority(FormationOrder(unit, squad2), squad_id=squad2[0].squad_id)
 
 
 
         soufredouleur = general.GetRandomUnit()
         if soufredouleur is not None:
-            soufredouleur.PushOrder(SacrificeOrder(soufredouleur), -1)
+            soufredouleur.order_manager.RemoveOrderAtPriority(0) # on lui enlève le déplacement en arrière
+            soufredouleur.order_manager.Add(SacrificeOrder(soufredouleur), 0)
 
 
 
-
+class DummyStrategy(StrategyTroup):
+    def __init__(self):
+        super().__init__(None, UnitType.ALL, UnitType.NONE)
+    def applyOrder(self):
+        pass
 
 
 
