@@ -45,7 +45,7 @@ def test_add_with_max_priority():
 
     om_empty = OrderManager()
     o4 = DummyOrder("D")
-    om_empty.AddWithMaxPriority(o4) # Should be priority 0
+    om_empty.AddMaxPriority(o4) # Should be priority 0
     assert om_empty.Get(0) is o4
 
 def test_add_priority_conflict():

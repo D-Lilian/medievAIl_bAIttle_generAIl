@@ -2,25 +2,68 @@
 
 ## Description
 
-TODO
+A medieval battle simulation engine with AI generals, comprehensive data analysis, and visualization tools. Features tournament systems, Lanchester's Laws analysis, and multiple scenario types.
+
+### Architecture
+
+The project follows **MVC** architecture with **SOLID** principles:
+
+```
+├── Controller/          # Orchestration layer
+│   ├── simulation_controller.py
+│   ├── terminal_controller.py
+│   ├── pygame_controller.py
+│   ├── tournament_controller.py
+│   └── plot_controller.py
+├── Model/               # Domain logic
+│   ├── simulation.py
+│   ├── scenario.py
+│   ├── units.py
+│   ├── generals.py
+│   ├── strategies.py
+│   └── orders.py
+├── View/                # Visualization
+│   ├── terminal_view.py
+│   ├── pygame_view.py
+│   └── renderers/
+├── Plotting/            # Data visualization
+│   ├── base.py          # Generic plotters
+│   ├── scenario_plotters.py  # Scenario-specific plotters
+│   ├── collector.py     # Data collection
+│   └── lanchester.py    # Lanchester scenario
+├── Tournament/          # Tournament system
+│   ├── runner.py
+│   └── report.py
+├── Analysis/            # Statistical analysis
+│   ├── statistical.py
+│   └── visualizers.py
+└── Utils/               # Utilities
+    ├── eval.py          # CLI dispatcher
+    └── parse_cli.py     # Argument parsing
+```
 
 ### Available Generals
 
-#### Braindead
+| General | Description |
+|---------|-------------|
+| `BRAINDEAD` | Basic AI with no tactical awareness - units attack nearest enemy |
+| `DAFT` | Default AI with simple tactics and formation awareness |
+| `SOMEIQ` | Smarter AI with unit-specific strategies (crossbow kiting, knight charging, etc.) |
 
-TODO description
+### Available Unit Types
 
-#### Daft
-
-TODO description
-
-#### SomeIQ
-
-TODO description
-
-#### RandomIQ
-
-TODO description
+| Unit | Type | Description |
+|------|------|-------------|
+| `Knight` | Melee | Heavy cavalry, high damage and HP |
+| `Pikeman` | Melee | Infantry with reach, effective vs cavalry |
+| `Crossbowman` | Ranged | Ranged unit, focus fire capable |
+| `LongSwordsman` | Melee | Balanced infantry |
+| `EliteSkirmisher` | Ranged | Fast ranged unit |
+| `CavalryArcher` | Ranged | Mobile ranged cavalry |
+| `LightCavalry` | Melee | Fast cavalry |
+| `Onager` | Siege | Area damage siege weapon |
+| `Scorpion` | Siege | Anti-personnel siege weapon |
+| `Trebuchet` | Siege | Long-range siege weapon |
 
 ## Screenshots
 
@@ -239,23 +282,225 @@ Resumes a battle from a save file.
 
 ### 3\. `tourney`: Organize a tournament
 
-Executes a series of matches between multiple AIs and scenarios.
+Runs a fully automated tournament between AI generals, generating comprehensive HTML reports with score matrices.
 
 | Argument | Description |
 | :--- | :--- |
-| `-G / --ais` | **List** of participating AI names (required). |
-| `-S / --scenarios` | **List** of scenarios to play (required). |
-| `-N` | Number of rounds for each confrontation (Default: 10). |
-| `-na / --no-alternate` | Disables alternation of player positions (AI1 vs AI2) for each round. |
+| `-G / --ais` | **List** of participating AI names. Default: all available (BRAINDEAD, DAFT, SOMEIQ). |
+| `-S / --scenarios` | **List** of scenarios to play. Default: all available. |
+| `-N` | Number of rounds for each matchup (Default: 10). |
+| `-na / --no-alternate` | Disables alternation of player positions for fairness testing. |
+
+#### Tournament Features
+
+- **All pairwise matchups** including reflexive (X vs X) to detect position bias
+- **Position alternation** (by default) ensures fairness - each general plays both sides
+- **Comprehensive HTML report** with:
+  - Overall standings with win percentages
+  - General vs General matrix (across all scenarios)
+  - Per-scenario matrices
+  - General vs Scenario performance
+  - Reflexive matchup analysis (should be ~50% to confirm no position bias)
+
+#### Example Usage
+
+```bash
+# Run tournament with all generals and scenarios (10 rounds each)
+python battle.py tourney -G DAFT BRAINDEAD SOMEIQ -N 10
+
+# Run tournament with specific scenarios
+python battle.py tourney -G DAFT BRAINDEAD -S classical_medieval_battle cavalry_charge -N 5
+
+# Run without position alternation (to test for position bias)
+python battle.py tourney -G DAFT BRAINDEAD -N 20 -na
+```
+
+#### Available Generals
+
+| General | Description |
+| :--- | :--- |
+| `BRAINDEAD` | Basic AI with no tactical awareness |
+| `DAFT` | Default AI with simple tactics |
+| `SOMEIQ` | Smarter AI with unit-specific strategies |
+
+#### Available Scenarios
+
+| Scenario | Description |
+| :--- | :--- |
+| `classical_medieval_battle` | 100v100 - Classic Medieval Battle |
+| `defensive_siege` | 120v120 - Defensive Formation |
+| `cavalry_charge` | 150v150 - Offensive Wedge |
+| `cannae_envelopment` | 180v180 - Hammer and Anvil |
+| `british_square` | 120v120 - Hollow Square |
 
 ### 4\. `plot`: Simulate and plot results
 
-Generates a graph by varying a specific parameter of a scenario.
+Generates graphs by running scenarios with varying parameters and produces both PNG plots and Markdown reports.
+
+#### Syntax
+
+```bash
+battle plot <AI> <Plotter> <Scenario> [types] range(min,max[,step]) [-N reps] [--stats]
+```
 
 | Argument | Description |
 | :--- | :--- |
-| `<ai>` | Name of the AI to use for simulation. |
-| `<plotter>` | Name of the plotting function to execute. |
-| `<scenario_params>` | **Two arguments**: `ScenarioName` and the `Parameter` to vary (ex: `Lanchester N`). |
-| `<range_params>` | **List of values** for the parameter range (ex: `1 100 1` for `range(1, 100)`). |
-| `-N` | Number of repetitions for each parameter value (Default: 10). |
+| `AI` | Name of the AI to use (DAFT, BRAINDEAD, SOMEIQ). |
+| `Plotter` | Name of the plotting function (PlotLanchester, PlotCasualties, etc.). |
+| `Scenario` | Scenario name (currently: Lanchester). |
+| `[types]` | Unit types as `[Type1,Type2]` (e.g., `[Knight,Crossbow]`). |
+| `range(...)` | Range expression: `range(min,max)` or `range(min,max,step)`. |
+| `-N` | Number of repetitions per configuration (Default: 10). |
+| `--stats` | Enable full statistical analysis with hypothesis tests and advanced visualizations. |
+
+#### How It Works
+
+The command does roughly this (pseudo code):
+
+```python
+for type in [Knight, Crossbow]:
+    for N in range(1, 100):
+        data[type, N] = Lanchester(type, N).run()  # repeat N times
+PlotLanchester(data)
+```
+
+Where:
+
+- `Lanchester(type, N)` creates a scenario with N units vs 2N units of the same type
+- `data[type, N]` contains: casualties, survivors, total HP damage on each side
+- `PlotLanchester(data)` produces pertinent graphs to visualize that data
+
+#### Available Plotters
+
+Three categories of plotters are available:
+
+**Scenario-Specific Plotters (recommended):**
+
+Each predefined scenario has a dedicated plotter with relevant visualizations:
+
+| Plotter | Scenario | Description |
+|---------|----------|-------------|
+| `PlotLanchester` / `Lanchester` | Lanchester | N vs 2N analysis - tests Linear vs Square Law |
+| `PlotClassicMedieval` / `ClassicMedieval` | classic_medieval_battle | 100v100 Agincourt-style battle analysis |
+| `PlotCavalryCharge` / `CavalryCharge` | cavalry_charge | 150v150 charge impact and K/D ratio |
+| `PlotDefensiveSiege` / `DefensiveSiege` | defensive_siege | 120v120 shield wall effectiveness |
+| `PlotCannaeEnvelopment` / `CannaeEnvelopment` | cannae_envelopment | 180v180 flanking maneuver analysis |
+| `PlotRomanLegion` / `RomanLegion` | roman_legion | 100v100 testudo formation analysis |
+| `PlotBritishSquare` / `BritishSquare` | british_square | 120v120 anti-cavalry square analysis |
+
+**Generic Plotters (matplotlib-based):**
+
+| Plotter | Description |
+|---------|-------------|
+| `PlotCasualties` | Simple casualties comparison between teams |
+| `PlotSurvivors` | Shows surviving units for both teams |
+| `PlotWinRate` | Visualizes win rate analysis |
+
+**ggplot2-style (plotnine - publication quality):**
+
+Uses plotnine, the Python equivalent of R's ggplot2, for publication-quality visualizations.
+
+| Plotter | Description |
+| :--- | :--- |
+| `GGPlotLanchester` | Beautiful multi-panel Lanchester analysis with individual plots saved separately. |
+| `GGPlotCasualties` | Elegant faceted casualties comparison with team colors. |
+| `GGPlotSurvivors` | Survival rate visualization with area ribbons. |
+| `GGPlotWinRate` | Win rate with reference lines and color fills. |
+| `GGPlotLanchesterComparison` | Direct comparison of casualty scaling between unit types. |
+
+#### Statistical Analysis Mode (`--stats`)
+
+When using the `--stats` flag, the system performs comprehensive statistical analysis:
+
+**Lanchester Law Testing:**
+
+- Fits Linear, Quadratic, and Square Root models
+- Calculates R² for each model to determine best fit
+- Validates whether data matches theoretical expectations (Linear Law for melee, Square Law for ranged)
+
+**Hypothesis Testing:**
+
+- Independent t-tests comparing unit types
+- Mann-Whitney U tests (non-parametric alternative)
+- ANOVA for 3+ unit types
+- Chi-square tests for proportions
+
+**Effect Size Calculations:**
+
+- Cohen's d with interpretation (small/medium/large)
+- Eta-squared for ANOVA
+- 95% Confidence intervals
+
+**Advanced Visualizations Generated:**
+
+- `correlation_heatmap.png` - Cross-correlation matrix of all metrics
+- `boxplot.png` - Casualty distributions by unit type
+- `grouped_barplot.png` - Mean casualties comparison with error bars
+- `mean_comparison.png` - Mean with 95% CI
+- `histogram.png` - Battle duration distribution
+- `metric_heatmap.png` - N × casualties heatmap
+
+#### Available Scenarios for Plotting
+
+| Scenario | Signature | Description |
+|----------|-----------|-------------|
+| `Lanchester` | N vs 2N | Tests Lanchester's Laws - use N ≥ 20 for visible differences |
+| `classic_medieval_battle` | 100v100 | Classic Medieval Battle (Agincourt style) |
+| `cavalry_charge` | 150v150 | Offensive Wedge (Heavy Cavalry) |
+| `defensive_siege` | 120v120 | Defensive Formation (Shield Wall) |
+| `cannae_envelopment` | 180v180 | Hammer and Anvil (Hannibal's Tactics) |
+| `roman_legion` | 100v100 | Testudo Formation (Roman Tactics) |
+| `british_square` | 120v120 | Hollow Square (Anti-Cavalry) |
+
+#### Example Usage
+
+```bash
+# Lanchester analysis with 3 unit types (use N >= 20 for visible results)
+python battle.py plot DAFT Lanchester Lanchester "[Knight,Pikeman,Crossbowman]" "range(20,100,20)" -N 5
+
+# Using ggplot2-style visualization
+python battle.py plot DAFT GGPlotLanchester Lanchester "[Knight,Crossbowman]" "range(20,80,20)"
+
+# Cavalry charge analysis
+python battle.py plot DAFT CavalryCharge cavalry_charge "[Knight]" "range(50,200,50)" -N 5
+
+# Full statistical analysis with hypothesis tests
+python battle.py plot DAFT Lanchester Lanchester "[Knight,Crossbowman]" "range(20,100,20)" -N 10 --stats
+```
+
+#### Output
+
+The command generates:
+
+1. **PNG Plot** in `Reports/lanchester_analysis_YYYYMMDD_HHMMSS.png`
+2. **Markdown Report** in `Reports/Lanchester_report_YYYYMMDD_HHMMSS.md`
+
+For ggplot-style plotters, additional individual plots are saved:
+
+- `Reports/lanchester_winner_casualties_*.png`
+- `Reports/lanchester_win_rate_*.png`
+- `Reports/lanchester_duration_*.png`
+- `Reports/lanchester_casualties_comparison_*.png`
+
+**With `--stats` flag, additional outputs:**
+
+3. **Statistical Report** in `Reports/stats_report_YYYYMMDD_HHMMSS.md` containing:
+   - Lanchester Law Analysis (R² values, best fit, theory validation)
+   - Unit Type Comparisons (p-values, effect sizes, significance)
+   - ANOVA results (if 3+ unit types)
+   - Summary statistics DataFrame
+
+4. **Advanced Visualizations:**
+   - `Reports/correlation_heatmap_*.png`
+   - `Reports/boxplot_*.png`
+   - `Reports/grouped_barplot_*.png`
+   - `Reports/mean_comparison_*.png`
+   - `Reports/histogram_*.png`
+   - `Reports/metric_heatmap_*.png`
+
+#### Lanchester's Laws
+
+- **Linear Law (Melee)**: In melee combat, casualties are proportional to N. The side with numerical advantage loses fewer soldiers proportionally.
+- **Square Law (Ranged)**: In ranged combat, fighting effectiveness scales with N². A 2:1 numerical advantage results in ~4:1 combat effectiveness.
+
+The Lanchester scenario pits N units against 2N units of the same type. The larger side (2N) should win every time, and what's interesting is to have a graph with two curves corresponding to unit types, with x=N and y=casualties sustained by winning side.

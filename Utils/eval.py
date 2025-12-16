@@ -1,10 +1,14 @@
+from datetime import datetime
 from Utils.parse_cli import args
 from Controller.terminal_controller import TerminalController
 from Controller.simulation_controller import SimulationController
+from Controller.tournament_controller import TournamentController
+from Controller.plot_controller import PlotController
 from Model.scenario import Scenario
 from Model.units import Knight, Pikeman, Team
 from Utils.map_generator import MapGenerator
 from Utils.predefined_scenarios import PredefinedScenarios
+
 # Fabrique d'IA: à partir d'un nom, créer un General avec les stratégies correspondantes
 from Model.generals import General
 from Model.strategies import (
@@ -17,23 +21,24 @@ from Model.strategies import (
 )
 from Model.units import UnitType
 
+
 def create_general(name: str, unitsA, unitsB) -> General:
     name_up = name.upper()
-    if name_up == 'BRAINDEAD':
+    if name_up == "BRAINDEAD":
         sT = {
             UnitType.CROSSBOWMAN: StrategieBrainDead(None),
             UnitType.KNIGHT: StrategieBrainDead(None),
             UnitType.PIKEMAN: StrategieBrainDead(None),
         }
         return General(unitsA=unitsA, unitsB=unitsB, sS=None, sT=sT)
-    elif name_up == 'DAFT':
+    elif name_up == "DAFT":
         sT = {
             UnitType.CROSSBOWMAN: StrategieDAFT(None),
             UnitType.KNIGHT: StrategieDAFT(None),
             UnitType.PIKEMAN: StrategieDAFT(None),
         }
         return General(unitsA=unitsA, unitsB=unitsB, sS=None, sT=sT)
-    elif name_up == 'SOMEIQ':
+    elif name_up == "SOMEIQ":
         sT = {
             UnitType.CROSSBOWMAN: StrategieCrossbowmanSomeIQ(),
             UnitType.KNIGHT: StrategieKnightSomeIQ(),
@@ -44,17 +49,18 @@ def create_general(name: str, unitsA, unitsB) -> General:
     else:
         raise ValueError(f"Nom d'IA inconnu ")
 
+
 def run(args):
     print(f"Running scenario: {args.scenario} with AIs: {args.ai1} vs {args.ai2}")
     # Préparer la sélection du scénario en dehors des branches terminal/non-terminal
     scenario_map = {
-        'classical_medieval_battle': PredefinedScenarios.classic_medieval_battle,
-        'defensive_siege': PredefinedScenarios.defensive_siege,
-        'cavalry_charge': PredefinedScenarios.cavalry_charge,
-        'cannae_envelopment': PredefinedScenarios.cannae_envelopment,
-        'british_square': PredefinedScenarios.british_square,
+        "classical_medieval_battle": PredefinedScenarios.classic_medieval_battle,
+        "defensive_siege": PredefinedScenarios.defensive_siege,
+        "cavalry_charge": PredefinedScenarios.cavalry_charge,
+        "cannae_envelopment": PredefinedScenarios.cannae_envelopment,
+        "british_square": PredefinedScenarios.british_square,
     }
-    requested = getattr(args, 'scenario', None)
+    requested = getattr(args, "scenario", None)
     if requested and requested in scenario_map:
         selected_scenario = scenario_map[requested]()
     else:
@@ -66,7 +72,7 @@ def run(args):
     team_a_units = selected_scenario.units_a
     team_b_units = selected_scenario.units_b
 
-    if args.t is None:
+    if not args.t:
         print("No terminal view selected.")
         # Créer les deux généraux selon les noms fournis
         ai1 = create_general(args.ai1, team_a_units, team_b_units)
@@ -105,73 +111,47 @@ def run(args):
         simulationController.start_simulation(game2)
 
 
-
 def tourney(args):
-    print(f"Running tournament: {args.ais} on scenarios: {args.scenarios} for {args.N} rounds")
-    map_gen= MapGenerator()
-    scenario_map = {
-        'classical_medieval_battle': PredefinedScenarios.classic_medieval_battle,
-        'defensive_siege': PredefinedScenarios.defensive_siege,
-        'cavalry_charge': PredefinedScenarios.cavalry_charge,
-        'cannae_envelopment': PredefinedScenarios.cannae_envelopment,
-        'british_square': PredefinedScenarios.british_square,
-    }
-
-    # si args.scenarios est vide ou None -> utiliser tous les scénarios par défaut
-    requested = getattr(args, 'scenarios', None)
-    if not requested:
-        selected_names = list(scenario_map.keys())
-    else:
-        selected_names = []
-        for name in requested:
-            if name in scenario_map:
-                selected_names.append(name)
-            else:
-                print(f"scenario inconnu")
-
-    # instancier les scénarios sélectionnés
-    selected_scenarios = [scenario_map[name]() for name in selected_names]
-
-    simulationController = SimulationController()
-
-    # boucle sur les paires d'AIs et sur les scénarios sélectionnés
-    for i in range(len(args.ais)):
-        for j in range(len(args.ais)):
-            for sc in selected_scenarios:
-                # Créer deux généraux distincts même en cas de doublon
-                ai1 = create_general(args.ais[i], sc.units_a, sc.units_b)
-                ai2 = create_general(args.ais[j], sc.units_b, sc.units_a)
-                scen = Scenario(sc.units, sc.units_a, sc.units_b, ai1, ai2)
-                simulationController.start_multiple_simulations(scen, args.N)
-
- #pas d ecran terminal
+    """Run a tournament between AI generals. Delegates to TournamentController."""
+    report_path = TournamentController.run_tournament(args)
+    if report_path:
+        print(f"\nFull report: {report_path}")
 
 
 def load(args):
     print("")
     # Appel de la fonction correspondant voir avec jp
 
+
 def save(args):
     print("")
     # Appel de la fonction correspondant voir avec jp
 
+
+def plot(args):
+    """Execute plot command. Delegates to PlotController."""
+    PlotController.run_plot(args)
+
+
 def Lanchester(args):
     print("")
-    #pas d ecran terminal
+    # pas d ecran terminal
 
 
 def main():
     # Conserver eval et ajouter 'args' dans l'environnement pour éviter NameError
     dispatch_env = {
-        '__builtins__': __builtins__,
-        'args': args,
-        'tourney': tourney,
-        'run': run,
-        'load': load,
-        'save': save,
-        'Lanchester': Lanchester,
+        "__builtins__": __builtins__,
+        "args": args,
+        "tourney": tourney,
+        "run": run,
+        "load": load,
+        "save": save,
+        "plot": plot,
+        "Lanchester": Lanchester,
     }
     eval(f"{args.command}(args)", dispatch_env)
 
-if __name__  == "__main__":
+
+if __name__ == "__main__":
     main()
