@@ -33,7 +33,7 @@ The project follows **MVC** architecture with **SOLID** principles:
 │   ├── runner.py
 │   └── report.py
 ├── Analysis/            # Statistical analysis
-│   ├── statistics.py
+│   ├── statistical.py
 │   └── visualizers.py
 └── Utils/               # Utilities
     ├── eval.py          # CLI dispatcher

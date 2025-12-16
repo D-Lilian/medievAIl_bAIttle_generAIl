@@ -6,6 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
+# Windows venv artifacts (should not be in repo)
+Scripts/
+Include/
+
 # Distribution / packaging
 .Python
 build/
