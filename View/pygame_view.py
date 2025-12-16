@@ -1,6 +1,9 @@
 import pygame
 import sys
 import os
+from View.report_generator import ReportGenerator
+from View.stats import Stats
+from View.unit_cache import UnitCacheManager
 
 # Constantes
 BASE_TILE_WIDTH = 64
@@ -58,6 +61,10 @@ class PygameView:
         self.last_zoom_cache = 0.0
 
         self._initial_camera_setup()
+
+        self.report_generator = ReportGenerator(scenario.size_x, scenario.size_y)
+        self.stats = Stats()
+        self.unit_cache = UnitCacheManager()
 
     def _init_pygame(self):
         """Initialise Pygame avec les paramètres optimaux"""
@@ -207,6 +214,10 @@ class PygameView:
         elif event.key == pygame.K_KP_MINUS:
             self.simulation_controller.decrease_tick()
 
+
+        elif event.key == pygame.K_TAB:
+            self.report_generator.generate(self.unit_cache.units, self.stats)
+
         return True
 
     def _update_camera_movement(self, dt):
@@ -254,6 +265,9 @@ class PygameView:
 
     def update(self):
         """Met à jour l'affichage (sans déplacement caméra, géré dans run)"""
+        if hasattr(self, 'simulation_controller') and hasattr(self.simulation_controller, 'simulation'):
+            self.unit_cache.update(self.simulation_controller.simulation, self.stats)
+
         self.screen.fill(BG_COLOR)
 
         self._draw_ground()

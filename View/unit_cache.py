@@ -166,7 +166,7 @@ class UnitCacheManager:
                     # AvoidOrder / StayInFriendlySpaceOrder (target is reference point)
                     elif order_type == 'AvoidOrder':
                         type_units = getattr(order, 'typeUnits', UnitType.ALL)
-                        target = simulation.get_nearest_enemy_in_sight(unit, type_units=type_units)
+                        target = simulation.get_nearest_enemy_in_sight(unit, type_target=type_units)
                         if target:
                             break
                     elif order_type == 'StayInFriendlySpaceOrder':
