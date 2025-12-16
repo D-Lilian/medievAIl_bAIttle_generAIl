@@ -411,22 +411,26 @@ Uses plotnine, the Python equivalent of R's ggplot2, for publication-quality vis
 When using the `--stats` flag, the system performs comprehensive statistical analysis:
 
 **Lanchester Law Testing:**
+
 - Fits Linear, Quadratic, and Square Root models
 - Calculates R² for each model to determine best fit
 - Validates whether data matches theoretical expectations (Linear Law for melee, Square Law for ranged)
 
 **Hypothesis Testing:**
+
 - Independent t-tests comparing unit types
 - Mann-Whitney U tests (non-parametric alternative)
 - ANOVA for 3+ unit types
 - Chi-square tests for proportions
 
 **Effect Size Calculations:**
+
 - Cohen's d with interpretation (small/medium/large)
 - Eta-squared for ANOVA
 - 95% Confidence intervals
 
 **Advanced Visualizations Generated:**
+
 - `correlation_heatmap.png` - Cross-correlation matrix of all metrics
 - `boxplot.png` - Casualty distributions by unit type
 - `grouped_barplot.png` - Mean casualties comparison with error bars
