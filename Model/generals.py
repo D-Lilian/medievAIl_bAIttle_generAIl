@@ -27,8 +27,8 @@ class General:
     def __init__(self,
                  unitsA: list[Unit],
                  unitsB: list[Unit],
-                 sS,
                  sT,
+                 sS=None,
                  UnitSubscriptions: dict = None,
                  ):
 
