@@ -12,7 +12,7 @@ from Utils.logs import setup_logger
 from View.pygame_view import PygameView
 
 if __name__ == "__main__":
-    setup_logger(level="INFO", modules=["generals", "orders", ])
+    setup_logger(level="DEBUG", modules=["Model.generals", "Model.orders", "Model.strategies" ])
     simulation_controller = SimulationController.SimulationController()
     units_a = []
     units_b = []
