@@ -13,24 +13,23 @@ import multiprocessing
 import threading
 import copy
 
-def run_simulation_worker_multiprocessing(scenario, output, idx, tickSpeed=5):
+def run_simulation_worker_multiprocessing(scenario, output, idx, tick_speed=5):
     """
     @brief Function to run a simulation in a separate process for multiprocessing.
 
     @param scenario Scenario instance to simulate.
     @param output List to store the results of the simulation.
     @param idx Index of the simulation (for identification in output).
-    @param tickSpeed Tick speed for the simulation (controls simulation step rate).
     """
     scenario_copy = copy.deepcopy(scenario)
     sim = Simulation(
         scenario_copy,
-        tick_speed=tickSpeed,
+        tick_speed=tick_speed,
         unlocked=True,
         paused = False
     )
     result = sim.simulate()
-    output.append((idx, result))
+    output.append((idx, result, scenario_copy))
     return
 
 class SimulationController:
@@ -48,12 +47,12 @@ class SimulationController:
         self.isSimulationRunning = False
         self.result = None
 
-    def initialize_simulation(self, scenario, tick_speed=5, paused=False, unlocked=False):
+    def initialize_simulation(self, scenario, tick_speed=10, paused=False, unlocked=False):
         """
         @brief Initializes the simulation with the given scenario.
 
         @param scenario Scenario instance to simulate.
-        @param tick_speed Initial tick speed for the simulation.
+        @param tickSpeed Initial tick speed for the simulation.
         @param paused Initial paused state of the simulation.
         @param unlocked Initial unlocked state of the simulation.
         """
@@ -81,24 +80,16 @@ class SimulationController:
 
     def increase_tick(self):
         """
-        @brief Increases the tick speed of the simulation by 1.
+        @brief Increases the tick speed of the simulation.
         """
         self.simulation.tick_speed += 1
 
     def decrease_tick(self):
         """
-        @brief Decreases the tick speed of the simulation by 1, ensuring it doesn't go below 1.
+        @brief Decreases the tick speed of the simulation, ensuring it doesn't go below 1.
         """
         if self.simulation.tick_speed > 1:
             self.simulation.tick_speed -= 1
-
-    def set_tick_speed(self, value: int):
-        """
-        @brief Sets the tick speed of the simulation directly.
-        
-        @param value New tick speed value (minimum 1).
-        """
-        self.simulation.tick_speed = max(1, value)
 
     def get_tick_speed(self):
         """
@@ -140,5 +131,4 @@ class SimulationController:
 
         self.isSimulationRunning = False
         self.result = output
-
 

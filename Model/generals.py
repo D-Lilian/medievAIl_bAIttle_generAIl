@@ -13,11 +13,11 @@ from Model.strategies import *
 from Utils.errors import GameEngineError
 from Utils.logs import setup_logger, logger
 
-# ... The rest of your file remains the same
-
-
 # Le general ne se préocupe pas de savoir "ou" sont les troupes, il n'a pas logique de réprésentation "logique" du jeu
 # si il veut qu'une de ses troupes attaquent l'unité la plus proche, alors il le demande, il ne va pas aller chercher l'unité la plus proche
+
+def CreateGenerals(General1, General2):
+    pass
 
 class General:
     # Il lui faut un moyen de detecter les différents etats du jeu adverse:
@@ -89,10 +89,16 @@ class General:
         # N'est appelé qu'au début
         self.log.info(f"Beggining strategy")
         if(self.sS):
-            self.sS(self) # On passe le general en paramère de la stratégie
+            sS = self.sS() # On passe le general en paramère de la stratégie
+            sS.apply_order(self)
+
+        if self.sT == None:
+            self.log.debug("Aucune strategie pour les troupes")
+            return
 
         for unit in self.MyUnits:
-            self.sT[unit.unit_type].apply_order(self,unit)
+            if(self.sT.get(unit.unit_type) != None):
+                self.sT[unit.unit_type].apply_order(self,unit)
 
 ## On peut s'en servir pour appliquer des stratégies différentes
     def GetNumberOfEnemyType(self, unitType): # récuperer le nbre des unités d'un type spécifique
@@ -133,6 +139,9 @@ class General:
     def get_units_by_type(self, unit_type: UnitType ): #retourne toutes mes unites d’un type donné
             return [u for u in self.MyUnits if u.type == unit_type]
 
+    def GetRandomUnit(self): #retourne une unité aléatoire
+        from random import choice
+        return choice(self.MyUnits)
 
 
     def generate_squad(self, desired_units: dict):
@@ -145,7 +154,8 @@ class General:
                 available += [u for u in self.MyUnits if u.unit_type == unit_type and u.squad_id is None][:count]
 
             if len(available) != sum(desired_units.values()):
-                raise GameEngineError(f"Il ne reste plus d'unités disponibles de type {desired_units} but got {available}")
+                #raise GameEngineError(f"Il ne reste plus d'unités disponibles de type {desired_units} but got {available}")
+                self.log.error(f"Il ne reste plus d'unités disponibles de type {desired_units} but got {available}")
 
             # genere un id aleatoire pas deja uttilisé
             used_squad_ids = {unit.squad_id for unit in self.MyUnits if unit.squad_id is not None}

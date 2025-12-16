@@ -54,15 +54,16 @@ class Unit:
         self.unit_type = unit_type
         self.name = name
         self.hp = hp                        # <=0 si l'unite est morte
+        self.hp_max = hp #pour le graphique on aura besoin pour la barre de vie
         self.team = team                    # choix de l'equipe
         self.armor = armor                  # valeur de l'armure
         self.attack = attack                # nombre de degats infliges
-        self.damage_dealt = 0               # degats totaux infliges par l'unité (cumulés sur sa vie)
-        self.distance_moved = 0             # distance totale parcourue par l'unité
+        self.damage_dealt = 0               # degats infliges lors de la derniere attaque
         self.range = range                  # portee de l'unite
         self.size = size                    # taille de l'unite
         self.sight = sight                  # Distance champ de vision
         self.speed = speed                  # vitesse de deplacement
+        self.distance_moved = 0             # distance parcourue lors du dernier deplacement
         self.accuracy = accuracy            # precision de l'unite
         self.reload = reload                # avanncement du rechargement, peut attaquer a 0
         self.reload_time = reload_time      # temps pour recharger
@@ -156,7 +157,7 @@ class Pikeman(Unit):
                              "Spearmen": 0,
                              "Ignore Armor": 0
                          })
-        
+
 
 class LongSwordsman(Unit):
     def __init__(self, team, x, y):
@@ -174,7 +175,7 @@ class LongSwordsman(Unit):
                              "Base Pierce": 1,
                              "Infantry": 0,
                              "Ignore Armor": 0
-                         })        
+                         })
 
 
 class EliteSkirmisher(Unit):
@@ -219,7 +220,7 @@ class CavalryArcher(Unit):
                              "SCavalry": 0,
                              "Ignore Armor": 0
                          })
-        
+
 
 class Onager(Unit):
     def __init__(self, team, x, y):
@@ -237,7 +238,7 @@ class Onager(Unit):
                              "Siege Weapons": 0,
                              "Ignore Armor": 0
                          })
-        
+
 
 class LightCavalry(Unit):
     def __init__(self, team, x, y):

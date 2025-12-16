@@ -93,12 +93,12 @@ class AvoidOrder(Order):
         self.typeUnits = typeUnits
 
     def Try(self, simu):
-        target = simu.get_nearest_enemy_in_sight(self.unit, type_units=self.typeUnits)
+        target = simu.get_nearest_enemy_in_sight(self.unit, type_target=self.typeUnits)
         if target is None:
             return False # Il ya aucune enemy nearby
 
         if simu.is_in_reach(target, self.unit):
-            if simu.move_one_step_towards_dir(self.unit, target, 180):
+            if simu.move_one_step_from_target_in_direction(self.unit, target, 180):
                 return False
         else:
             return False
@@ -136,7 +136,7 @@ class MoveTowardEnemyWithSpecificAttribute(Order):
         current_target = None
 
         if self.fixed and self.target:
-            if simu.is_unit_still_alive(self.target):
+            if self.target > 0:
                 current_target = self.target
             else:
                 self.target = None
@@ -224,6 +224,7 @@ class AttackNearestTroupOmniscient(Order):
     def Try(self, simu):
         target = simu.get_nearest_enemy_unit(self.unit, type_target=self.typeTarget)
         if target is None:
+            self.log.debug(f"Aucune cible trouvée pour {self.unit}")
             return False
 
         if simu.is_in_reach(self.unit, target):
@@ -324,7 +325,7 @@ class OrderManager:
 
     def Add(self, order, priority, squad_id=None):
         if priority in self._by_priority:
-            raise ValueError("Priority already used")
+            raise ValueError(f"Priority already used {priority} by order {self._by_priority[priority].order}")
         node = _Node(order)
         self._by_priority[priority] = node
         self._by_order[order] = priority
