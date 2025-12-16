@@ -137,7 +137,7 @@ if __name__ == "__main__":
     # stats.print_stats()
 
     simulation_controller.initialize_simulation(scenario)
-    view = PygameView(scenario, simulation_controller, width=800, height=600)
+    view = PygameView(scenario, simulation_controller, width=1000, height=700)
 
     simulation_controller.start_simulation()
     view.run()

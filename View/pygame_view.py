@@ -2,66 +2,151 @@ import pygame
 import sys
 import os
 
-# Paramètres de base
+# Constantes
 BASE_TILE_WIDTH = 64
 BASE_TILE_HEIGHT = 32
 MAP_SIZE = 120
+MIN_ZOOM = 0.4
+MAX_ZOOM = 3.0
+ZOOM_STEP = 0.1
+FPS = 60
+
+# Couleurs
+BG_COLOR = (20, 20, 25)
+TEXT_COLOR = (255, 255, 255)
+GROUND_COLOR = (34, 139, 34)
+MINIMAP_BG = (20, 80, 20)
+MINIMAP_BORDER = (255, 255, 255)
+PAUSE_TEXT_COLOR = (255, 0, 0)
+
 
 class PygameView:
-    def __init__(self, scenario, simulation_controller, width=800, height=600):
-        # 1. Centrage de la fenêtre
-        os.environ['SDL_VIDEO_CENTERED'] = '1'
-        
-        pygame.init()
+    def __init__(self, scenario, simulation_controller, width=1600, height=1200):
+        self._init_pygame()
+        self._init_window(width, height)
+
         self.scenario = scenario
         self.simulation_controller = simulation_controller
 
-        self.height = height
-        self.width = width
-        self.screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
-        pygame.display.set_caption("MedievAIl Battle - 2.5D (Sprites Heroes II)")
+        self.zoom_level = 0.8
+        self.cam_x = 0
+        self.cam_y = 0
+        self.paused = False
 
-        # 2. FORCE FOCUS
+        self.dragging = False
+        self.last_mouse_pos = (0, 0)
+
+        self.last_unit_positions = {}
+        self.flipped_units = {}
+
+        self.last_avg_x = 0
+        self.last_avg_y = 0
+
+        self.camera_velocity = [0, 0]
+        self.camera_speed = 300
+        self.show_hud = True
+        self.show_minimap = True
+
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.SysFont("Arial", 14, bold=True)
+
+        self.sprites = {}
+        self.ground_tile = None
+        self._load_resources()
+
+        self.ground_cache = {}
+        self.last_zoom_cache = 0.0
+
+        self._initial_camera_setup()
+
+    def _init_pygame(self):
+        """Initialise Pygame avec les paramètres optimaux"""
+        os.environ['SDL_VIDEO_CENTERED'] = '1'
+        pygame.init()
+
+        pygame.event.set_blocked([pygame.ACTIVEEVENT, pygame.JOYAXISMOTION])
+
+    def _init_window(self, width, height):
+        """Initialise la fenêtre et force le focus"""
+        self.width = width
+        self.height = height
+        self.screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
+        pygame.display.set_caption("MedievAIl Battle - 2.5D")
+
         if sys.platform == 'win32':
             try:
                 import ctypes
                 hwnd = pygame.display.get_wm_info()['window']
                 ctypes.windll.user32.ShowWindow(hwnd, 9)
                 ctypes.windll.user32.SetForegroundWindow(hwnd)
-            except: pass
+            except Exception:
+                pass
 
-        self.BG_COLOR = (20, 20, 25) 
-        self.TEXT_COLOR = (255, 255, 255)
-        
-        # Zoom et Caméra
-        self.zoom_level = 0.8 # Un peu plus zoomé pour voir les sprites
-        self.cam_x = 0
-        self.cam_y = 0
-        
-        # Mémoire pour l'effet miroir (Flip)
-        # On stocke la dernière position X pour savoir si on va à gauche ou droite
-        self.last_unit_positions = {} 
-        self.flipped_units = {} # Mémorise qui regarde à gauche
+    def _load_resources(self):
+        """Charge toutes les ressources graphiques"""
+        self._load_ground()
+        self._load_unit_sprites()
 
-        # Centrage initial
-        if scenario.units:
-            avg_x = sum(u.x for u in scenario.units) / len(scenario.units)
-            avg_y = sum(u.y for u in scenario.units) / len(scenario.units)
+    def _load_unit_sprites(self):
+        """Charge les sprites BMP des unités avec recoloration par équipe"""
+        from Model.units import UnitType
+
+        unit_types = [UnitType.KNIGHT, UnitType.PIKEMAN, UnitType.CROSSBOWMAN]
+
+        for unit_type in unit_types:
+            sprite_path = os.path.join("assets", f"{unit_type.value}stand001.bmp")
+
+            if os.path.exists(sprite_path):
+                try:
+                    sprite_base = pygame.image.load(sprite_path).convert()
+                    sprite_base.set_colorkey((255, 0, 255))
+                    self.sprites[unit_type] = {}
+                    self.sprites[unit_type]["B"] = sprite_base
+
+                    sprite_red = self._recolor_sprite(sprite_base)
+                    sprite_red.set_colorkey((255, 0, 255))
+                    self.sprites[unit_type]["A"] = sprite_red
+
+                    print(f"✅ Chargé: {sprite_path} (A: rouge, B: bleu)")
+                except pygame.error as e:
+                    print(f"⚠️ Erreur chargement {sprite_path}: {e}")
+                    self.sprites[unit_type] = None
+            else:
+                print(f"⚠️ Sprite manquant: {sprite_path}")
+                self.sprites[unit_type] = None
+
+    def _load_ground(self):
+        """Charge la texture du sol"""
+        ground_path = os.path.join("assets", "ground.png")
+        if os.path.exists(ground_path):
+            try:
+                img = pygame.image.load(ground_path).convert_alpha()
+                self.ground_tile = pygame.transform.scale(
+                    img, (BASE_TILE_WIDTH, BASE_TILE_HEIGHT)
+                )
+            except pygame.error as e:
+                print(f"⚠️ Erreur chargement sol: {e}")
+                self.ground_tile = None
+
+    def _initial_camera_setup(self):
+        """Centre la caméra sur le champ de bataille"""
+        if self.scenario.units:
+            avg_x = sum(u.x for u in self.scenario.units) / len(self.scenario.units)
+            avg_y = sum(u.y for u in self.scenario.units) / len(self.scenario.units)
             self.center_camera_on(avg_x, avg_y)
         else:
-            self.center_camera_on(60, 60)
-        
-        self.dragging = False
-        self.last_mouse_pos = (0, 0)
-        self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont("Arial", 14, bold=True)
-        self.paused = False
-        
-        self.sprites = {}
-        self.ground_tile = None
-        self.load_sprites()
+            self.center_camera_on(MAP_SIZE / 2, MAP_SIZE / 2)
+
+    def cart_to_iso(self, x, y):
+        """Convertit coordonnées cartésiennes en isométriques"""
+        tile_w = BASE_TILE_WIDTH * self.zoom_level
+        tile_h = BASE_TILE_HEIGHT * self.zoom_level
+        iso_x = (x - y) * (tile_w / 2)
+        iso_y = (x + y) * (tile_h / 2)
+        return iso_x + self.cam_x, iso_y + self.cam_y
 
     def center_camera_on(self, target_x, target_y):
+        """Centre la caméra sur une position"""
         tile_w = BASE_TILE_WIDTH * self.zoom_level
         tile_h = BASE_TILE_HEIGHT * self.zoom_level
         iso_x = (target_x - target_y) * (tile_w / 2)
@@ -71,238 +156,395 @@ class PygameView:
         self.cam_x = (screen_w / 2) - iso_x
         self.cam_y = (screen_h / 2) - iso_y
 
-    def load_sprites(self):
-        # Charge le sol
-        ground_path = os.path.join("assets", "ground.png")
-        if os.path.exists(ground_path):
-            try:
-                img = pygame.image.load(ground_path).convert_alpha()
-                self.ground_tile = pygame.transform.scale(img, (BASE_TILE_WIDTH, BASE_TILE_HEIGHT))
-            except: self.ground_tile = None
-        
-        # Charge les unités
-        unit_types = ["Knight", "Pikeman", "Crossbowman"]
-        teams = {"A": (0, 200, 255), "B": (255, 50, 50)}
-
-        for u_type in unit_types:
-            self.sprites[u_type] = {}
-            for team_name, color in teams.items():
-                path = os.path.join("assets", f"{u_type}_{team_name}.png")
-                if os.path.exists(path):
-                    self.sprites[u_type][team_name] = pygame.image.load(path).convert_alpha()
-                    print(f"✅ Chargé : {path}")
-                else:
-                    # Placeholder (Carré simple) si pas d'image
-                    s = pygame.Surface((48, 48), pygame.SRCALPHA)
-                    pygame.draw.ellipse(s, (0,0,0, 100), (12, 36, 24, 12))
-                    pygame.draw.rect(s, color, (16, 10, 16, 30))
-                    self.sprites[u_type][team_name] = s
-
-    def cart_to_iso(self, x, y):
-        tile_w = BASE_TILE_WIDTH * self.zoom_level
-        tile_h = BASE_TILE_HEIGHT * self.zoom_level
-        iso_x = (x - y) * (tile_w / 2)
-        iso_y = (x + y) * (tile_h / 2)
-        return iso_x + self.cam_x, iso_y + self.cam_y
-
     def handle_input(self):
-        events = pygame.event.get()
-        mouse_pos = pygame.mouse.get_pos()
-        for event in events:
+        """Gère tous les événements utilisateur"""
+        for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                os._exit(0)
                 return False
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                if not self._handle_keydown(event):
                     return False
-                if event.key == pygame.K_p:
-                    self.paused = not self.paused
-                    self.simulation_controller.toggle_pause()
-                if event.key == pygame.K_F9: return "SWITCH"
-                if event.key == pygame.K_c and hasattr(self, 'last_avg_x'):
-                    self.center_camera_on(self.last_avg_x, self.last_avg_y)
-                if event.key == pygame.K_KP_PLUS :
-                    self.simulation_controller.increase_tick()
-                if event.key == pygame.K_KP_MINUS :
-                    self.simulation_controller.decrease_tick()
 
-            if event.type == pygame.MOUSEWHEEL:
-                if event.y > 0: self.zoom_level = min(3.0, self.zoom_level + 0.1)
-                else: self.zoom_level = max(0.4, self.zoom_level - 0.1)
+            elif event.type == pygame.MOUSEWHEEL:
+                self._handle_mousewheel(event)
 
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1: self.dragging = True; self.last_mouse_pos = mouse_pos
-            if event.type == pygame.MOUSEBUTTONUP:
-                if event.button == 1: self.dragging = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                self._handle_mousedown(event)
+
+            elif event.type == pygame.MOUSEBUTTONUP:
+                self._handle_mouseup(event)
 
         if self.dragging:
-            dx = mouse_pos[0] - self.last_mouse_pos[0]
-            dy = mouse_pos[1] - self.last_mouse_pos[1]
-            self.cam_x += dx; self.cam_y += dy
-            self.last_mouse_pos = mouse_pos
+            self._update_camera_drag()
+
         return True
 
+    def _handle_keydown(self, event):
+        """Traite les événements clavier"""
+        if event.key == pygame.K_ESCAPE:
+            return False
+
+        elif event.key == pygame.K_p:
+            self.paused = not self.paused
+            self.simulation_controller.toggle_pause()
+
+        elif event.key == pygame.K_F9:
+            return "SWITCH"
+
+        elif event.key == pygame.K_F4:
+            self.show_hud = not self.show_hud
+
+        elif event.key == pygame.K_F5:
+            self.show_minimap = not self.show_minimap
+
+        elif event.key == pygame.K_c:
+            self.center_camera_on(self.last_avg_x, self.last_avg_y)
+
+        elif event.key == pygame.K_KP_PLUS:
+            self.simulation_controller.increase_tick()
+
+        elif event.key == pygame.K_KP_MINUS:
+            self.simulation_controller.decrease_tick()
+
+        return True
+
+    def _update_camera_movement(self, dt):
+        """Met à jour le déplacement de la caméra selon les touches pressées"""
+        keys = pygame.key.get_pressed()
+
+        speed_multiplier = 2.5 if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] else 1.0
+        speed = self.camera_speed * dt * speed_multiplier
+
+        if keys[pygame.K_z] or keys[pygame.K_UP]:
+            self.cam_y += speed
+        if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+            self.cam_y -= speed
+        if keys[pygame.K_q] or keys[pygame.K_LEFT]:
+            self.cam_x += speed
+        if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+            self.cam_x -= speed
+
+    def _handle_mousewheel(self, event):
+        """Gère le zoom avec la molette"""
+        if event.y > 0:
+            self.zoom_level = min(MAX_ZOOM, self.zoom_level + ZOOM_STEP)
+        else:
+            self.zoom_level = max(MIN_ZOOM, self.zoom_level - ZOOM_STEP)
+
+    def _handle_mousedown(self, event):
+        """Démarre le drag de la caméra"""
+        if event.button == 1:
+            self.dragging = True
+            self.last_mouse_pos = event.pos
+
+    def _handle_mouseup(self, event):
+        """Arrête le drag de la caméra"""
+        if event.button == 1:
+            self.dragging = False
+
+    def _update_camera_drag(self):
+        """Met à jour la position de la caméra pendant le drag"""
+        mouse_pos = pygame.mouse.get_pos()
+        dx = mouse_pos[0] - self.last_mouse_pos[0]
+        dy = mouse_pos[1] - self.last_mouse_pos[1]
+        self.cam_x += dx
+        self.cam_y += dy
+        self.last_mouse_pos = mouse_pos
+
     def update(self):
-        self.screen.fill(self.BG_COLOR)
+        """Met à jour l'affichage (sans déplacement caméra, géré dans run)"""
+        self.screen.fill(BG_COLOR)
 
-        curr_w = int(BASE_TILE_WIDTH * self.zoom_level) + 1
-        curr_h = int(BASE_TILE_HEIGHT * self.zoom_level) + 1
-        
-        scaled_ground = None
-        if self.ground_tile:
-            scaled_ground = pygame.transform.scale(self.ground_tile, (curr_w, curr_h))
+        self._draw_ground()
+        self._draw_units()
 
-        # --- DESSIN DU SOL ---
-        p1 = self.cart_to_iso(0, 0); p2 = self.cart_to_iso(MAP_SIZE, 0)
-        p3 = self.cart_to_iso(MAP_SIZE, MAP_SIZE); p4 = self.cart_to_iso(0, MAP_SIZE)
-        pygame.draw.polygon(self.screen, (34, 139, 34), [p1, p2, p3, p4])
+        if self.show_minimap:
+            self._draw_minimap()
 
-        if self.ground_tile and self.zoom_level > 0.15:
-            half_w = curr_w // 2
-            start_x = 0; end_x = MAP_SIZE; start_y = 0; end_y = MAP_SIZE
-            for x in range(start_x, end_x): 
-                for y in range(start_y, end_y):
-                    sx, sy = self.cart_to_iso(x, y)
-                    if -100 < sx < self.width + 100 and -100 < sy < self.height + 100:
-                        self.screen.blit(scaled_ground, (sx - half_w, sy))
-
-        # --- DESSIN DES UNITÉS ---
-        visible_units = [u for u in self.scenario.units if u.hp > 0]
-        visible_units.sort(key=lambda u: u.x + u.y)
-        
-        if visible_units:
-            self.last_avg_x = sum(u.x for u in visible_units) / len(visible_units)
-            self.last_avg_y = sum(u.y for u in visible_units) / len(visible_units)
-
-        for unit in visible_units:
-            ix, iy = self.cart_to_iso(unit.x, unit.y)
-            
-            # Culling (Si hors écran, on ignore)
-            if -100 < ix < self.width + 100 and -100 < iy < self.height + 100:
-                try: 
-                    sprite_orig = self.sprites[unit.name][unit.team]
-                except: 
-                    # Fallback sur le Piquier si l'image Knight/Crossbowman manque
-                    sprite_orig = self.sprites["Pikeman"][unit.team]
-
-                # --- 1. LOGIQUE MIROIR (FLIP) ---
-                # On compare la position X actuelle avec la précédente
-                should_flip = self.flipped_units.get(unit, False) # Valeur par défaut
-                
-                if unit in self.last_unit_positions:
-                    last_x = self.last_unit_positions[unit]
-                    if unit.x < last_x - 0.01: # Va vers la gauche
-                        should_flip = True
-                    elif unit.x > last_x + 0.01: # Va vers la droite
-                        should_flip = False
-                
-                # Mémoriser pour la prochaine fois
-                self.last_unit_positions[unit] = unit.x
-                self.flipped_units[unit] = should_flip
-
-                # Si besoin, on retourne l'image
-                if should_flip:
-                    sprite_orig = pygame.transform.flip(sprite_orig, True, False)
-
-                # --- 2. MISE A L'ÉCHELLE ---
-                w, h = sprite_orig.get_size()
-                sw = int(w * self.zoom_level); sh = int(h * self.zoom_level)
-                sprite = pygame.transform.scale(sprite_orig, (sw, sh))
-                
-                # --- 3. AFFICHAGE ---
-                offset_y = (curr_h / 2)
-                rect = sprite.get_rect(midbottom=(ix, iy + offset_y))
-                self.screen.blit(sprite, rect)
-
-                # --- 4. BARRE DE VIE DYNAMIQUE ---
-                if unit.hp < unit.hp_max:
-                    hp_pct = unit.hp / unit.hp_max
-                    
-                    # Couleur dynamique
-                    if hp_pct > 0.5: bar_color = (0, 255, 0)   # Vert
-                    elif hp_pct > 0.25: bar_color = (255, 200, 0) # Jaune
-                    else: bar_color = (255, 0, 0)             # Rouge
-
-                    bw = 32 * self.zoom_level
-                    bh = 4 * self.zoom_level
-                    
-                    # Fond noir
-                    pygame.draw.rect(self.screen, (0,0,0), (rect.centerx - bw/2, rect.top - bh - 4, bw, bh))
-                    # Vie
-                    pygame.draw.rect(self.screen, bar_color, (rect.centerx - bw/2, rect.top - bh - 4, bw * hp_pct, bh))
-
-        # --- DESSIN HUD & MINIMAP ---
-        self.draw_minimap()
-
-        fps = int(self.clock.get_fps())
-        t1 = self.font.render(f"FPS: {fps} | "
-                              f"Zoom: {int(self.zoom_level*100)}% | "
-                              f"Tick speed: {self.simulation_controller.get_tick_speed()} | "
-                              f"Tick: {self.simulation_controller.get_tick()}", True, (255,255,255))
-        self.screen.blit(t1, (10, 10))
+        if self.show_hud:
+            self._draw_hud()
+            self._draw_controls()
 
         pygame.display.flip()
         return True
 
-    # --- MINIMAP (Code précédent inchangé) ---
-    def draw_minimap(self):
-        minimap_size = 200
-        margin = 20
+    def _draw_ground(self):
+        """Dessine le sol avec culling et cache optimisé"""
+        p1 = self.cart_to_iso(0, 0)
+        p2 = self.cart_to_iso(MAP_SIZE, 0)
+        p3 = self.cart_to_iso(MAP_SIZE, MAP_SIZE)
+        p4 = self.cart_to_iso(0, MAP_SIZE)
+        pygame.draw.polygon(self.screen, GROUND_COLOR, [p1, p2, p3, p4])
+
+        if not self.ground_tile or self.zoom_level < 0.15:
+            return
+
+        curr_w = int(BASE_TILE_WIDTH * self.zoom_level) + 1
+        curr_h = int(BASE_TILE_HEIGHT * self.zoom_level) + 1
+
+        scaled_ground = self._get_cached_ground_tile(curr_w, curr_h)
+        half_w = curr_w // 2
+        screen_w, screen_h = self.screen.get_size()
+        margin = 50
+
+        for x in range(MAP_SIZE):
+            for y in range(MAP_SIZE):
+                sx, sy = self.cart_to_iso(x, y)
+                if (-curr_w - margin < sx < screen_w + margin and
+                        -curr_h - margin < sy < screen_h + margin):
+                    self.screen.blit(scaled_ground, (sx - half_w, sy))
+
+    def _get_cached_ground_tile(self, width, height):
+        """Récupère ou crée une tuile de sol mise en cache selon le zoom"""
+        zoom_key = round(self.zoom_level, 2)
+
+        if zoom_key != self.last_zoom_cache:
+            self.ground_cache = {}
+            self.last_zoom_cache = zoom_key
+
+        if zoom_key not in self.ground_cache:
+            self.ground_cache[zoom_key] = pygame.transform.smoothscale(
+                self.ground_tile, (width, height)
+            )
+
+        return self.ground_cache[zoom_key]
+
+    def _draw_units(self):
+        """Dessine toutes les unités vivantes"""
+        visible_units = [u for u in self.scenario.units if u.hp > 0]
+        visible_units.sort(key=lambda u: u.x + u.y)
+
+        if visible_units:
+            self.last_avg_x = sum(u.x for u in visible_units) / len(visible_units)
+            self.last_avg_y = sum(u.y for u in visible_units) / len(visible_units)
+
+        curr_h = int(BASE_TILE_HEIGHT * self.zoom_level) + 1
+
+        for unit in visible_units:
+            ix, iy = self.cart_to_iso(unit.x, unit.y)
+
+            if not (-100 < ix < self.width + 100 and -100 < iy < self.height + 100):
+                continue
+
+            self._draw_unit(unit, ix, iy, curr_h)
+
+    def _draw_unit(self, unit, screen_x, screen_y, tile_height):
+        """Dessine une unité avec sprite BMP et sa barre de vie"""
+        sprite_dict = self.sprites.get(unit.unit_type)
+
+        sprite = None
+        if sprite_dict and isinstance(sprite_dict, dict):
+            sprite = sprite_dict.get(unit.team)
+
+        if sprite:
+            scaled_width = int(sprite.get_width() * self.zoom_level)
+            scaled_height = int(sprite.get_height() * self.zoom_level)
+
+            if scaled_width > 0 and scaled_height > 0:
+                sprite_scaled = pygame.transform.scale(sprite, (scaled_width, scaled_height))
+                offset_y = tile_height / 2
+                sprite_rect = sprite_scaled.get_rect()
+                sprite_rect.midbottom = (screen_x, screen_y + offset_y)
+                self.screen.blit(sprite_scaled, sprite_rect)
+
+                if unit.hp < unit.hp_max:
+                    self._draw_health_bar(unit, sprite_rect)
+        else:
+            color = (255, 0, 0) if unit.team == "A" else (0, 150, 255)
+            rect_width = int(20 * self.zoom_level)
+            rect_height = int(30 * self.zoom_level)
+            offset_y = tile_height / 2
+            rect = pygame.Rect(0, 0, rect_width, rect_height)
+            rect.midbottom = (screen_x, screen_y + offset_y)
+            pygame.draw.rect(self.screen, color, rect)
+            pygame.draw.rect(self.screen, (0, 0, 0), rect, 1)
+
+            if unit.hp < unit.hp_max:
+                self._draw_health_bar(unit, rect)
+
+    def _recolor_sprite(self, sprite):
+        """Remplace une couleur par une autre dans un sprite en préservant le magenta"""
+        sprite_copy = sprite.copy()
+        pixels = pygame.surfarray.pixels3d(sprite_copy)
+        r, g, b = pixels[:, :, 0], pixels[:, :, 1], pixels[:, :, 2]
+
+        is_blue = (
+                (b > r + 30) &
+                (b > g + 30) &
+                (b > 100) &
+                ~((r > 250) & (g < 10) & (b > 250))
+        )
+
+        if is_blue.any():
+            blue_intensity = b[is_blue].astype(float) / 255.0
+
+            pixels[is_blue, 0] = (blue_intensity * 220).astype('uint8')
+            pixels[is_blue, 1] = (b[is_blue] * 0.15).astype('uint8')
+            pixels[is_blue, 2] = (b[is_blue] * 0.15).astype('uint8')
+
+        del pixels
+        return sprite_copy
+
+    def _draw_health_bar(self, unit, rect):
+        """Dessine la barre de vie d'une unité"""
+        hp_pct = unit.hp / unit.hp_max
+
+        if hp_pct > 0.5:
+            bar_color = (0, 255, 0)
+        elif hp_pct > 0.25:
+            bar_color = (255, 200, 0)
+        else:
+            bar_color = (255, 0, 0)
+
+        bar_width = 32 * self.zoom_level
+        bar_height = 4 * self.zoom_level
+        bar_x = rect.centerx - bar_width / 2
+        bar_y = rect.top - bar_height - 4
+
+        pygame.draw.rect(self.screen, (0, 0, 0), (bar_x, bar_y, bar_width, bar_height))
+        pygame.draw.rect(self.screen, bar_color, (bar_x, bar_y, bar_width * hp_pct, bar_height))
+
+    def _draw_minimap(self):
+        """Dessine la minimap"""
+        minimap_size = 150
+        margin = 40
+
         minimap_surf = pygame.Surface((minimap_size, minimap_size))
-        minimap_surf.fill((20, 80, 20)) # Vert sombre
-        
+        minimap_surf.fill(MINIMAP_BG)
+
         ratio = minimap_size / MAP_SIZE
+
+        # Dessine les unités
         for unit in self.scenario.units:
-            if unit.hp <= 0: continue
+            if unit.hp <= 0:
+                continue
+
             mx = int(unit.x * ratio)
             my = int(unit.y * ratio)
             color = (0, 255, 255) if unit.team == "A" else (255, 50, 50)
             pygame.draw.rect(minimap_surf, color, (mx, my, 3, 3))
 
-        # Cadre caméra
         view_cx = self.last_avg_x * ratio
         view_cy = self.last_avg_y * ratio
-        rect_size = (40 / self.zoom_level) 
-        r = pygame.Rect(0, 0, rect_size, rect_size)
-        r.center = (view_cx, view_cy)
-        pygame.draw.rect(minimap_surf, (255, 255, 255), r, 1)
+        rect_size = 40 / self.zoom_level
+        camera_rect = pygame.Rect(0, 0, rect_size, rect_size)
+        camera_rect.center = (view_cx, view_cy)
+        pygame.draw.rect(minimap_surf, MINIMAP_BORDER, camera_rect, 1)
 
-        # Affichage écran
-        dest_rect = pygame.Rect(self.width - minimap_size - margin, self.height - minimap_size - margin, minimap_size, minimap_size)
-        
-        # Interaction Souris Minimap (Réimplémentation rapide ici si handle_input ne le fait pas)
-        mouse_pos = pygame.mouse.get_pos()
-        if pygame.mouse.get_pressed()[0] and dest_rect.collidepoint(mouse_pos):
-             rel_x = (mouse_pos[0] - dest_rect.x) / minimap_size
-             rel_y = (mouse_pos[1] - dest_rect.y) / minimap_size
-             self.center_camera_on(rel_x * MAP_SIZE, rel_y * MAP_SIZE)
+        dest_rect = pygame.Rect(
+            self.width - minimap_size - margin,
+            self.height - minimap_size - margin,
+            minimap_size,
+            minimap_size
+        )
 
-        pygame.draw.rect(self.screen, (255, 255, 255), (dest_rect.x-2, dest_rect.y-2, dest_rect.w+4, dest_rect.h+4), 2)
+        self._handle_minimap_click(dest_rect, ratio)
+
+        pygame.draw.rect(self.screen, MINIMAP_BORDER, dest_rect.inflate(4, 4), 2)
         self.screen.blit(minimap_surf, dest_rect)
 
+    def _handle_minimap_click(self, minimap_rect, ratio):
+        """Gère le clic sur la minimap pour centrer la caméra"""
+        mouse_pos = pygame.mouse.get_pos()
+        if pygame.mouse.get_pressed()[0] and minimap_rect.collidepoint(mouse_pos):
+            rel_x = (mouse_pos[0] - minimap_rect.x) / minimap_rect.width
+            rel_y = (mouse_pos[1] - minimap_rect.y) / minimap_rect.height
+            self.center_camera_on(rel_x * MAP_SIZE, rel_y * MAP_SIZE)
+
+    def _draw_hud(self):
+        """Dessine l'interface utilisateur"""
+        fps = int(self.clock.get_fps())
+
+        alive_team_a = sum(1 for u in self.scenario.units if u.hp > 0 and u.team == "A")
+        alive_team_b = sum(1 for u in self.scenario.units if u.hp > 0 and u.team == "B")
+        total_alive = alive_team_a + alive_team_b
+
+        hud_text = (
+            f"FPS: {fps} | "
+            f"Zoom: {int(self.zoom_level * 100)}% | "
+            f"Tick speed: {self.simulation_controller.get_tick_speed()} | "
+            f"Tick: {self.simulation_controller.get_tick()} | "
+            f"Unités: {total_alive} (A:{alive_team_a} | B:{alive_team_b})"
+        )
+
+        text_surf = self.font.render(hud_text, True, TEXT_COLOR)
+        self.screen.blit(text_surf, (10, 10))
+
+        if self.paused:
+            pause_surf = self.font.render(
+                "PAUSED - Appuyez sur 'P' pour reprendre",
+                True,
+                PAUSE_TEXT_COLOR
+            )
+            screen_w = self.screen.get_size()[0]
+            pause_x = screen_w // 2 - pause_surf.get_width() // 2
+            self.screen.blit(pause_surf, (pause_x, 10))
+
+    def _draw_controls(self):
+        """Affiche les instructions de contrôle en bas de l'écran"""
+        controls = [
+            "ZQSD/Flèches: Déplacer caméra",
+            "Shift: Accélérer",
+            "Molette: Zoom",
+            "Clic: Drag",
+            "C: Centrer",
+            "P: Pause",
+            "+/-: Vitesse",
+            "F4: HUD",
+            "F5: Minimap",
+            "Échap: Quitter"
+        ]
+
+        screen_w, screen_h = self.screen.get_size()
+        control_height = 30
+        bg_rect = pygame.Rect(0, screen_h - control_height, screen_w, control_height)
+        bg_surface = pygame.Surface((screen_w, control_height), pygame.SRCALPHA)
+        self.screen.blit(bg_surface, bg_rect)
+
+        control_text = " | ".join(controls)
+        text_surf = self.font.render(control_text, True, TEXT_COLOR)
+        text_x = screen_w // 2 - text_surf.get_width() // 2
+        text_y = screen_h - control_height // 2 - text_surf.get_height() // 2
+        self.screen.blit(text_surf, (text_x, text_y))
+
     def run(self):
+        """Boucle principale"""
         running = True
+
         while running:
-            self.clock.tick(60)
-            res = self.handle_input()
-            if res is False: return False
-            if res == "SWITCH": return "SWITCH"
+            dt = self.clock.tick(FPS) / 1000.0
+
+            result = self.handle_input()
+            if result is False:
+                return False
+            if result == "SWITCH":
+                return "SWITCH"
+
+            self._update_camera_movement(dt)
+
             if not self.paused:
                 result = self.update()
                 if result is False:
-                    running = False
-                elif result == "SWITCH":
-                    running = False
+                    return False
+                if result == "SWITCH":
                     return "SWITCH"
             else:
-                # Affiche juste le texte "PAUSED" centré horizontalement à partir de la taille réelle de la fenêtre
-                pause_text = self.font.render("PAUSED - Appuyez sur 'P' pour reprendre", True, (255, 0, 0))
-                screen_w, _ = self.screen.get_size()
-                self.screen.blit(pause_text, (screen_w // 2 - pause_text.get_width() // 2, 10))
+                self.screen.fill(BG_COLOR)
+                self._draw_ground()
+                self._draw_units()
+
+                if self.show_minimap:
+                    self._draw_minimap()
+
+                if self.show_hud:
+                    self._draw_hud()
+                    self._draw_controls()
+
                 pygame.display.flip()
-        pygame.quit()
-        sys.exit()
+
+        return False
 
     def cleanup(self):
+        """Nettoie les ressources Pygame"""
         pygame.quit()
