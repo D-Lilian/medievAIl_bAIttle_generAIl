@@ -12,6 +12,7 @@ The project follows **MVC** architecture with **SOLID** principles:
 ├── Controller/          # Orchestration layer
 │   ├── simulation_controller.py
 │   ├── terminal_controller.py
+│   ├── pygame_controller.py
 │   ├── tournament_controller.py
 │   └── plot_controller.py
 ├── Model/               # Domain logic
@@ -23,6 +24,7 @@ The project follows **MVC** architecture with **SOLID** principles:
 │   └── orders.py
 ├── View/                # Visualization
 │   ├── terminal_view.py
+│   ├── pygame_view.py
 │   └── renderers/
 ├── Plotting/            # Data visualization
 │   ├── base.py          # Generic plotters

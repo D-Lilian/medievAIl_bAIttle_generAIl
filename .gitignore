@@ -9,6 +9,7 @@ __pycache__/
 # Windows venv artifacts (should not be in repo)
 Scripts/
 Include/
+pyvenv.cfg
 
 # Distribution / packaging
 .Python
