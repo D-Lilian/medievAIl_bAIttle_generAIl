@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+@file simulation_tests.py
+@brief Simulation Tests - Unit tests for Simulation
+
+@details
+Tests the core simulation logic, including unit movement, combat,
+and game loop progression.
+
+"""
 import unittest
 from Model.simulation import Simulation
 from Model.scenario import Scenario

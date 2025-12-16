@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battle Report - {timestamp}</title>
+    <link rel="stylesheet" href="../Utils/battle_report.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Battle Report</h1>
+            <p>Generated on {generation_datetime}</p>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-value">{simulation_time}s</span>
+                <span class="stat-label">Simulation Time</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" style="color: var(--team1-color)">{team1_units}</span>
+                <span class="stat-label">Team 1 Units</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" style="color: var(--team2-color)">{team2_units}</span>
+                <span class="stat-label">Team 2 Units</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value">{total_units}</span>
+                <span class="stat-label">Total Active</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="unitSearch" placeholder="Search units (ID, Type, Status)..." onkeyup="filterUnits()">
+            <div class="buttons">
+                <button class="details-toggle" onclick="toggleDetails(true)">Expand All</button>
+                <button class="details-toggle" onclick="toggleDetails(false)">Collapse All</button>
+            </div>
+        </div>
+
+        <section class="map-section">
+            <details class="map-details">
+                <summary>Battle Map</summary>
+                <div class="map-wrapper">
+                    <div id="battleMap" class="battle-map-outer">{battle_map}</div>
+                </div>
+            </details>
+        </section>
+
+        {breakdown_section}
+
+        <div class="teams-container">
+            {team_sections}
+        </div>
+
+        <div class="legend">
+            <h3>Unit Legend</h3>
+            <ul>
+                {legend_items}
+            </ul>
+        </div>
+
+        <button id="backToTop" title="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+        <footer>
+            <p style="color:var(--secondary-color);font-size:0.95rem;">MedievAIl Battle Simulator</p>
+        </footer>
+    </div>
+
+    <script>
+        // Show/hide back to top button
+        window.addEventListener('scroll', function() {
+            const btn = document.getElementById('backToTop');
+            if (!btn) return;
+            if (window.scrollY > 200) btn.style.display = 'flex';
+            else btn.style.display = 'none';
+        });
+        let selectedUnitId = null;
+        let selectedTargetId = null;
+
+        function filterUnits() {
+            const input = document.getElementById('unitSearch');
+            const filter = input.value.toUpperCase();
+            const units = document.getElementsByClassName('unit');
+
+            for (let i = 0; i < units.length; i++) {
+                const txtValue = units[i].textContent || units[i].innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    units[i].style.display = "";
+                } else {
+                    units[i].style.display = "none";
+                }
+            }
+        }
+
+        function toggleDetails(open) {
+            const details = document.getElementsByTagName('details');
+            for (let i = 0; i < details.length; i++) {
+                if (open) {
+                    details[i].setAttribute('open', 'true');
+                } else {
+                    details[i].removeAttribute('open');
+                }
+            }
+        }
+
+        function selectUnit(unitId) {
+            // Remove previous selection
+            if (selectedUnitId) {
+                const prevUnit = document.getElementById(selectedUnitId);
+                const prevDot = document.querySelector(`[data-unit-id="${selectedUnitId}"]`);
+                if (prevUnit) prevUnit.classList.remove('selected');
+                if (prevDot) prevDot.classList.remove('selected');
+            }
+            // Clear previous target highlight
+            if (selectedTargetId) {
+                const prevTarget = document.getElementById(selectedTargetId);
+                const prevTargetDot = document.querySelector(`[data-unit-id="${selectedTargetId}"]`);
+                if (prevTarget) prevTarget.classList.remove('selected');
+                if (prevTargetDot) prevTargetDot.classList.remove('selected');
+                selectedTargetId = null;
+            }
+
+            // Set new selection
+            selectedUnitId = unitId;
+            const unit = document.getElementById(unitId);
+            const dot = document.querySelector(`[data-unit-id="${unitId}"]`);
+            
+            if (unit) {
+                unit.classList.add('selected');
+                unit.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Expand the parent details if collapsed
+                const details = unit.closest('details');
+                if (details && !details.hasAttribute('open')) {
+                    details.setAttribute('open', 'true');
+                }
+                // If this unit has a target, highlight it too
+                const targetId = unit.dataset.targetId;
+                if (targetId) {
+                    const targetEl = document.getElementById(targetId);
+                    const targetDot = document.querySelector(`[data-unit-id="${targetId}"]`);
+                    if (targetEl) targetEl.classList.add('selected');
+                    if (targetDot) targetDot.classList.add('selected');
+                    selectedTargetId = targetId;
+                }
+            }
+            
+            if (dot) {
+                dot.classList.add('selected');
+            }
+        }
+
+        // Add click handlers to unit cards
+        document.addEventListener('DOMContentLoaded', function() {
+            const units = document.getElementsByClassName('unit');
+            for (let i = 0; i < units.length; i++) {
+                units[i].addEventListener('click', function() {
+                    const unitId = this.getAttribute('data-unit-id');
+                    selectUnit(unitId);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

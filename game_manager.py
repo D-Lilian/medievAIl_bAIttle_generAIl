@@ -8,9 +8,11 @@ from Model.units import *
 from Model.strategies import *
 from Model.orders import OrderManager
 from Model.generals import General
+from Utils.logs import setup_logger
 from View.pygame_view import PygameView
 
 if __name__ == "__main__":
+    setup_logger(level="DEBUG", modules=["Model.generals", "Model.orders", "Model.strategies" ])
     simulation_controller = SimulationController.SimulationController()
     units_a = []
     units_b = []
@@ -54,7 +56,7 @@ if __name__ == "__main__":
                     }
             )
 
-    RPC = General(
+    RPC2 = General(
         units_b,
         units_a,
         sS=None,
@@ -64,6 +66,21 @@ if __name__ == "__main__":
             UnitType.CROSSBOWMAN: StrategieCrossbowmanSomeIQ(),
         }
     )
+    RPC1 = General(
+        units_a,
+        units_b,
+        sS=None,
+        sT={  # TODO: Fix the strategies to use the enum
+            #UnitType.KNIGHT: StrategieKnightSomeIQ(),
+            #UnitType.PIKEMAN: StrategiePikemanSomeIQ(),
+            #UnitType.CROSSBOWMAN: StrategieCrossbowmanSomeIQ(),
+            UnitType.KNIGHT: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.CROSSBOWMAN, hatedTroup=None),
+            UnitType.PIKEMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.KNIGHT, hatedTroup=None),
+            UnitType.CROSSBOWMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.PIKEMAN, hatedTroup=None),
+        }
+    )
+
+    DUMMY2 = General(units_b,units_a,sS=None,sT=None)
 
     SOMEIQ = General(
         units_a,
@@ -74,11 +91,7 @@ if __name__ == "__main__":
             UnitType.PIKEMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.KNIGHT, hatedTroup=UnitType.CROSSBOWMAN),
             UnitType.CROSSBOWMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.PIKEMAN, hatedTroup=UnitType.KNIGHT),
         })
-
-
-
-
-
+    SOMEIQ.sS = StrategieStartSomeIQ
 
 
     DAFT2 = General(units_b,
@@ -94,7 +107,10 @@ if __name__ == "__main__":
                     }
             )
 
-    scenario = Scenario(units, units_a, units_b, SOMEIQ, RPC, size_x=120, size_y=120)
+    scenario = Scenario(units, units_a, units_b, SOMEIQ, RPC2, size_x=120, size_y=120)
+    # rouge RPC
+    # bleu DAFT1
+
 
     # Partie de mesure de temps d'execution
     # start_time = time.perf_counter()
