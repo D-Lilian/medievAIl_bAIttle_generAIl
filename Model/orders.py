@@ -62,8 +62,9 @@ class SacrificeOrder(Order):
         self.unit = unit
 
     def Try(self, simu:Simulation):
-        # TODO
-        raise NotImplemented
+        self.log.debug("ЗА РОДИНУ !!!")
+        simu.move_unit_towards_coordinates(self.unit, 0, 50)
+        return False;
     # Fait la meme chose que avoid, + se déplace vers un coin opposé à la map
 
 
@@ -84,6 +85,22 @@ class MoveByStepOrder(Order):
         elif self.nbStep < 0:
             raise Exception
             #raise GameEngineError("While trying to step back, nbStep got negative")
+        return False
+
+class DontMoveOrder(Order):
+    def __init__(self, unit, nb):
+        super().__init__(unit)
+        self.unit = unit
+        self.nb = nb
+
+
+    def Try(self, simu:Simulation):
+        if self.nb == 0:
+            return True
+        if self.nb < 0:
+            raise Exception
+            #raise GameEngineError("While trying to step back, nbStep got negative")
+        self.nb -= 1
         return False
 
 class AvoidOrder(Order):
@@ -241,11 +258,11 @@ class FormationOrder(Order):
         super().__init__(unit)
         self.units = units # Ici units comprend totu les autres alliés
 
-    def Try(self, simu, typeFormation="GROUPE"):
+    def Try(self, simu, type_formation='ROND'):
         # Qu'un seul type de formation (le groupe=
-        if simu.is_in_formation(self.units, typeFormation): # check un rayon par ex
+        if simu.is_in_formation(self.unit, self.units, type_formation): # check un rayon par ex
             return True
-        simu.do_formation(typeFormation, self.units) # renvoi trrue ou false en fonction
+        simu.do_formation(self.unit, self.units, type_formation) # renvoi trrue ou false en fonction
         return False
 
 class isInDangerOrder(Order):
@@ -289,15 +306,15 @@ class OrderManager:
         self._by_order = {}
         self.log =  logger.bind(order="order-manager")
 
+
     def AddMaxPriority(self, order, squad_id=None):
-        node = _Node(order) # Create a new node for the order
-        keys = [p for p in self._by_priority]
+        node = _Node(order)
+        keys = [p for p in self._by_priority if p >= 0]
         prio_max = max(keys) + 1 if keys else 0
 
         self._by_priority[prio_max] = node
         self._by_order[order] = prio_max
 
-        # La liste est vide
         if self._head is None:
             self.log.debug(f"Adding order at the beggining with prio {prio_max}")
             self._head = self._tail = node
@@ -306,9 +323,8 @@ class OrderManager:
         self._tail.next = node
         node.prev = self._tail
         self._tail = node
-
-        self._by_priority[prio_max] = node
         self.log.debug(f"Adding order with max priority of {prio_max}")
+
 
     def FlushOrders(self):
         self._head = None
@@ -323,9 +339,42 @@ class OrderManager:
 
 
 
+    #def Add(self, order, priority, squad_id=None):
+    #    if priority in self._by_priority:
+    #        raise ValueError(f"Priority already used {priority} by order {self._by_priority[priority].order}")
+    #    node = _Node(order)
+    #    self._by_priority[priority] = node
+    #    self._by_order[order] = priority
+
+    #    if self._head is None:
+    #        self._head = self._tail = node
+    #        return
+
+    #    keys = [p for p in self._by_priority if p < priority]
+    #    if not keys:
+    #        node.next = self._head
+    #        self._head.prev = node
+    #        self._head = node
+    #        return
+
+    #    insert_after = max(keys) # on prend la priorité maximale
+    #    ref = self._by_priority[insert_after]
+    #    node.next = ref.next
+    #    node.prev = ref
+    #    ref.next = node
+    #    if node.next:
+    #        node.next.prev = node
+    #    else:
+    #        self._tail = node
+
+
     def Add(self, order, priority, squad_id=None):
+        self.log.debug(f"Add called with priority={priority}")
+
+
         if priority in self._by_priority:
             raise ValueError(f"Priority already used {priority} by order {self._by_priority[priority].order}")
+
         node = _Node(order)
         self._by_priority[priority] = node
         self._by_order[order] = priority
@@ -334,14 +383,20 @@ class OrderManager:
             self._head = self._tail = node
             return
 
-        keys = [p for p in self._by_priority if p < priority]
+        if priority == -1:
+            node.next = self._head
+            self._head.prev = node
+            self._head = node
+            return
+
+        keys = [p for p in self._by_priority if 0 <= p < priority]
         if not keys:
             node.next = self._head
             self._head.prev = node
             self._head = node
             return
 
-        insert_after = max(keys) # on prend la priorité maximale
+        insert_after = max(keys)
         ref = self._by_priority[insert_after]
         node.next = ref.next
         node.prev = ref
@@ -351,14 +406,26 @@ class OrderManager:
         else:
             self._tail = node
 
-    def TryOrder(self, simu, order):
-        if -1 in self._by_priority:
-            if self._by_order[order] == -1:
-                return order.Try(simu)
-            else:
-                return False # Tout les autres ordres ne sont pas effectué
 
+
+    def TryOrder(self, simu, order):
+        enforcing = self._by_priority.get(-1)
+        if enforcing is not None:
+            if enforcing.order is order:
+                return order.Try(simu)
+            return False
         return order.Try(simu)
+
+
+
+    #def TryOrder(self, simu, order):
+    #    if -1 in self._by_priority:
+    #        if self._by_order[order] == -1:
+    #            return order.Try(simu)
+    #        else:
+    #            return False # Tout les autres ordres ne sont pas effectué
+#
+#        return order.Try(simu)
 
     def Get(self, priority):
         n = self._by_priority.get(priority)

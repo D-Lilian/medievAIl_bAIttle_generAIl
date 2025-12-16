@@ -109,7 +109,10 @@ class PygameView:
         events = pygame.event.get()
         mouse_pos = pygame.mouse.get_pos()
         for event in events:
-            if event.type == pygame.QUIT: return False
+            if event.type == pygame.QUIT:
+                os._exit(0)
+                return False
+
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     return False

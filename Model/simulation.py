@@ -59,8 +59,9 @@ class Simulation:
                     continue
 
                 for unit_order in unit.order_manager:
-                    if unit_order.Try(self):
-                        unit_order.Remove(unit_order)
+                    if unit.order_manager.TryOrder(self, unit_order):
+                        unit.order_manager.Remove(unit_order)
+                        #unit_order.Remove(unit_order)
                 self.as_unit_attacked = False
                 self.as_unit_moved = False
             self.tick += 1
