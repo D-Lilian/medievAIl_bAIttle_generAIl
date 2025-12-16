@@ -5,3 +5,17 @@ loguru
 
 # Testing (optional, for running tests with pytest)
 pytest
+
+# Data Analysis and Plotting
+matplotlib
+numpy
+pandas
+
+# ggplot2-style visualization (like R's ggplot2)
+plotnine
+
+# Statistical Analysis
+scipy
+
+# HTML Reports (included in standard library)
+# jinja2  # Optional: for advanced templating

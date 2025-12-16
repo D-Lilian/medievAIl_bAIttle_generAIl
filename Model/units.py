@@ -58,6 +58,7 @@ class Unit:
         self.armor = armor                  # valeur de l'armure
         self.attack = attack                # nombre de degats infliges
         self.damage_dealt = 0               # degats totaux infliges par l'unité (cumulés sur sa vie)
+        self.distance_moved = 0             # distance totale parcourue par l'unité
         self.range = range                  # portee de l'unite
         self.size = size                    # taille de l'unite
         self.sight = sight                  # Distance champ de vision
