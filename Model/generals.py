@@ -13,9 +13,6 @@ from Model.strategies import *
 from Utils.errors import GameEngineError
 from Utils.logs import setup_logger, logger
 
-# ... The rest of your file remains the same
-
-
 # Le general ne se préocupe pas de savoir "ou" sont les troupes, il n'a pas logique de réprésentation "logique" du jeu
 # si il veut qu'une de ses troupes attaquent l'unité la plus proche, alors il le demande, il ne va pas aller chercher l'unité la plus proche
 
