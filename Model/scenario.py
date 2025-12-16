@@ -19,6 +19,6 @@ class Scenario:
         self.general_a = general_a
         self.general_b = general_b
 
-        self.size_x = max(size_x,120)
-        self.size_y = max(size_y,120)
+        self.size_x = max(size_x, 120)
+        self.size_y = max(size_y, 120)
 

@@ -19,6 +19,9 @@ from Utils.logs import setup_logger, logger
 # Le general ne se préocupe pas de savoir "ou" sont les troupes, il n'a pas logique de réprésentation "logique" du jeu
 # si il veut qu'une de ses troupes attaquent l'unité la plus proche, alors il le demande, il ne va pas aller chercher l'unité la plus proche
 
+def CreateGenerals(General1, General2):
+    pass
+
 class General:
     # Il lui faut un moyen de detecter les différents etats du jeu adverse:
     # -il n'ya plus de crossbowmen
