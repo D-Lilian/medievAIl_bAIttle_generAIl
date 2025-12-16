@@ -16,12 +16,12 @@ from Model.units import *
 
 # Number chosen to make simulation fast but realistic
 # So that reload time and tick speed are compatible
-DEFAULT_NUMBER_OF_TICKS_PER_SECOND = 5
-
+DEFAULT_NUMBER_OF_TICKS_PER_SECOND = 10
+DEFAULT_NUMBER_OF_TICKS_PER_SECOND_FOR_ATTACK = 5
 
 class Simulation:
 
-    def __init__(self, scenario, tick_speed=5, paused=False, unlocked=False):
+    def __init__(self, scenario, tick_speed=10, paused=False, unlocked=False):
         self.scenario = scenario
         self.reload_units = []
 
@@ -68,7 +68,7 @@ class Simulation:
             # print("Tick :", self.tick)
 
             for unit in list(self.reload_units):
-                unit.update_reload(1 / DEFAULT_NUMBER_OF_TICKS_PER_SECOND)
+                unit.update_reload(1 / DEFAULT_NUMBER_OF_TICKS_PER_SECOND_FOR_ATTACK)
                 if unit.can_attack():
                     try:
                         self.reload_units.remove(unit)
@@ -119,7 +119,7 @@ class Simulation:
             print("Ticks : ", self.tick, "Team A units left:", count_a, "  | Team B units left:", count_b)
             return True
 
-        return self.tick >= DEFAULT_NUMBER_OF_TICKS_PER_SECOND * 480
+        return self.tick >= DEFAULT_NUMBER_OF_TICKS_PER_SECOND * 240
 
     ## ----------- Movement functions -------------
 
