@@ -1,3 +1,5 @@
+from time import sleep
+
 import pygame
 import sys
 import os
@@ -238,8 +240,11 @@ class PygameView:
             self.report_generator.generate(self.unit_cache.units, self.stats)
 
         elif event.key == pygame.K_e:
+            self.simulation_controller.toggle_pause()
+            sleep(0.1)
             self.save_load.save_game()
             self.as_save = 120
+            self.simulation_controller.toggle_pause()
 
         return True
 
