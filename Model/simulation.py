@@ -193,7 +193,7 @@ class Simulation:
                         attacker_unit.distance_moved += actual_moved
                         return True
 
-        return False
+        return True
 
     def _resolve_collisions_minimal(self, x, y, unit):
         """Résolution des collisions avec recherche spatiale optimisée."""
