@@ -1,3 +1,0 @@
-run_id,unit_type,n_value,team_a_casualties,team_b_casualties,winner,winner_casualties,duration_ticks
-0,Knight,5,5,0,B,0,114
-1,Knight,10,10,3,B,3,211
