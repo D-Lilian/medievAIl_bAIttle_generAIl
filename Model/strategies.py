@@ -250,17 +250,13 @@ class StrategieStartSomeIQ(StrategyStart):
             #unit.order_manager.Add(MoveByStepOrder(unit, 10, 180), 0)
             if(unit.unit_type == UnitType.KNIGHT):
                 unit.order_manager.Add(DontMoveOrder(unit, 20-5), 0)
-                continue
-            if(unit.unit_type == UnitType.CROSSBOWMAN):
+            elif(unit.unit_type == UnitType.CROSSBOWMAN):
                 unit.order_manager.Add(DontMoveOrder(unit, 30-5), 0)
                 unit.order_manager.Add(StayInFriendlySpaceOrder(unit, UnitType.PIKEMAN), 1)
-                continue
-            if(unit.unit_type == UnitType.PIKEMAN):
-                unit.order_manager.Add(DontMoveOrder(unit, 30-5), 0)
-                unit.order_manager.Add(StayInFriendlySpaceOrder(unit, UnitType.PIKEMAN), 1)
-                continue
+            elif(unit.unit_type == UnitType.PIKEMAN):
+                unit.order_manager.Add(DontMoveOrder(unit, 30-7), 0)
 
-            unit.order_manager.Add(DontMoveOrder(unit, 10), 0)
+            #unit.order_manager.Add(DontMoveOrder(unit, 10), 0)
 
         # todo faire le truc global après les squad, et mettee les ordres globaux execeptés ceux au squad
         #StrategySquad(nb_crossbowmen=20).build_squad(general)
@@ -269,25 +265,28 @@ class StrategieStartSomeIQ(StrategyStart):
 
         # On fait une squad crossbow à gauche,
         squad1 = general.generate_squad({UnitType.CROSSBOWMAN:10, UnitType.PIKEMAN:5})
-        for unit in squad1:
-            #unit.order_manager.AddMaxPriority(MoveByStepOrder(unit, 50, 90), squad_id=squad1[0].squad_id)
-            unit.order_manager.AddMaxPriority(FormationOrder(unit, squad1), squad_id=squad1[0].squad_id)
+        if(len(squad1)!=0):
+            for unit in squad1:
+                #unit.order_manager.AddMaxPriority(MoveByStepOrder(unit, 50, 90), squad_id=squad1[0].squad_id)
+                unit.order_manager.AddMaxPriority(FormationOrder(unit, squad1), squad_id=squad1[0].squad_id)
 
         # On fait une squad crossbow à droite,
         squad2 = general.generate_squad({UnitType.CROSSBOWMAN:10, UnitType.PIKEMAN:5})
-        for unit in squad2:
-            #unit.order_manager.AddMaxPriority(MoveByStepOrder(unit, 50, -90), squad_id=squad2[0].squad_id)
-            #unit.order_manager.AddMaxPriority(DontMoveOrder(unit, 50), squad_id=squad2[0].squad_id)
-            unit.order_manager.AddMaxPriority(FormationOrder(unit, squad2), squad_id=squad2[0].squad_id)
+        if(len(squad2)!=0):
+            for unit in squad2:
+                #unit.order_manager.AddMaxPriority(MoveByStepOrder(unit, 50, -90), squad_id=squad2[0].squad_id)
+                #unit.order_manager.AddMaxPriority(DontMoveOrder(unit, 50), squad_id=squad2[0].squad_id)
+                unit.order_manager.AddMaxPriority(FormationOrder(unit, squad2), squad_id=squad2[0].squad_id)
 
         squad3 = general.generate_squad({UnitType.KNIGHT:15})
-        for unit in squad3:
-            #unit.order_manager.AddMaxPriority(MoveByStepOrder(unit, 50, -90), squad_id=squad2[0].squad_id)
-            unit.order_manager.AddMaxPriority(DontMoveOrder(unit, 10), squad_id=squad2[0].squad_id)
-            unit.order_manager.AddMaxPriority(FormationOrder(unit, squad3), squad_id=squad3[0].squad_id)
+        if(len(squad3)!=0):
+            for unit in squad3:
+                #unit.order_manager.AddMaxPriority(MoveByStepOrder(unit, 50, -90), squad_id=squad2[0].squad_id)
+                #unit.order_manager.AddMaxPriority(DontMoveOrder(unit, 10), squad_id=squad2[0].squad_id)
+                unit.order_manager.AddMaxPriority(FormationOrder(unit, squad3), squad_id=squad3[0].squad_id)
 
 
-        soufredouleurs = general.generate_squad({UnitType.KNIGHT:5})
+        soufredouleurs = general.generate_squad({UnitType.KNIGHT:3})
         for sf in soufredouleurs:
             sf.order_manager.RemoveOrderAtPriority(-1) # on lui enlève le déplacement en arrière
 
@@ -369,8 +368,3 @@ class StrategySquad(): #Stratégie pour un squad mixte
             u.om.Add(order, priority) 
 
     #exemple d'appel squad.apply_orders(general, MoveByStepOrder, 10, "forward")  # MoveByStepOrder(u, 10, "forward")
-
-
-
-
-
