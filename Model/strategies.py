@@ -216,12 +216,17 @@ class StrategieStartSomeIQ(StrategyStart):
             #unit.order_manager.Add(MoveOneStepFromRef(unit, 10, "WORLD"), 180)
             #unit.order_manager.Add(MoveByStepOrder(unit, 10, 180), 0)
             if(unit.unit_type == UnitType.KNIGHT):
-                unit.order_manager.Add(DontMoveOrder(unit, 20), 0)
+                unit.order_manager.Add(DontMoveOrder(unit, 20-5), 0)
                 continue
             if(unit.unit_type == UnitType.CROSSBOWMAN):
-                unit.order_manager.Add(DontMoveOrder(unit, 30), 0)
+                unit.order_manager.Add(DontMoveOrder(unit, 30-5), 0)
                 unit.order_manager.Add(StayInFriendlySpaceOrder(unit, UnitType.PIKEMAN), 1)
                 continue
+            if(unit.unit_type == UnitType.PIKEMAN):
+                unit.order_manager.Add(DontMoveOrder(unit, 30-5), 0)
+                unit.order_manager.Add(StayInFriendlySpaceOrder(unit, UnitType.PIKEMAN), 1)
+                continue
+
             unit.order_manager.Add(DontMoveOrder(unit, 10), 0)
 
         # todo faire le truc global après les squad, et mettee les ordres globaux execeptés ceux au squad
