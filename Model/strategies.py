@@ -13,6 +13,7 @@ from Model.orders import FormationOrder, DontMoveOrder
 from Utils.errors import WrongArguments
 from Model.orders import AttackOnSightOrder, AvoidOrder, StayInReachOrder, SacrificeOrder, \
     MoveByStepOrder, StayInFriendlySpaceOrder, AttackNearestTroupOmniscient
+import random
 
 #############################################################################################################
 # CLasse abstraites
@@ -203,6 +204,38 @@ class StrategieNoTroupFallbackSomeIQ:
         #for unit in general.MyUnits:
         #    unit.order_manager.FlushOrders()
 
+
+class StrategieRandomIQ(StrategyStart):
+    def __init__(self):
+        super().__init__()
+
+    def apply_order(self, general):
+        for unit in general.MyUnits:
+            orders = [
+                AttackNearestTroupOmniscient(
+                    unit,
+                    random.choice([UnitType.PIKEMAN,
+                                   UnitType.CROSSBOWMAN,
+                                   UnitType.KNIGHT])
+                ),
+                StayInFriendlySpaceOrder(
+                    unit,
+                    random.choice([UnitType.PIKEMAN,
+                                   UnitType.CROSSBOWMAN,
+                                   UnitType.KNIGHT])
+                ),
+                AvoidOrder(
+                    unit,
+                    random.choice([UnitType.PIKEMAN,
+                                   UnitType.CROSSBOWMAN,
+                                   UnitType.KNIGHT])
+                ),
+            ]
+
+            random.shuffle(orders)
+
+            for order in orders:
+                unit.order_manager.AddMaxPriority(order)
 
 
 

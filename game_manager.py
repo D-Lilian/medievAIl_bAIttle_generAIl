@@ -109,7 +109,8 @@ if __name__ == "__main__":
                     }
             )
 
-    scenario = Scenario(units, units_a, units_b, SOMEIQ, RPC2, size_x=120, size_y=120)
+    RANDOMIQ1 = General(units_b, units_a, sS=StrategieRandomIQ, sT=None )
+    scenario = Scenario(units, units_a, units_b, SOMEIQ, RANDOMIQ1, size_x=120, size_y=120)
 
 
     # rouge RPC
