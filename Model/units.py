@@ -15,15 +15,15 @@ class UnitType(Enum):
     CROSSBOWMAN = 1
     KNIGHT = 2
     PIKEMAN = 3
-    LONGSWORDSMAN = 4
-    ELITESKIRMISHER = 5
-    CAVALRYARCHER = 6
-    ONAGER = 7
-    LIGHTCAVALRY = 8
-    SCORPION = 9
-    CAPPEDRAM = 10
-    CASTLE = 11
-    TREBUCHET = 12
+#    LONGSWORDSMAN = 4
+#    ELITESKIRMISHER = 5
+#    CAVALRYARCHER = 6
+#    ONAGER = 7
+#    LIGHTCAVALRY = 8
+#    SCORPION = 9
+#    CAPPEDRAM = 10
+#    CASTLE = 11
+#    TREBUCHET = 12
     ALL = 0
     NONE = None
 
@@ -158,7 +158,8 @@ class Pikeman(Unit):
                              "Ignore Armor": 0
                          })
 
-
+#these units have been placed here in case we need to use them.
+"""
 class LongSwordsman(Unit):
     def __init__(self, team, x, y):
         super().__init__(unit_type=UnitType.LONGSWORDSMAN, name="Long Swordsman", team=team, hp=60, range=0, size=1, sight=4,
@@ -337,3 +338,4 @@ class Trebuchet(Unit):
                              "Rams": 0,
                              "Ignore Armor": 0
                          })
+"""
