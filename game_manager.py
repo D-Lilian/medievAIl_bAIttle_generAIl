@@ -24,6 +24,7 @@ if __name__ == "__main__":
             temp = Knight("A", 10 + i % 20, 10 + i % 5)
         elif (rand == 1):
             temp = Pikeman("A", 10 + i % 20, 10 + i % 5)
+            temp.range = 0.1
         else:
             temp = Crossbowman("A", 10 + i % 20, 10 + i % 5)
         #temp.order_manager= OrderManager()
@@ -36,6 +37,7 @@ if __name__ == "__main__":
             temp = Knight("B", 10 + i % 20, 50 + i % 5)
         elif (rand == 1):
             temp = Pikeman("B", 10 + i % 20, 50 + i % 5)
+            temp.range = 0.1
         else:
             temp = Crossbowman("B", 10 + i % 20, 50 + i % 5)
         #temp.order_manager= OrderManager()
@@ -61,9 +63,9 @@ if __name__ == "__main__":
         units_a,
         sS=None,
         sT={  # TODO: Fix the strategies to use the enum
-            UnitType.KNIGHT: StrategieKnightSomeIQ(),
-            UnitType.PIKEMAN: StrategiePikemanSomeIQ(),
-            UnitType.CROSSBOWMAN: StrategieCrossbowmanSomeIQ(),
+            UnitType.KNIGHT: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.CROSSBOWMAN, hatedTroup=None),
+            UnitType.PIKEMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.KNIGHT, hatedTroup=None),
+            UnitType.CROSSBOWMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.PIKEMAN, hatedTroup=None),
         }
     )
     RPC1 = General(
@@ -108,6 +110,9 @@ if __name__ == "__main__":
             )
 
     scenario = Scenario(units, units_a, units_b, SOMEIQ, RPC2, size_x=120, size_y=120)
+
+
+    RANDOMIQ1 = General(units_a, units_b, sS=None, sT=None)
     # rouge RPC
     # bleu DAFT1
 

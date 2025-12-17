@@ -192,6 +192,9 @@ class PygameView:
         if event.key == pygame.K_ESCAPE:
             return False
 
+        elif event.type == pygame.QUIT:
+            os._exit(0)
+
         elif event.key == pygame.K_p:
             self.paused = not self.paused
             self.simulation_controller.toggle_pause()
