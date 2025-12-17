@@ -8,6 +8,7 @@ from Model.scenario import Scenario
 from Model.units import Knight, Pikeman, Team
 from Utils.map_generator import MapGenerator
 from Utils.predefined_scenarios import PredefinedScenarios
+from Utils.save_load import SaveLoad
 
 # Fabrique d'IA: à partir d'un nom, créer un General avec les stratégies correspondantes
 from Model.generals import General
@@ -88,7 +89,9 @@ def run(args):
             size_y=120,
         )
         # Exécuter la simulation ici seulement (branche sans terminal)
-        SimulationController.start_simulation(game)
+        simulationController = SimulationController()
+        simulationController.initialize_simulation(game, tick_speed=20, unlocked=True)
+        simulationController.start_simulation()
 
     else:
         print("Terminal view enabled.")
@@ -106,9 +109,10 @@ def run(args):
             size_y=120,
         )
         simulationController = SimulationController()
-        controller = TerminalController(game2, simulationController)
+        controller = TerminalController(game2)
         controller.run()
-        simulationController.start_simulation(game2)
+        simulationController.initialize_simulation(game2, tick_speed=20, unlocked=False
+        simulationController.start_simulation()
 
 
 def tourney(args):
@@ -120,7 +124,10 @@ def tourney(args):
 
 def load(args):
     print("")
-    # Appel de la fonction correspondant voir avec jp
+    scenari = SaveLoad.load_game(args.savefile)
+    simulationController = SimulationController()
+    simulationController.start_simulation()
+    simulationController.initialize_simulation(scenari, tick_speed=20, unlocked=True)
 
 
 def save(args):
