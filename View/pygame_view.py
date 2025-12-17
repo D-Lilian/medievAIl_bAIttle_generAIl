@@ -486,7 +486,7 @@ class PygameView:
 
             mx = int(unit.x * ratio_x)
             my = int(unit.y * ratio_y)
-            color = (0, 255, 255) if unit.team == "A" else (255, 50, 50)
+            color = (255, 50, 50) if unit.team == "A" else (0, 255, 255)
             pygame.draw.rect(minimap_surf, color, (mx, my, 3, 3))
 
         view_cx = self.last_avg_x * ratio_x
