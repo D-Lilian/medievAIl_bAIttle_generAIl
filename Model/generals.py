@@ -30,8 +30,12 @@ class General:
                  sT,
                  sS=None,
                  UnitSubscriptions: dict = None,
+                 size_x=120,
+                 size_y=120
                  ):
 
+        self.size_x = size_x
+        self.size_y = size_y
         self.MyUnits = unitsA
         self.HistUnits = unitsB
         self.UnitsDepleted = {
