@@ -59,13 +59,36 @@ class MoveOrder(Order):
 
 
 class SacrificeOrder(Order):
-    def __init__(self, unit):
+    def __init__(self, unit,  target_x, target_y):
         super().__init__(unit)
+        self.target_x = target_x
+        self.target_y = target_y
         self.unit = unit
+        self.atteint = False
 
     def Try(self, simu:Simulation):
-        self.log.debug("ЗА РОДИНУ !!!")
-        simu.move_unit_towards_coordinates(self.unit, 0, 50)
+        #if(self.atteint == False):
+        #    self.log.debug("ЗА РОДИНУ !!!")
+        #    if(simu.move_unit_towards_coordinates(self.unit, self.target_x, self.target_y) == False):
+        #        return False
+
+        #self.atteint = True
+
+
+        target = simu.get_nearest_enemy_in_reach(self.unit, type_target=UnitType.ALL)
+        if target is None:
+            r = simu.move_unit_towards_coordinates(self.unit, self.target_x, self.target_y);
+            self.log.debug(f"ATTEINT ATTEINT {r}")
+            return False
+
+        if simu.is_in_sight(target, self.unit):
+            if simu.move_one_step_from_target_in_direction(self.unit, target, 15):
+                return False
+        else:
+            simu.move_unit_towards_coordinates(self.unit, self.target_x, self.target_y);
+            return False
+
+
         return False;
     # Fait la meme chose que avoid, + se déplace vers un coin opposé à la map
 
