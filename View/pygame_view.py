@@ -237,11 +237,17 @@ class PygameView:
             self.cam_x -= speed
 
     def _handle_mousewheel(self, event):
-        """Gère le zoom avec la molette"""
+        """Gère le zoom avec la molette vers la position de la souris"""
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        old_zoom = self.zoom_level
         if event.y > 0:
             self.zoom_level = min(MAX_ZOOM, self.zoom_level + ZOOM_STEP)
         else:
             self.zoom_level = max(MIN_ZOOM, self.zoom_level - ZOOM_STEP)
+
+        zoom_ratio = self.zoom_level / old_zoom
+        self.cam_x = mouse_x - (mouse_x - self.cam_x) * zoom_ratio
+        self.cam_y = mouse_y - (mouse_y - self.cam_y) * zoom_ratio
 
     def _handle_mousedown(self, event):
         """Démarre le drag de la caméra"""
