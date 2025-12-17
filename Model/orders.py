@@ -162,7 +162,7 @@ class StayInFriendlySpaceOrder(Order):
         if friendly is None:
             return False # Il ya aucune enemy nearby
 
-        if simu.is_in_reach(friendly, self.unit): # NOTE l'ordre des arguments ici est inversée
+        if simu.is_in_sight(friendly, self.unit): # NOTE l'ordre des arguments ici est inversée
             if simu.move_unit_towards_unit(self.unit, friendly):
                 return False
         else:
