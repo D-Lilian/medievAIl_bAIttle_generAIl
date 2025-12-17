@@ -15,15 +15,14 @@ Part of Utils module.
 """
 
 import warnings
-from dataclasses import dataclass, field
-from typing import Dict, List, Tuple, Optional, Any
-from datetime import datetime
+from dataclasses import dataclass
+from typing import Dict, Tuple, Optional, Any
 
 import pandas as pd
 import numpy as np
 from scipy import stats
 
-from Plotting.data import PlotData, AggregatedResults, BattleResult
+from Plotting.data import PlotData
 
 
 @dataclass
@@ -487,7 +486,6 @@ class StatisticalAnalyzer:
         @return: DataFrame with correlations
         """
         cols = df.select_dtypes(include=[np.number]).columns
-        n = len(cols)
         
         corr_matrix = pd.DataFrame(index=cols, columns=cols, dtype=float)
         p_matrix = pd.DataFrame(index=cols, columns=cols, dtype=float)

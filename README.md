@@ -157,38 +157,68 @@ Team A (N units) vs Team B (2N units). Analyze winner casualties to verify the l
 
 ## Architecture
 
-```text
-├── Controller/          # Orchestration (MVC Controller)
-├── Model/               # Domain logic (Units, Generals, Simulation)
-├── View/                # Visualization (Terminal, Pygame)
-├── Plotting/            # Data science (plotnine, pandas)
-├── Tournament/          # Tournament system
-└── Utils/               # CLI, save/load, utilities
-```
+The project follows the **MVC** (Model-View-Controller) pattern with specialized modules.
 
-## Project Structure
-
-```text
-battle                   # Main entry point (bash script)
-├── main.py              # Python entry
-├── Utils/
-│   ├── eval.py          # Command dispatcher
-│   └── parse_cli.py     # CLI argument parsing
-├── Controller/
-│   ├── simulation_controller.py
-│   ├── hybrid_controller.py   # View switching
-│   ├── tournament_controller.py
-│   └── plot_controller.py
-├── Model/
-│   ├── units.py
-│   ├── generals.py
-│   ├── general_factory.py
-│   ├── strategies.py
-│   └── simulation.py
-├── Plotting/
-│   ├── base.py          # Plotters (plotnine)
-│   ├── data.py          # LanchesterData (pandas)
-│   ├── collector.py     # Parallel simulation runner
-│   └── report.py        # HTML report generator
-└── Reports/             # Output directory
+``` txt
+medievAIl_bAIttle_generAIl/
+│
+├── battle                 # Entry point (bash script)
+├── main.py                # Python entry point
+│
+├── Model/                 # MODEL - Business logic
+│   ├── units.py           # Unit classes (Knight, Pikeman, Crossbowman)
+│   ├── generals.py        # General AI logic
+│   ├── general_factory.py # Factory pattern for general creation
+│   ├── strategies.py      # General strategies (BRAINDEAD, DAFT, SOMEIQ, RPC)
+│   ├── orders.py          # Order system (Move, Attack, Formation)
+│   ├── scenario.py        # Battle configuration
+│   └── simulation.py      # Simulation engine
+│
+├── View/                  # VIEW - Display
+│   ├── pygame_view.py     # 2.5D isometric view (Pygame)
+│   ├── terminal_view.py   # Terminal view (curses)
+│   ├── renderers/         # Rendering components (map, UI, debug)
+│   ├── report_generator.py # HTML report generation
+│   ├── state.py           # View state
+│   ├── stats.py           # Real-time statistics
+│   └── data_types.py      # Shared data types
+│
+├── Controller/            # CONTROLLER - Orchestration
+│   ├── simulation_controller.py  # Simulation control
+│   ├── pygame_controller.py      # 2.5D view control
+│   ├── terminal_controller.py    # Terminal view control
+│   ├── hybrid_controller.py      # View switching (F9)
+│   ├── plot_controller.py        # Lanchester analysis
+│   └── tournament_controller.py  # Tournaments
+│
+├── Plotting/              # DATA SCIENCE - Analysis
+│   ├── base.py            # Abstract plotters (plotnine/ggplot2)
+│   ├── lanchester.py      # PlotLanchester analysis
+│   ├── data.py            # LanchesterData (pandas DataFrame)
+│   ├── collector.py       # Parallel collection (multiprocessing)
+│   └── report.py          # HTML report generation with graphs
+│
+├── Tournament/            # TOURNAMENTS
+│   ├── config.py          # Tournament configuration
+│   ├── runner.py          # Match execution
+│   ├── results.py         # Results and rankings
+│   └── report.py          # Tournament HTML reports
+│
+├── Utils/                 # UTILITIES
+│   ├── eval.py            # CLI dispatcher (run, load, plot, tourney)
+│   ├── parse_cli.py       # Argument parsing
+│   ├── predefined_scenarios.py  # Predefined scenarios
+│   ├── save_load.py       # Save/load (.pkl)
+│   ├── statistical.py     # Statistical analysis
+│   ├── logs.py            # Logging (loguru)
+│   └── errors.py          # Custom exceptions
+│
+├── Tests/                 # UNIT TESTS
+│   ├── orders_test.py
+│   ├── plotting_tests.py
+│   ├── tournament_tests.py
+│   └── general_factory_tests.py
+│
+├── Reports/               # OUTPUT - Generated reports
+└── assets/                # ASSETS - Sprites and images
 ```
