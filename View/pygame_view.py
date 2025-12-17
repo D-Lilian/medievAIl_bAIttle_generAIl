@@ -153,7 +153,7 @@ class PygameView:
             avg_y = sum(u.y for u in self.scenario.units) / len(self.scenario.units)
             self.center_camera_on(avg_x, avg_y)
         else:
-            self.center_camera_on(MAP_SIZE / 2, MAP_SIZE / 2)
+            self.center_camera_on(self.scenario.size_x / 2, self.scenario.size_y / 2)
 
     def cart_to_iso(self, x, y):
         """Convertit coordonnées cartésiennes en isométriques"""
@@ -309,9 +309,9 @@ class PygameView:
     def _draw_ground(self):
         """Dessine le sol avec culling et cache optimisé"""
         p1 = self.cart_to_iso(0, 0)
-        p2 = self.cart_to_iso(MAP_SIZE, 0)
-        p3 = self.cart_to_iso(MAP_SIZE, MAP_SIZE)
-        p4 = self.cart_to_iso(0, MAP_SIZE)
+        p2 = self.cart_to_iso(self.scenario.size_x, 0)
+        p3 = self.cart_to_iso(self.scenario.size_x, self.scenario.size_y)
+        p4 = self.cart_to_iso(0, self.scenario.size_y)
         pygame.draw.polygon(self.screen, GROUND_COLOR, [p1, p2, p3, p4])
 
         if not self.ground_tile or self.zoom_level < 0.15:
@@ -325,8 +325,8 @@ class PygameView:
         screen_w, screen_h = self.screen.get_size()
         margin = 50
 
-        for x in range(MAP_SIZE):
-            for y in range(MAP_SIZE):
+        for x in range(self.scenario.size_x):
+            for y in range(self.scenario.size_y):
                 sx, sy = self.cart_to_iso(x, y)
                 if (-curr_w - margin < sx < screen_w + margin and
                         -curr_h - margin < sy < screen_h + margin):
@@ -458,20 +458,21 @@ class PygameView:
         minimap_surf = pygame.Surface((minimap_size, minimap_size))
         minimap_surf.fill(MINIMAP_BG)
 
-        ratio = minimap_size / MAP_SIZE
+        ratio_x = minimap_size / self.scenario.size_x
+        ratio_y = minimap_size / self.scenario.size_y
 
         # Dessine les unités
         for unit in self.scenario.units:
             if unit.hp <= 0:
                 continue
 
-            mx = int(unit.x * ratio)
-            my = int(unit.y * ratio)
+            mx = int(unit.x * ratio_x)
+            my = int(unit.y * ratio_y)
             color = (0, 255, 255) if unit.team == "A" else (255, 50, 50)
             pygame.draw.rect(minimap_surf, color, (mx, my, 3, 3))
 
-        view_cx = self.last_avg_x * ratio
-        view_cy = self.last_avg_y * ratio
+        view_cx = self.last_avg_x * ratio_x
+        view_cy = self.last_avg_y * ratio_y
         rect_size = 40 / self.zoom_level
         camera_rect = pygame.Rect(0, 0, rect_size, rect_size)
         camera_rect.center = (view_cx, view_cy)
@@ -479,18 +480,18 @@ class PygameView:
 
         dest_rect = pygame.Rect(minimap_x, minimap_y, minimap_size, minimap_size)
 
-        self._handle_minimap_click(dest_rect, ratio)
+        self._handle_minimap_click(dest_rect)
 
         pygame.draw.rect(self.screen, MINIMAP_BORDER, dest_rect.inflate(4, 4), 2)
         self.screen.blit(minimap_surf, dest_rect)
 
-    def _handle_minimap_click(self, minimap_rect, ratio):
+    def _handle_minimap_click(self, minimap_rect):
         """Gère le clic sur la minimap pour centrer la caméra"""
         mouse_pos = pygame.mouse.get_pos()
         if pygame.mouse.get_pressed()[0] and minimap_rect.collidepoint(mouse_pos):
             rel_x = (mouse_pos[0] - minimap_rect.x) / minimap_rect.width
             rel_y = (mouse_pos[1] - minimap_rect.y) / minimap_rect.height
-            self.center_camera_on(rel_x * MAP_SIZE, rel_y * MAP_SIZE)
+            self.center_camera_on(rel_x * self.scenario.size_x, rel_y * self.scenario.size_y)
 
     def _draw_hud(self):
         """Dessine l'interface utilisateur"""
