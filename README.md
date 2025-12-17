@@ -49,6 +49,7 @@ The project follows **MVC** architecture with **SOLID** principles:
 | `BRAINDEAD` | Basic AI with no tactical awareness - units attack nearest enemy |
 | `DAFT` | Default AI with simple tactics and formation awareness |
 | `SOMEIQ` | Smarter AI with unit-specific strategies (crossbow kiting, knight charging, etc.) |
+| `RPC` | Rock-Paper-Counter AI - each unit type prioritizes attacking its counter |
 
 ### Available Unit Types
 
@@ -286,7 +287,7 @@ Runs a fully automated tournament between AI generals, generating comprehensive 
 
 | Argument | Description |
 | :--- | :--- |
-| `-G / --ais` | **List** of participating AI names. Default: all available (BRAINDEAD, DAFT, SOMEIQ). |
+| `-G / --ais` | **List** of participating AI names. Default: all available (BRAINDEAD, DAFT, SOMEIQ, RPC). |
 | `-S / --scenarios` | **List** of scenarios to play. Default: all available. |
 | `-N` | Number of rounds for each matchup (Default: 10). |
 | `-na / --no-alternate` | Disables alternation of player positions for fairness testing. |
@@ -306,7 +307,7 @@ Runs a fully automated tournament between AI generals, generating comprehensive 
 
 ```bash
 # Run tournament with all generals and scenarios (10 rounds each)
-python battle.py tourney -G DAFT BRAINDEAD SOMEIQ -N 10
+python battle.py tourney -G DAFT BRAINDEAD SOMEIQ RPC -N 10
 
 # Run tournament with specific scenarios
 python battle.py tourney -G DAFT BRAINDEAD -S classical_medieval_battle cavalry_charge -N 5
@@ -322,6 +323,7 @@ python battle.py tourney -G DAFT BRAINDEAD -N 20 -na
 | `BRAINDEAD` | Basic AI with no tactical awareness |
 | `DAFT` | Default AI with simple tactics |
 | `SOMEIQ` | Smarter AI with unit-specific strategies |
+| `RPC` | Rock-Paper-Counter - targets unit counters |
 
 #### Available Scenarios
 
@@ -345,7 +347,7 @@ battle plot <AI> <Plotter> <Scenario> [types] range(min,max[,step]) [-N reps] [-
 
 | Argument | Description |
 | :--- | :--- |
-| `AI` | Name of the AI to use (DAFT, BRAINDEAD, SOMEIQ). |
+| `AI` | Name of the AI to use (DAFT, BRAINDEAD, SOMEIQ, RPC). |
 | `Plotter` | Name of the plotting function (PlotLanchester, PlotCasualties, etc.). |
 | `Scenario` | Scenario name (currently: Lanchester). |
 | `[types]` | Unit types as `[Type1,Type2]` (e.g., `[Knight,Crossbow]`). |

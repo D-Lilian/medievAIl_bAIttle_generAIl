@@ -183,6 +183,7 @@ class TestTournamentRunner(unittest.TestCase):
         self.assertIn('DAFT', TournamentRunner.AVAILABLE_GENERALS)
         self.assertIn('BRAINDEAD', TournamentRunner.AVAILABLE_GENERALS)
         self.assertIn('SOMEIQ', TournamentRunner.AVAILABLE_GENERALS)
+        self.assertIn('RPC', TournamentRunner.AVAILABLE_GENERALS)
 
     def test_runner_scenario_map(self):
         """Test scenario map is populated."""

@@ -18,6 +18,7 @@ from Model.strategies import (
     StrategieKnightSomeIQ,
     StrategiePikemanSomeIQ,
     StrategieStartSomeIQ,
+    StrategieSimpleAttackBestAvoidWorst,
 )
 from Model.units import UnitType
 
@@ -46,8 +47,16 @@ def create_general(name: str, unitsA, unitsB) -> General:
         }
         sS = StrategieStartSomeIQ()
         return General(unitsA=unitsA, unitsB=unitsB, sS=sS, sT=sT)
+    elif name_up == "RPC":
+        # Rock-Paper-Counter: each unit type targets its counter
+        sT = {
+            UnitType.CROSSBOWMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.PIKEMAN, hatedTroup=UnitType.KNIGHT),
+            UnitType.KNIGHT: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.CROSSBOWMAN, hatedTroup=UnitType.PIKEMAN),
+            UnitType.PIKEMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.KNIGHT, hatedTroup=UnitType.CROSSBOWMAN),
+        }
+        return General(unitsA=unitsA, unitsB=unitsB, sS=None, sT=sT)
     else:
-        raise ValueError(f"Nom d'IA inconnu ")
+        raise ValueError(f"Nom d'IA inconnu: {name}. Disponibles: BRAINDEAD, DAFT, SOMEIQ, RPC")
 
 
 def run(args):

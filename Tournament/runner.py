@@ -19,6 +19,7 @@ from Model.strategies import (
     StrategieKnightSomeIQ,
     StrategiePikemanSomeIQ,
     StrategieStartSomeIQ,
+    StrategieSimpleAttackBestAvoidWorst,
 )
 from Model.units import UnitType
 from Utils.predefined_scenarios import PredefinedScenarios
@@ -39,7 +40,7 @@ class TournamentRunner:
     """
     
     # Available generals
-    AVAILABLE_GENERALS = ['BRAINDEAD', 'DAFT', 'SOMEIQ']
+    AVAILABLE_GENERALS = ['BRAINDEAD', 'DAFT', 'SOMEIQ', 'RPC']
     
     # Available scenarios
     SCENARIO_MAP = {
@@ -248,6 +249,15 @@ class TournamentRunner:
             }
             start_strategy = StrategieStartSomeIQ()
             return General(unitsA=units_a, unitsB=units_b, sS=start_strategy, sT=strategy_map)
+        
+        elif name_up == 'RPC':
+            # Rock-Paper-Counter: each unit type targets its counter
+            strategy_map = {
+                UnitType.CROSSBOWMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.PIKEMAN, hatedTroup=UnitType.KNIGHT),
+                UnitType.KNIGHT: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.CROSSBOWMAN, hatedTroup=UnitType.PIKEMAN),
+                UnitType.PIKEMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.KNIGHT, hatedTroup=UnitType.CROSSBOWMAN),
+            }
+            return General(unitsA=units_a, unitsB=units_b, sS=None, sT=strategy_map)
         
         else:
             raise ValueError(f"Unknown general: {name}. Available: {self.AVAILABLE_GENERALS}")
