@@ -64,6 +64,7 @@ class PygameView:
         self.font = pygame.font.SysFont("Arial", 14, bold=True)
 
         self.sprites = {}
+        self.debug = False
         self.ground_tile = None
         self._load_resources()
 
@@ -213,6 +214,9 @@ class PygameView:
 
         elif event.type == pygame.QUIT:
             os._exit(0)
+
+        elif event.key == pygame.K_d and (pygame.key.get_mods() & pygame.KMOD_CTRL):
+            self.debug = not self.debug
 
         elif event.key == pygame.K_p:
             self.paused = not self.paused
@@ -404,6 +408,15 @@ class PygameView:
 
             if unit.hp < unit.hp_max:
                 self._draw_health_bar(unit, rect)
+
+        if self.debug:
+            cx, cy = int(screen_x), int(screen_y)
+            radius = max(3, int(8 * self.zoom_level) * (1 + unit.size))
+            pygame.draw.circle(self.screen, (255, 255, 0), (cx, cy), radius, 2)
+
+            cx, cy = int(screen_x), int(screen_y)
+            radius = max(3, int(10 * self.zoom_level) * (1 + unit.range))
+            pygame.draw.circle(self.screen, (255, 255, 255), (cx, cy), radius, 2)
 
     def _recolor_sprite(self, sprite):
         """Remplace une couleur par une autre dans un sprite en préservant le magenta"""
