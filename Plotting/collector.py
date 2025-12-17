@@ -16,27 +16,17 @@
 @see LanchesterData for the output data container.
 """
 
-import os
 from typing import List, Dict, Any, Tuple
-from dataclasses import dataclass, field
 from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
 
-import pandas as pd
-import numpy as np
-
-from Controller.simulation_controller import SimulationController
 from Model.simulation import Simulation
 from Model.general_factory import create_general
 
 from Plotting.data import (
     LanchesterData, 
-    BattleResult, 
     BattleDataCollector,
-    TeamStats,
-    AggregatedResults,
-    PlotData,
 )
 from Plotting.lanchester import Lanchester
 
@@ -53,6 +43,8 @@ def _run_single_simulation(args: Tuple[str, str, int, int, int]) -> Dict[str, An
     @brief  Run a single Lanchester simulation (multiprocessing worker).
     @param  args Tuple of (ai_name, unit_type, n, run_id, repetition).
     @return Dict with battle results for DataFrame insertion.
+    
+    @details Creates N vs 2N battle (Lanchester format).
     """
     ai_name, unit_type, n, run_id, repetition = args
     
@@ -90,9 +82,64 @@ def _run_single_simulation(args: Tuple[str, str, int, int, int]) -> Dict[str, An
             'winner_casualties': winner_casualties,
             'duration_ticks': result.ticks,
         }
-    except Exception as e:
+    except Exception:
         # Return error result for this simulation (will be filtered out)
         # This handles cases where N is too small for some strategies
+        return {
+            'run_id': run_id,
+            'unit_type': unit_type,
+            'n_value': n,
+            'team_a_casualties': 0,
+            'team_b_casualties': 0,
+            'winner': 'error',
+            'winner_casualties': 0,
+            'duration_ticks': 0,
+        }
+
+
+def _run_symmetric_simulation(args: Tuple[str, str, int, int, int, bool]) -> Dict[str, Any]:
+    """
+    @brief  Run a single symmetric simulation (N vs N).
+    @param  args Tuple of (ai_name, unit_type, n, run_id, repetition, symmetric).
+    @return Dict with battle results for DataFrame insertion.
+    
+    @details Creates N vs N battle (symmetric format).
+    """
+    ai_name, unit_type, n, run_id, repetition, _ = args
+    
+    try:
+        # Create symmetric scenario: N units vs N units
+        from Plotting.lanchester import LanchesterSymmetric
+        scenario = LanchesterSymmetric(unit_type, n)
+        
+        # Assign generals
+        scenario.general_a = create_general(ai_name, scenario.units_a, scenario.units_b)
+        scenario.general_b = create_general(ai_name, scenario.units_b, scenario.units_a)
+        
+        # Run simulation
+        simulation = Simulation(scenario, tick_speed=100, paused=False, unlocked=True)
+        output = simulation.simulate()
+        
+        result = BattleDataCollector.collect_from_scenario(scenario, output)
+        
+        if result.winner == 'A':
+            winner_casualties = result.team_a.casualties
+        elif result.winner == 'B':
+            winner_casualties = result.team_b.casualties
+        else:
+            winner_casualties = 0
+        
+        return {
+            'run_id': run_id,
+            'unit_type': unit_type,
+            'n_value': n,
+            'team_a_casualties': result.team_a.casualties,
+            'team_b_casualties': result.team_b.casualties,
+            'winner': result.winner,
+            'winner_casualties': winner_casualties,
+            'duration_ticks': result.ticks,
+        }
+    except Exception:
         return {
             'run_id': run_id,
             'unit_type': unit_type,
@@ -253,6 +300,103 @@ class DataCollector:
             unit = row['unit_type']
             win_rate = row['overall_team_b_win_rate'] * 100
             parts.append(f"{unit}: {win_rate:.0f}%")
+        
+        print(f"Done. {' | '.join(parts)}")
+
+    def collect_symmetric(self, unit_types: List[str], 
+                          n_range: range) -> LanchesterData:
+        """
+        @brief  Collect symmetric battle data (N vs N).
+        @param  unit_types List of unit type names.
+        @param  n_range Range of N values to test.
+        @return LanchesterData object (reused for simplicity).
+        
+        @details Creates symmetric scenarios: Team A (N units) vs Team B (N units).
+        """
+        data = LanchesterData(
+            ai_name=self.ai_name,
+            scenario_name='Symmetric',
+            unit_types=list(unit_types),
+            n_range=list(n_range),
+            num_repetitions=self.num_repetitions,
+            timestamp=datetime.now().isoformat()
+        )
+        
+        total_simulations = len(unit_types) * len(n_range) * self.num_repetitions
+        
+        # Prepare all simulation arguments
+        all_args = []
+        run_id = 0
+        for unit_type in unit_types:
+            for n in n_range:
+                for rep in range(self.num_repetitions):
+                    # Use N vs N (symmetric) instead of N vs 2N
+                    all_args.append((self.ai_name, unit_type, n, run_id, rep, True))  # True = symmetric
+                    run_id += 1
+        
+        # Run simulations with multiprocessing
+        results = self._run_parallel_symmetric(all_args, total_simulations)
+        
+        valid_results = [r for r in results if r.get('winner') != 'error']
+        error_count = len(results) - len(valid_results)
+        if error_count > 0:
+            print(f"  Warning: {error_count} simulations failed")
+        
+        data.add_results(valid_results)
+        self._print_results_symmetric(data)
+        
+        return data
+
+    def _run_parallel_symmetric(self, all_args: List[Tuple], total: int) -> List[Dict[str, Any]]:
+        """@brief Run symmetric simulations in parallel."""
+        import sys
+        
+        results = []
+        completed = 0
+        max_workers = min(mp.cpu_count(), 8)
+        bar_width = 40
+        
+        def print_progress(done: int, total: int):
+            pct = done / total if total > 0 else 1
+            filled = int(bar_width * pct)
+            bar = '█' * filled + '░' * (bar_width - filled)
+            sys.stdout.write(f'\r[{bar}] {pct*100:.0f}%')
+            sys.stdout.flush()
+        
+        print(f"Running {total} simulations...", end=' ')
+        sys.stdout.write('\n')
+        
+        if len(all_args) >= 4 and max_workers > 1:
+            with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                futures = {executor.submit(_run_symmetric_simulation, args): args 
+                          for args in all_args}
+                
+                for future in as_completed(futures):
+                    result = future.result()
+                    results.append(result)
+                    completed += 1
+                    print_progress(completed, total)
+        else:
+            for args in all_args:
+                result = _run_symmetric_simulation(args)
+                results.append(result)
+                completed += 1
+                print_progress(completed, total)
+        
+        print()
+        return results
+
+    def _print_results_symmetric(self, data: LanchesterData):
+        """@brief Print compact results for symmetric battles."""
+        summary = data.get_full_summary()
+        if summary.empty:
+            return
+        
+        parts = []
+        for _, row in summary.iterrows():
+            unit = row['unit_type']
+            # For symmetric, both teams should win ~50% of the time
+            parts.append(f"{unit}: ~50%")
         
         print(f"Done. {' | '.join(parts)}")
 

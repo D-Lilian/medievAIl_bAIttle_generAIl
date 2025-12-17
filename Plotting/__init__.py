@@ -1,22 +1,20 @@
 # -*- coding: utf-8 -*-
 """
 @package Plotting
-@brief Unified Plotting and Visualization Module with pandas DataFrames
+@brief Data Science Plotting and Visualization Module
 
 @details
 Professional data science plotting module using:
 - pandas DataFrames for data storage
 - plotnine (ggplot2-style) for visualization
 - Lanchester's Laws analysis for battle simulation
-
+- Unit comparison and damage analysis
 """
 
 from .data import (
-    # Core DataFrame container
     LanchesterData,
     create_empty_dataframe,
     BATTLE_COLUMNS,
-    # Legacy classes (backward compatibility)
     BattleResult,
     AggregatedResults,
     PlotData,
@@ -43,41 +41,42 @@ from .base import (
     UNIT_TYPES,
     # Lanchester analysis
     PlotLanchester,
-    # Generic plot types
+    # Generic analysis
     PlotWinRate,
     PlotCasualties,
     PlotDuration,
     PlotComparison,
     PlotHeatmap,
     PlotRawData,
-    # General scenario plotters
+    # Scenario analysis
     PlotScenarioOverview,
     PlotTeamPerformance,
     PlotCasualtiesDistribution,
     PlotBattleTimeline,
     PlotWinnerAnalysis,
+    # Unit analysis
+    PlotUnitComparison,
+    PlotDamageMatrix,
+    PlotKillEfficiency,
 )
 
 from .report import PlotReportGenerator
 
 __all__ = [
-    # Core DataFrame container
+    # Data containers
     'LanchesterData',
     'create_empty_dataframe',
     'BATTLE_COLUMNS',
-    # Legacy data structures
     'BattleResult',
     'AggregatedResults',
     'PlotData',
     'TeamStats',
     'BattleDataCollector',
-    
     # Data collection
     'DataCollector',
     'parse_types_arg',
     'parse_range_arg',
-    
-    # Base plotting
+    # Plotting infrastructure
     'BasePlotter',
     'PLOTTERS',
     'get_plotter',
@@ -86,26 +85,27 @@ __all__ = [
     'PALETTE_UNITS',
     'PALETTE_TEAMS',
     'PALETTE_RESULTS',
-    
-    # Lanchester-specific plots
+    'PALETTE_COMBAT',
+    'UNIT_TYPES',
+    # Lanchester
     'PlotLanchester',
-    'PlotLanchesterCasualties',
-    
-    # Generic plot types
+    # Generic
     'PlotWinRate',
     'PlotCasualties',
     'PlotDuration',
     'PlotComparison',
     'PlotHeatmap',
     'PlotRawData',
-    
-    # General scenario plotters
+    # Scenario
     'PlotScenarioOverview',
     'PlotTeamPerformance',
     'PlotCasualtiesDistribution',
     'PlotBattleTimeline',
     'PlotWinnerAnalysis',
-    
+    # Unit analysis
+    'PlotUnitComparison',
+    'PlotDamageMatrix',
+    'PlotKillEfficiency',
     # Reporting
     'PlotReportGenerator',
 ]

@@ -52,6 +52,26 @@ PALETTE_COMBAT = {
     'Ranged': '#4c72b0',  # Blue for ranged
 }
 
+## @var DAMAGE_MATRIX
+#  @brief Theoretical damage dealt by attacker (row) to target (column).
+#  @details Based on unit stats from Model/units.py
+#           Knight: 10 Base Melee, -3 vs Cavalry
+#           Pikeman: 4 Base Melee, +22 vs Cavalry  
+#           Crossbowman: 5 Base Pierce, +3 vs Spearmen
+DAMAGE_MATRIX = {
+    'Knight': {'Knight': 7, 'Pikeman': 10, 'Crossbowman': 10},
+    'Pikeman': {'Knight': 26, 'Pikeman': 4, 'Crossbowman': 4},
+    'Crossbowman': {'Knight': 5, 'Pikeman': 8, 'Crossbowman': 5},
+}
+
+## @var HP_VALUES
+#  @brief HP values for each unit type.
+HP_VALUES = {
+    'Knight': 100,
+    'Pikeman': 55,
+    'Crossbowman': 35,
+}
+
 ## @var PALETTE_UNITS
 #  @brief Color palette for unit types.
 PALETTE_UNITS = {
@@ -67,8 +87,10 @@ PALETTE_UNITS = {
 ## @var PALETTE_TEAMS
 #  @brief Color palette for team designations.
 PALETTE_TEAMS = {
-    'Team A (N)': '#e74c3c', 
-    'Team B (2N)': '#3498db',
+    'Team A': '#e74c3c',
+    'Team B': '#3498db',
+    'Team A (N)': '#e74c3c',   # Lanchester specific
+    'Team B (2N)': '#3498db',  # Lanchester specific
     'A': '#e74c3c',
     'B': '#3498db'
 }
@@ -365,8 +387,8 @@ class PlotCasualties(BasePlotter):
                     value_name='casualties'
                 )
                 melted['team'] = melted['team'].map({
-                    'mean_team_a_casualties': 'Team A (N)',
-                    'mean_team_b_casualties': 'Team B (2N)'
+                    'mean_team_a_casualties': 'Team A',
+                    'mean_team_b_casualties': 'Team B'
                 })
                 
                 plot = (
@@ -755,6 +777,153 @@ class PlotWinnerAnalysis(BasePlotter):
         return self._generate_filename("winner_analysis_empty")
 
 
+class PlotUnitComparison(BasePlotter):
+    """
+    @brief  Compare unit types side by side.
+    @details Bar charts comparing win rate, casualties, and duration by unit type.
+    """
+    
+    def plot(self, data: Any, **kwargs) -> Path:
+        title = kwargs.get('title', 'Unit Type Comparison')
+        
+        if hasattr(data, 'get_summary_by_type_and_n'):
+            summary = data.get_summary_by_type_and_n()
+            
+            if summary.empty:
+                return self._generate_filename("unit_comparison_empty")
+            
+            # Aggregate by unit type only (mean across all N values)
+            agg = summary.groupby('unit_type').agg({
+                'win_rate': 'mean',
+                'mean_team_a_casualties': 'mean',
+                'mean_team_b_casualties': 'mean',
+                'mean_duration': 'mean'
+            }).reset_index()
+            
+            agg.columns = ['unit_type', 'Win Rate (%)', 'Team A Casualties', 
+                          'Team B Casualties', 'Duration (ticks)']
+            
+            # Melt for plotting
+            melted = agg.melt(
+                id_vars='unit_type',
+                var_name='metric',
+                value_name='value'
+            )
+            
+            # Get colors for unit types
+            unit_types = melted['unit_type'].unique().tolist()
+            colors = [PALETTE_UNITS.get(ut, PALETTE_UNITS['default']) for ut in unit_types]
+            color_map = dict(zip(unit_types, colors))
+            
+            plot = (
+                ggplot(melted, aes(x='unit_type', y='value', fill='unit_type'))
+                + geom_col(position='dodge', width=0.7)
+                + facet_wrap('~metric', scales='free_y', ncol=2)
+                + scale_fill_manual(values=color_map)
+                + labs(title=title, x="Unit Type", y="Value", fill="Unit Type")
+                + theme_battle()
+                + theme(
+                    axis_text_x=element_text(rotation=45, hjust=1),
+                    legend_position='none'
+                )
+            )
+            
+            return self._save_plot(plot, self._generate_filename("unit_comparison"),
+                                   width=12, height=10)
+        
+        return self._generate_filename("unit_comparison_empty")
+
+
+class PlotDamageMatrix(BasePlotter):
+    """
+    @brief  Plot theoretical damage matrix between unit types.
+    @details Shows how much damage each unit type deals to others.
+             Based on DAMAGE_MATRIX constants from unit stats.
+    """
+    
+    def plot(self, data: Any = None, **kwargs) -> Path:
+        title = kwargs.get('title', 'Damage Matrix (Attacker → Target)')
+        
+        # Build DataFrame from DAMAGE_MATRIX
+        rows = []
+        for attacker, targets in DAMAGE_MATRIX.items():
+            for target, damage in targets.items():
+                rows.append({
+                    'attacker': attacker,
+                    'target': target,
+                    'damage': damage,
+                    'hits_to_kill': HP_VALUES[target] / damage if damage > 0 else float('inf')
+                })
+        
+        df = pd.DataFrame(rows)
+        
+        # Damage heatmap
+        plot = (
+            ggplot(df, aes(x='target', y='attacker', fill='damage'))
+            + geom_tile(color='white', size=1)
+            + geom_text(aes(label='damage'), size=14, color='white', fontweight='bold')
+            + scale_fill_gradient(low='#3498db', high='#e74c3c', name='Damage')
+            + labs(
+                title=title,
+                subtitle='Higher = more damage dealt',
+                x='Target',
+                y='Attacker'
+            )
+            + theme_battle()
+            + theme(
+                axis_text_x=element_text(size=12),
+                axis_text_y=element_text(size=12),
+                legend_position='right'
+            )
+        )
+        
+        return self._save_plot(plot, self._generate_filename("damage_matrix"))
+
+
+class PlotKillEfficiency(BasePlotter):
+    """
+    @brief  Plot hits-to-kill efficiency matrix.
+    @details Shows how many hits each unit needs to kill another.
+    """
+    
+    def plot(self, data: Any = None, **kwargs) -> Path:
+        title = kwargs.get('title', 'Hits to Kill (Attacker → Target)')
+        
+        # Build DataFrame
+        rows = []
+        for attacker, targets in DAMAGE_MATRIX.items():
+            for target, damage in targets.items():
+                htk = HP_VALUES[target] / damage if damage > 0 else 99
+                rows.append({
+                    'attacker': attacker,
+                    'target': target,
+                    'hits_to_kill': round(htk, 1)
+                })
+        
+        df = pd.DataFrame(rows)
+        
+        plot = (
+            ggplot(df, aes(x='target', y='attacker', fill='hits_to_kill'))
+            + geom_tile(color='white', size=1)
+            + geom_text(aes(label='hits_to_kill'), size=12, color='white', fontweight='bold')
+            + scale_fill_gradient(low='#27ae60', high='#e74c3c', name='Hits')
+            + labs(
+                title=title,
+                subtitle='Lower = kills faster',
+                x='Target',
+                y='Attacker'
+            )
+            + theme_battle()
+            + theme(
+                axis_text_x=element_text(size=12),
+                axis_text_y=element_text(size=12),
+                legend_position='right'
+            )
+        )
+        
+        return self._save_plot(plot, self._generate_filename("kill_efficiency"))
+
+
 ## @}
 
 ## @defgroup PlotterRegistry Plotter Registry
@@ -795,6 +964,14 @@ PLOTTERS: Dict[str, type] = {
     'timeline': PlotBattleTimeline,
     'PlotWinnerAnalysis': PlotWinnerAnalysis,
     'winner': PlotWinnerAnalysis,
+    'PlotUnitComparison': PlotUnitComparison,
+    'units': PlotUnitComparison,
+    
+    # Unit interaction plotters
+    'PlotDamageMatrix': PlotDamageMatrix,
+    'damage': PlotDamageMatrix,
+    'PlotKillEfficiency': PlotKillEfficiency,
+    'kills': PlotKillEfficiency,
 }
 
 

@@ -9,11 +9,13 @@ Creates N vs 2N battle scenarios to test Lanchester's Laws:
 - Linear Law (Melee): Casualties ∝ N, one-on-one combat
 - Square Law (Ranged): Casualties ∝ N², focus fire possible
 
+Also provides symmetric scenarios (N vs N) for general analysis.
+
 Usage:
-    from Plotting.lanchester import LanchesterScenario, Lanchester
+    from Plotting.lanchester import Lanchester, LanchesterSymmetric
     
-    scenario = Lanchester("Knight", 20)  # 20 vs 40 Knights
-    scenario = LanchesterScenario.create("Crossbowman", 30)
+    scenario = Lanchester("Knight", 20)  # 20 vs 40 Knights (Lanchester)
+    scenario = LanchesterSymmetric("Knight", 30)  # 30 vs 30 Knights (Symmetric)
 """
 
 from Model.scenario import Scenario
@@ -170,3 +172,55 @@ def Lanchester(unit_type: str, n: int) -> Scenario:
         scenario = Lanchester("Knight", 20)  # 20 Knights vs 40 Knights
     """
     return LanchesterScenario.create(unit_type, n)
+
+
+def LanchesterSymmetric(unit_type: str, n: int) -> Scenario:
+    """
+    Create a symmetric battle scenario (N vs N).
+    
+    @param unit_type: Type of units (Knight, Crossbowman, Pikeman)
+    @param n: Unit count for both teams
+    @return: Configured Scenario
+    
+    Example:
+        scenario = LanchesterSymmetric("Knight", 30)  # 30 vs 30 Knights
+    """
+    if unit_type not in UNIT_TYPES:
+        available = ', '.join(UNIT_TYPES.keys())
+        raise ValueError(f"Unknown unit type: '{unit_type}'. Available: {available}")
+    
+    if not isinstance(n, int) or n <= 0:
+        raise ValueError(f"Unit count must be a positive integer, got {n}")
+    
+    if n > MAX_UNITS_PER_TEAM:
+        raise ValueError(f"Unit count {n} exceeds max {MAX_UNITS_PER_TEAM}")
+    
+    unit_class = UNIT_TYPES[unit_type]
+    
+    # Map size scales with unit count
+    total_units = 2 * n
+    map_size = min(MAP_SIZE_MAX, max(MAP_SIZE_MIN, MAP_SIZE_BASE + total_units // 2))
+    
+    center_x = map_size // 2
+    center_y = map_size // 2
+    
+    team_a_x = center_x - ENGAGEMENT_GAP // 2
+    team_b_x = center_x + ENGAGEMENT_GAP // 2
+    
+    # Both teams have N units
+    units_a = LanchesterScenario._create_line(
+        unit_class, 'A', n, team_a_x, center_y, map_size
+    )
+    units_b = LanchesterScenario._create_line(
+        unit_class, 'B', n, team_b_x, center_y, map_size
+    )
+    
+    return Scenario(
+        units=units_a + units_b,
+        units_a=units_a,
+        units_b=units_b,
+        general_a=None,
+        general_b=None,
+        size_x=map_size,
+        size_y=map_size
+    )

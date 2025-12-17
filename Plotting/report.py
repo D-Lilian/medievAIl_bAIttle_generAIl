@@ -14,10 +14,8 @@ import os
 import webbrowser
 from datetime import datetime
 from typing import Dict, Any, Optional, List
-from pathlib import Path
 
 import pandas as pd
-import numpy as np
 
 
 class PlotReportGenerator:

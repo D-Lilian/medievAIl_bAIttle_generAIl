@@ -71,17 +71,35 @@ class PlotController:
             print(f"Error: Unknown plotter '{plotter_name}'. Available: {list(PLOTTERS.keys())}")
             return {"error": "Unknown plotter"}
         
+        # Check Lanchester plotter/scenario consistency
+        is_lanchester_plotter = plotter_name.lower() in ('plotlanchester', 'lanchester', 'plotlanchestercasualties', 'casualties_lanchester')
+        is_lanchester_scenario = scenario.lower() == "lanchester"
+        
+        if is_lanchester_plotter and not is_lanchester_scenario:
+            print(f"Error: PlotLanchester requires 'Lanchester' scenario (N vs 2N).")
+            print(f"Usage: ./battle plot {ai} PlotLanchester Lanchester '[types]' 'range(...)'")
+            return {"error": "PlotLanchester requires Lanchester scenario"}
+        
+        if is_lanchester_scenario and not is_lanchester_plotter:
+            print(f"Error: 'Lanchester' scenario should only be used with PlotLanchester.")
+            print(f"For other plots, use a different scenario (e.g., 'classic', 'shield_wall').")
+            return {"error": "Lanchester scenario requires PlotLanchester"}
+        
         # Display compact config
-        total_sims = len(unit_types) * len(n_range) * num_reps
-        print(f"\nLanchester Analysis: {ai} | {', '.join(unit_types)} | N={list(n_range)} | {num_reps}x = {total_sims} sims")
+        if is_lanchester_plotter:
+            total_sims = len(unit_types) * len(n_range) * num_reps
+            print(f"\nLanchester Analysis: {ai} | {', '.join(unit_types)} | N={list(n_range)} | {num_reps}x = {total_sims} sims")
+        else:
+            total_sims = len(unit_types) * len(n_range) * num_reps
+            print(f"\n{plotter_name}: {ai} | {', '.join(unit_types)} | N={list(n_range)} | {num_reps}x = {total_sims} sims")
         
         collector = DataCollector(ai_name=ai, num_repetitions=num_reps)
         
-        if scenario.lower() == "lanchester":
+        if is_lanchester_scenario:
             data = collector.collect_lanchester(unit_types, n_range)
         else:
-            # For generic scenarios, use Lanchester format (N vs 2N)
-            data = collector.collect_lanchester(unit_types, n_range)
+            # For generic scenarios, use symmetric battles (N vs N)
+            data = collector.collect_symmetric(unit_types, n_range)
         
         # Save raw data
         data_path = Path(PlotController.DEFAULT_OUTPUT_DIR) / "lanchester_data.csv"
@@ -91,20 +109,25 @@ class PlotController:
         plotter = get_plotter(plotter_name, output_dir=PlotController.DEFAULT_OUTPUT_DIR)
         plot_path = plotter.plot(data, ai_name=ai)
         
-        # Statistical analysis
-        stats_results = PlotController._run_statistical_analysis(data, verbose=False)
-        
-        # Generate report (auto-opens in browser)
-        report_gen = PlotReportGenerator(output_dir=PlotController.DEFAULT_OUTPUT_DIR)
-        report_path = report_gen.generate(data, plot_path, stats_results, auto_open=True)
-        
-        # Compact summary
-        PlotController._print_compact_summary(data, plot_path, report_path)
+        # Only generate full report for PlotLanchester
+        if is_lanchester_plotter:
+            # Statistical analysis
+            stats_results = PlotController._run_statistical_analysis(data, verbose=False)
+            
+            # Generate report (auto-opens in browser)
+            report_gen = PlotReportGenerator(output_dir=PlotController.DEFAULT_OUTPUT_DIR)
+            report_path = report_gen.generate(data, plot_path, stats_results, auto_open=True)
+            
+            # Compact summary
+            PlotController._print_compact_summary(data, plot_path, report_path)
+        else:
+            report_path = None
+            print(f"\n✓ Plot saved: {plot_path}")
         
         return {
             "data": str(data_path),
             "plot": str(plot_path),
-            "report": str(report_path)
+            "report": str(report_path) if report_path else None
         }
     
     @staticmethod

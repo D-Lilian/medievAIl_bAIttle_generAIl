@@ -77,17 +77,31 @@ Loads a `.pkl` save file from `save/` directory.
 | Argument | Example |
 |----------|---------|
 | AI | `DAFT`, `BRAINDEAD`, `SOMEIQ`, `RPC` |
-| Plotter | `PlotLanchester` |
-| Scenario | `Lanchester` |
-| types | `'[Knight,Crossbow]'` |
+| Plotter | `PlotLanchester`, `PlotCasualties`, `PlotUnitComparison`, etc. |
+| Scenario | `Lanchester` (for PlotLanchester only), `classic`, `shield_wall` |
+| types | `'[Knight,Crossbowman]'` |
 | range | `'range(10,50,10)'` |
 | -N | Number of repetitions (default: 10) |
+
+**Available Plotters:**
+
+| Plotter | Description | Scenario |
+|---------|-------------|----------|
+| `PlotLanchester` | Lanchester's Laws analysis (N vs 2N) | `Lanchester` only |
+| `PlotCasualties` | Casualties by unit type | Any |
+| `PlotWinRate` | Win rate analysis | Any |
+| `PlotDuration` | Battle duration analysis | Any |
+| `PlotUnitComparison` | Unit type effectiveness | Any |
+| `PlotDamageMatrix` | Damage dealt between unit types | Any |
+| `PlotKillEfficiency` | Kill efficiency per unit type | Any |
+
+**Note:** `PlotLanchester` requires `Lanchester` scenario and vice versa.
 
 **Output:**
 
 - `Reports/lanchester_data.csv` - Raw data
-- `Reports/lanchester_analysis_*.png` - Plot
-- `Reports/lanchester_report_*.html` - Full report (auto-opens)
+- `Reports/<plotter>_*.png` - Plot
+- `Reports/lanchester_report_*.html` - Full report (PlotLanchester only)
 
 ## AI Generals
 
