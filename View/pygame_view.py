@@ -4,6 +4,7 @@ import os
 from View.report_generator import ReportGenerator
 from View.stats import Stats
 from View.unit_cache import UnitCacheManager
+from Utils.save_load import SaveLoad
 
 # Constantes
 BASE_TILE_WIDTH = 64
@@ -25,6 +26,13 @@ PAUSE_TEXT_COLOR = (255, 0, 0)
 
 class PygameView:
     def __init__(self, scenario, simulation_controller, width=1600, height=1200):
+
+        pygame.init()
+        self.min_width = 800
+        self.min_height = 600
+        self.screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
+        pygame.display.set_caption("Simulation de bataille")
+
         self._init_pygame()
         self._init_window(width, height)
 
@@ -65,6 +73,9 @@ class PygameView:
         self.report_generator = ReportGenerator(scenario.size_x, scenario.size_y)
         self.stats = Stats()
         self.unit_cache = UnitCacheManager()
+
+        self.save_load = SaveLoad(scenario)
+        self.as_save = 0
 
     def _init_pygame(self):
         """Initialise Pygame avec les paramètres optimaux"""
@@ -182,6 +193,12 @@ class PygameView:
             elif event.type == pygame.MOUSEBUTTONUP:
                 self._handle_mouseup(event)
 
+            elif event.type == pygame.VIDEORESIZE:
+                new_width = max(event.w, self.min_width)
+                new_height = max(event.h, self.min_height)
+                self.width = new_width
+                self.height = new_height
+
         if self.dragging:
             self._update_camera_drag()
 
@@ -217,9 +234,12 @@ class PygameView:
         elif event.key == pygame.K_KP_MINUS:
             self.simulation_controller.decrease_tick()
 
-
         elif event.key == pygame.K_TAB:
             self.report_generator.generate(self.unit_cache.units, self.stats)
+
+        elif event.key == pygame.K_e:
+            self.save_load.save_game()
+            self.as_save = 120
 
         return True
 
@@ -424,8 +444,16 @@ class PygameView:
 
     def _draw_minimap(self):
         """Dessine la minimap"""
+        if not self.show_minimap:
+            return
+
+        screen_w, screen_h = self.screen.get_size()
         minimap_size = 150
-        margin = 40
+        margin = 10
+
+        # Position en bas à droite
+        minimap_x = screen_w - minimap_size - margin
+        minimap_y = screen_h - minimap_size - margin - 50
 
         minimap_surf = pygame.Surface((minimap_size, minimap_size))
         minimap_surf.fill(MINIMAP_BG)
@@ -449,12 +477,7 @@ class PygameView:
         camera_rect.center = (view_cx, view_cy)
         pygame.draw.rect(minimap_surf, MINIMAP_BORDER, camera_rect, 1)
 
-        dest_rect = pygame.Rect(
-            self.width - minimap_size - margin,
-            self.height - minimap_size - margin,
-            minimap_size,
-            minimap_size
-        )
+        dest_rect = pygame.Rect(minimap_x, minimap_y, minimap_size, minimap_size)
 
         self._handle_minimap_click(dest_rect, ratio)
 
@@ -498,32 +521,56 @@ class PygameView:
             pause_x = screen_w // 2 - pause_surf.get_width() // 2
             self.screen.blit(pause_surf, (pause_x, 10))
 
+        if self.as_save >= 0:
+            pause_surf = self.font.render(
+                "La partie a été enregistrée",
+                True,
+                PAUSE_TEXT_COLOR
+            )
+            screen_w = self.screen.get_size()[0]
+            pause_x = screen_w // 2 - pause_surf.get_width() // 2
+            self.screen.blit(pause_surf, (pause_x, 10))
+            self.as_save -= 1
+
     def _draw_controls(self):
         """Affiche les instructions de contrôle en bas de l'écran"""
-        controls = [
+        controls1 = [
             "ZQSD/Flèches: Déplacer caméra",
             "Shift: Accélérer",
             "Molette: Zoom",
             "Clic: Drag",
-            "C: Centrer",
-            "P: Pause",
             "+/-: Vitesse",
+        ]
+        controls2 = [
+            "C: Centrer",
+            "Tab: Rapport",
+            "E: Sauvegarder",
+            "P: Pause",
             "F4: HUD",
             "F5: Minimap",
             "Échap: Quitter"
         ]
 
         screen_w, screen_h = self.screen.get_size()
-        control_height = 30
+        control_height = 50
         bg_rect = pygame.Rect(0, screen_h - control_height, screen_w, control_height)
         bg_surface = pygame.Surface((screen_w, control_height), pygame.SRCALPHA)
+        bg_surface.fill((0, 0, 0, 128))
         self.screen.blit(bg_surface, bg_rect)
 
-        control_text = " | ".join(controls)
-        text_surf = self.font.render(control_text, True, TEXT_COLOR)
-        text_x = screen_w // 2 - text_surf.get_width() // 2
-        text_y = screen_h - control_height // 2 - text_surf.get_height() // 2
-        self.screen.blit(text_surf, (text_x, text_y))
+        # Première ligne
+        control_text1 = " | ".join(controls1)
+        text_surf1 = self.font.render(control_text1, True, TEXT_COLOR)
+        text_x1 = screen_w // 2 - text_surf1.get_width() // 2
+        text_y1 = screen_h - control_height + 5
+        self.screen.blit(text_surf1, (text_x1, text_y1))
+
+        # Deuxième ligne
+        control_text2 = " | ".join(controls2)
+        text_surf2 = self.font.render(control_text2, True, TEXT_COLOR)
+        text_x2 = screen_w // 2 - text_surf2.get_width() // 2
+        text_y2 = screen_h - control_height + 25
+        self.screen.blit(text_surf2, (text_x2, text_y2))
 
     def run(self):
         """Boucle principale"""
