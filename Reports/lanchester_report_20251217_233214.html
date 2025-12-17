@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lanchester Analysis Report | MedievAIl</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        
+        :root {
+            --primary: #1a1a2e;
+            --primary-light: #16213e;
+            --secondary: #0f3460;
+            --accent: #e94560;
+            --accent-light: #ff6b6b;
+            --success: #00d9a5;
+            --warning: #ffc107;
+            --info: #00bcd4;
+            --text: #2d3748;
+            --text-light: #718096;
+            --bg: #f7fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.7;
+            color: var(--text);
+            background: var(--bg);
+            min-height: 100vh;
+        }
+        
+        /* Header Section */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 3rem 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+        
+        .header .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+        
+        .header .meta {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .header .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            opacity: 0.85;
+        }
+        
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem 3rem;
+        }
+        
+        /* Grid System */
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+        
+        .grid-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .grid-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+        
+        @media (max-width: 1024px) {
+            .grid-4 { grid-template-columns: repeat(2, 1fr); }
+            .grid-3 { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        @media (max-width: 640px) {
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .card-full {
+            grid-column: 1 / -1;
+        }
+        
+        /* Stat Cards */
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stat-card .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1.2;
+        }
+        
+        .stat-card .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-light);
+            margin-top: 0.25rem;
+        }
+        
+        .stat-card.melee .stat-icon { background: rgba(233, 69, 96, 0.1); color: var(--accent); }
+        .stat-card.ranged .stat-icon { background: rgba(0, 188, 212, 0.1); color: var(--info); }
+        .stat-card.success .stat-icon { background: rgba(0, 217, 165, 0.1); color: var(--success); }
+        .stat-card.warning .stat-icon { background: rgba(255, 193, 7, 0.1); color: var(--warning); }
+        
+        /* Theory Box */
+        .theory-box {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--primary-light) 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .theory-box h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .theory-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .theory-grid { grid-template-columns: 1fr; }
+        }
+        
+        .law-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .law-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .law-card p {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+        
+        .law-card .formula {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            text-align: center;
+        }
+        
+        /* Section Headers */
+        .section-header {
+            margin: 2.5rem 0 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .section-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .section-header .badge {
+            background: var(--accent);
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        
+        .data-table th {
+            background: var(--primary);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .data-table th:first-child {
+            border-radius: 10px 0 0 0;
+        }
+        
+        .data-table th:last-child {
+            border-radius: 0 10px 0 0;
+        }
+        
+        .data-table td {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .data-table tr:nth-child(even) {
+            background: var(--bg);
+        }
+        
+        .data-table tr:hover {
+            background: rgba(15, 52, 96, 0.05);
+        }
+        
+        .data-table .highlight {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        /* Plot Container */
+        .plot-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .plot-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+        
+        /* Result Cards */
+        .result-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            border-left: 4px solid var(--accent);
+        }
+        
+        .result-card.linear { border-left-color: var(--accent); }
+        .result-card.quadratic { border-left-color: var(--info); }
+        .result-card.confirmed { border-left-color: var(--success); }
+        .result-card.inconclusive { border-left-color: var(--warning); }
+        
+        .result-card h4 {
+            font-size: 1.1rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .result-card p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
+        
+        .result-card .metrics {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .result-card .metric {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .result-card .metric-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .result-card .metric-label {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+        
+        /* Badges */
+        .badge-linear {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .badge-quadratic {
+            background: linear-gradient(135deg, var(--info) 0%, #26c6da 100%);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+        }
+        
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        /* Utility Classes */
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+        .mt-1 { margin-top: 0.5rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1>Lanchester's Laws Analysis</h1>
+            <p class="subtitle">Melee vs Ranged Combat Dynamics Simulation</p>
+            <div class="meta">
+                <span class="meta-item">Date: December 17, 2025 at 23:32</span>
+                <span class="meta-item">2 simulations</span>
+                <span class="meta-item">1 unit type</span>
+                <span class="meta-item">N range: 5 → 10</span>
+            </div>
+        </div>
+    </header>
+    
+    <main class="container">
+        <!-- Theory Section -->
+        <div class="theory-box">
+            <h2>Lanchester's Laws Theory</h2>
+            <div class="theory-grid">
+                <div class="law-card">
+                    <h3>Linear Law (Melee)</h3>
+                    <p>In close combat, each soldier can only engage one enemy at a time. 
+                    Casualties are directly proportional to army size.</p>
+                    <div class="formula">casualties ∝ N</div>
+                </div>
+                <div class="law-card">
+                    <h3>Square Law (Ranged)</h3>
+                    <p>In ranged combat, multiple soldiers can focus fire on the same target. 
+                    Combat effectiveness scales quadratically.</p>
+                    <div class="formula">effectiveness ∝ N²</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="section-header">
+            <h2>Simulation Overview</h2>
+        </div>
+        
+        <div class="grid grid-4">
+            <div class="stat-card success">
+                <div class="stat-icon">N</div>
+                <div class="stat-value">2</div>
+                <div class="stat-label">Total Simulations</div>
+            </div>
+            <div class="stat-card melee">
+                <div class="stat-icon">R</div>
+                <div class="stat-value">1</div>
+                <div class="stat-label">Runs per Config</div>
+            </div>
+            <div class="stat-card ranged">
+                <div class="stat-icon">V</div>
+                <div class="stat-value">2</div>
+                <div class="stat-label">N Values Tested</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-icon">AI</div>
+                <div class="stat-value font-mono" style="font-size: 1rem;">DAFT</div>
+                <div class="stat-label">AI Strategy</div>
+            </div>
+        </div>
+        
+        <!-- Configuration -->
+        <div class="section-header">
+            <h2>Configuration</h2>
+        </div>
+        
+        <div class="card">
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Value</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="highlight">AI Strategy</td>
+                            <td><code class="font-mono">DAFT</code></td>
+                            <td>Combat decision algorithm</td>
+                        </tr>
+                        <tr>
+                            <td class="highlight">Scenario</td>
+                            <td><code class="font-mono">Lanchester</code></td>
+                            <td>N vs 2N army configuration</td>
+                        </tr>
+                        <tr>
+                            <td class="highlight">Unit Types</td>
+                            <td><span class="badge-linear">Knight</span></td>
+                            <td>Combat unit classes being compared</td>
+                        </tr>
+                        <tr>
+                            <td class="highlight">N Range</td>
+                            <td><code class="font-mono">[5, 10]</code></td>
+                            <td>Army sizes tested (Team A = N, Team B = 2N)</td>
+                        </tr>
+                        <tr>
+                            <td class="highlight">Repetitions</td>
+                            <td>1</td>
+                            <td>Statistical replicates per configuration</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Visualization -->
+        <div class="section-header">
+            <h2>Visualization</h2>
+            <span class="badge">Interactive Plot</span>
+        </div>
+        
+        <div class="plot-container">
+            <img src="./lanchester_analysis_20251217_233214.png" alt="Lanchester Analysis Plot">
+        </div>
+        
+        
+        <div class="section-header">
+            <h2>Statistical Analysis</h2>
+            <span class="badge">Lanchester's Laws Test</span>
+        </div>
+        
+            <div class="card mt-2">
+                <div class="card-header">
+                    <span class="card-title">Descriptive Statistics</span>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Unit Type</th>
+                                <th>Simulations</th>
+                                <th>Casualties (μ)</th>
+                                <th>Casualties (σ)</th>
+                                <th>Duration (μ)</th>
+                                <th>2N Win Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            
+                    <tr>
+                        <td class="highlight">Knight</td>
+                        <td>2</td>
+                        <td class="font-mono">1.00</td>
+                        <td class="font-mono">0.00</td>
+                        <td class="font-mono">130.0 ticks</td>
+                        <td><strong>100.0%</strong></td>
+                    </tr>
+                </tbody></table></div></div>
+        
+        
+        <div class="section-header">
+            <h2>Detailed Data</h2>
+        </div>
+        
+            <div class="card mt-2">
+                <div class="card-header">
+                    <span class="card-title">Knight</span>
+                    <span class="badge-linear">Linear (Melee)</span>
+                </div>
+                
+                <p class="mt-1" style="color: var(--text-light);">
+                    <strong>Theory:</strong> Knights are melee units. According to Lanchester's <strong>Linear Law</strong>,
+                    in melee combat each soldier can only engage one enemy at a time, so casualties 
+                    should scale <em>linearly</em> with N.
+                </p>
+                <div class="table-container mt-1">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>N</th>
+                                <th>Team A (N)</th>
+                                <th>Team B (2N)</th>
+                                <th>A Casualties</th>
+                                <th>B Casualties</th>
+                                <th>Winner Casualties</th>
+                                <th>2N Win Rate</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            
+                    <tr>
+                        <td class="highlight">5</td>
+                        <td>5 units</td>
+                        <td>10 units</td>
+                        <td class="font-mono">5.0</td>
+                        <td class="font-mono">1.0</td>
+                        <td class="font-mono">1.0</td>
+                        <td><strong>100%</strong></td>
+                        <td class="font-mono">127 ticks</td>
+                    </tr>
+                
+                    <tr>
+                        <td class="highlight">10</td>
+                        <td>10 units</td>
+                        <td>20 units</td>
+                        <td class="font-mono">10.0</td>
+                        <td class="font-mono">1.0</td>
+                        <td class="font-mono">1.0</td>
+                        <td><strong>100%</strong></td>
+                        <td class="font-mono">133 ticks</td>
+                    </tr>
+                </tbody></table></div></div>
+        
+        
+        <div class="section-header">
+            <h2>Interpretation</h2>
+        </div>
+        
+        <div class="card mt-2">
+            <div class="card-header">
+                <span class="card-title">Methodology Notes</span>
+            </div>
+            <p style="color: var(--text-light);">
+                This analysis uses <strong>polynomial regression</strong> to fit the relationship between initial army size (N)
+                and winner casualties. The <strong>R² coefficient</strong> indicates how well each model (linear vs quadratic) 
+                explains the variance in the data.
+            </p>
+            <p style="color: var(--text-light); margin-top: 0.5rem;">
+                A higher R² for the <span class="badge-linear">Linear</span> model suggests Lanchester's Linear Law applies (melee behavior),
+                while a higher R² for the <span class="badge-quadratic">Quadratic</span> model suggests Lanchester's Square Law applies (ranged behavior).
+            </p>
+        </div>
+        
+        
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Generated by <strong>MedievAIl bAIttle generAIl</strong></p>
+            <p>Data Science Analysis powered by <a href="https://pandas.pydata.org/">pandas</a> & 
+               <a href="https://plotnine.org/">plotnine</a></p>
+        </footer>
+    </main>
+</body>
+</html>

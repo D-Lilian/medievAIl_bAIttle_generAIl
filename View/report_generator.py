@@ -15,6 +15,8 @@ import sys
 import webbrowser
 from typing import List, Dict
 
+from jinja2 import Environment, FileSystemLoader
+
 from View.data_types import Team, UnitRepr, UNIT_LETTERS
 from View.stats import Stats
 
@@ -32,6 +34,22 @@ class ReportGenerator:
         """
         self.board_width = board_width
         self.board_height = board_height
+        
+        # General/AI names (set by controller)
+        self.general_a_name: str = "Unknown"
+        self.general_b_name: str = "Unknown"
+        
+        # Define project root and output directory for reports
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        self.reports_dir = os.path.join(project_root, "Reports")
+        os.makedirs(self.reports_dir, exist_ok=True)
+        
+        # Setup Jinja2 environment
+        template_dir = os.path.join(project_root, 'Utils')
+        self.jinja_env = Environment(
+            loader=FileSystemLoader(template_dir),
+            autoescape=True
+        )
 
     def generate(self, units: List[UnitRepr], stats: Stats) -> None:
         """
@@ -39,11 +57,8 @@ class ReportGenerator:
         @param units List of unit representations
         @param stats Statistics object
         """
-        reports_dir = os.path.join(os.getcwd(), "Reports")
-        os.makedirs(reports_dir, exist_ok=True)
-
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = os.path.join(reports_dir, f"battle_report_{timestamp}.html")
+        filename = os.path.join(self.reports_dir, f"battle_report_{timestamp}.html")
 
         # Generate content
         team1 = [u for u in units if u.team == Team.A]
@@ -56,34 +71,32 @@ class ReportGenerator:
         for i, u in enumerate(team2, 1):
             uid_display_map[u.uid] = f"#{i}"
 
-        team_sections = self._gen_team_section(1, team1, uid_display_map) + self._gen_team_section(2, team2, uid_display_map)
-        battle_map = self._gen_battle_map(team1, team2)
-        breakdown = self._gen_breakdown(stats)
-        legend = self._gen_legend()
-
-        # Load template and CSS
-        base_dir = os.path.join(os.path.dirname(__file__), '..', 'Utils')
-        with open(os.path.join(base_dir, 'battle_report_template.html'), 'r', encoding='utf-8') as f:
-            template = f.read()
-        
-        with open(os.path.join(base_dir, 'battle_report.css'), 'r', encoding='utf-8') as f:
+        # Load CSS content
+        with open(os.path.join(self.jinja_env.loader.searchpath[0], 'battle_report.css'), 'r', encoding='utf-8') as f:
             css_content = f.read()
 
-        # Fill template
-        html = template.replace('{timestamp}', timestamp)
-        html = html.replace('<link rel="stylesheet" href="battle_report.css">', f'<style>{css_content}</style>')
-        html = html.replace('{simulation_time}', f"{stats.simulation_time:.2f}")
-        html = html.replace('{team1_units}', f"{stats.team1_alive}")
-        html = html.replace('{team2_units}', f"{stats.team2_alive}")
-        html = html.replace('{total_units}', f"{len(units)}")
-        html = html.replace('{team_sections}', team_sections)
-        html = html.replace('{battle_map}', battle_map)
-        html = html.replace('{breakdown_section}', breakdown)
-        html = html.replace('{legend_items}', legend)
-        html = html.replace('{generation_datetime}',
-                            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        # Prepare context for template
+        context = {
+            'timestamp': timestamp,
+            'css_content': css_content,
+            'simulation_time': f"{stats.simulation_time:.2f}",
+            'team1_units': f"{stats.team1_alive}",
+            'team2_units': f"{stats.team2_alive}",
+            'total_units': f"{len(units)}",
+            'general_a_name': self.general_a_name,
+            'general_b_name': self.general_b_name,
+            'team_sections': self._gen_team_section(1, team1, uid_display_map, self.general_a_name) + self._gen_team_section(2, team2, uid_display_map, self.general_b_name),
+            'battle_map': self._gen_battle_map(team1, team2),
+            'breakdown_section': self._gen_breakdown(stats),
+            'legend_items': self._gen_legend(),
+            'generation_datetime': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
 
-        # Write HTML file only (CSS is in Utils/)
+        # Load template and render
+        template = self.jinja_env.get_template('battle_report_template.html')
+        html = template.render(context)
+
+        # Write HTML file
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(html)
 
@@ -203,19 +216,20 @@ class ReportGenerator:
             </div>
         </div>'''
 
-    def _gen_team_section(self, team: int, units: List[UnitRepr], uid_map: Dict[int, str] = None) -> str:
+    def _gen_team_section(self, team: int, units: List[UnitRepr], uid_map: Dict[int, str] = None, general_name: str = "Unknown") -> str:
         """
         @brief Generate HTML for team section.
         @param team Team number
         @param units List of units
         @param uid_map Map of unit UIDs to display IDs
+        @param general_name Name of the general/AI controlling this team
         @return HTML string
         """
         units_html = "".join(self._gen_unit_html(i, u, team, uid_map) for i, u in enumerate(units, 1))
         return f'''
         <div class="team-section">
             <details open>
-                <summary>Team {team} - {len(units)} units</summary>
+                <summary>Team {team} ({general_name}) - {len(units)} units</summary>
                 <div class="unit-list">{units_html}</div>
             </details>
         </div>'''

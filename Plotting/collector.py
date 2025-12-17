@@ -1,272 +1,273 @@
 # -*- coding: utf-8 -*-
 """
-@file collector.py
-@brief Data Collector - Runs simulations and collects data for analysis
+@file       collector.py
+@brief      Data Collector for Lanchester analysis simulations.
 
-@details
-Separates data collection from plotting. Runs scenarios with varying parameters,
-collects results into a unified data structure that can be used by any plotter.
+@details    Runs simulations in parallel and collects data into pandas DataFrames.
 
-Part of the Plotting module - follows Single Responsibility Principle.
-
-Supports the workflow:
-    for type in [Knight,Crossbow]:
-        for N in range(1,100):
-            data[type,N] = Lanchester(type, N).run()  # repeat N times
+@par Workflow:
+@code
+    for unit_type in [Knight, Crossbow]:
+        for N in range(1, 100):
+            data[unit_type, N] = Lanchester(unit_type, N).run()
     PlotLanchester(data)
+@endcode
+
+@see LanchesterData for the output data container.
 """
 
 import os
-from typing import List, Dict, Any, Callable, Optional, Tuple
+from typing import List, Dict, Any, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import multiprocessing as mp
+
+import pandas as pd
+import numpy as np
 
 from Controller.simulation_controller import SimulationController
 from Model.simulation import Simulation
-from Model.scenario import Scenario
-from Model.generals import General
-from Model.strategies import (
-    StrategieBrainDead,
-    StrategieDAFT,
-    StrategieCrossbowmanSomeIQ,
-    StrategieKnightSomeIQ,
-    StrategiePikemanSomeIQ,
-    StrategieStartSomeIQ,
-)
-from Model.units import UnitType
+from Model.general_factory import create_general
 
-from Plotting.data import BattleResult, BattleDataCollector, AggregatedResults, PlotData
+from Plotting.data import (
+    LanchesterData, 
+    BattleResult, 
+    BattleDataCollector,
+    TeamStats,
+    AggregatedResults,
+    PlotData,
+)
 from Plotting.lanchester import Lanchester
 
 
-@dataclass
-class CollectedData:
-    """
-    Container for all collected simulation data.
-    
-    Organized by (unit_type, N) -> AggregatedResults
-    Can be passed to any Plotter for visualization.
-    """
-    unit_types: List[str] = field(default_factory=list)
-    n_range: List[int] = field(default_factory=list)
-    
-    # data[type][n] -> AggregatedResults
-    results: Dict[str, Dict[int, AggregatedResults]] = field(default_factory=dict)
-    
-    # For plotting convenience: PlotData per unit type
-    plot_data: Dict[str, PlotData] = field(default_factory=dict)
-    
-    # Metadata
-    ai_name: str = ""
-    scenario_name: str = ""
-    num_repetitions: int = 0
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    
-    def get_casualties(self, unit_type: str, n: int, team: str = 'winner') -> float:
-        """Get average casualties for a specific (type, N) combination."""
-        if unit_type not in self.results or n not in self.results[unit_type]:
-            return 0.0
-        agg = self.results[unit_type][n]
-        if team == 'winner':
-            # Winner is usually team B (2N)
-            return agg.avg_team_b_casualties
-        elif team == 'A':
-            return agg.avg_team_a_casualties
-        elif team == 'B':
-            return agg.avg_team_b_casualties
-        return 0.0
-    
-    def get_survivors(self, unit_type: str, n: int, team: str = 'winner') -> float:
-        """Get average survivors for a specific (type, N) combination."""
-        if unit_type not in self.results or n not in self.results[unit_type]:
-            return 0.0
-        agg = self.results[unit_type][n]
-        if team == 'winner' or team == 'B':
-            return agg.avg_team_b_survivors
-        return agg.avg_team_a_survivors
-    
-    def get_win_rate(self, unit_type: str, n: int, team: str = 'B') -> float:
-        """Get win rate for a specific (type, N) combination."""
-        if unit_type not in self.results or n not in self.results[unit_type]:
-            return 0.0
-        agg = self.results[unit_type][n]
-        if team == 'B':
-            return agg.team_b_win_rate
-        return agg.team_a_win_rate
+## @defgroup WorkerFunctions Multiprocessing Worker Functions
+## @{
 
+## @var MIN_N_VALUE
+#  @brief Minimum N value for Lanchester simulations to avoid strategy errors.
+MIN_N_VALUE = 5
+
+def _run_single_simulation(args: Tuple[str, str, int, int, int]) -> Dict[str, Any]:
+    """
+    @brief  Run a single Lanchester simulation (multiprocessing worker).
+    @param  args Tuple of (ai_name, unit_type, n, run_id, repetition).
+    @return Dict with battle results for DataFrame insertion.
+    """
+    ai_name, unit_type, n, run_id, repetition = args
+    
+    try:
+        # Create fresh scenario: N units (Team A) vs 2N units (Team B)
+        scenario = Lanchester(unit_type, n)
+        
+        # Assign generals using centralized factory
+        scenario.general_a = create_general(ai_name, scenario.units_a, scenario.units_b)
+        scenario.general_b = create_general(ai_name, scenario.units_b, scenario.units_a)
+        
+        # Run simulation (fast mode for data collection)
+        simulation = Simulation(scenario, tick_speed=100, paused=False, unlocked=True)
+        output = simulation.simulate()
+        
+        # Collect results using BattleDataCollector
+        result = BattleDataCollector.collect_from_scenario(scenario, output)
+        
+        # Determine winner casualties
+        if result.winner == 'A':
+            winner_casualties = result.team_a.casualties
+        elif result.winner == 'B':
+            winner_casualties = result.team_b.casualties
+        else:
+            winner_casualties = 0
+        
+        # Return only essential columns for DataFrame (optimized)
+        return {
+            'run_id': run_id,
+            'unit_type': unit_type,
+            'n_value': n,
+            'team_a_casualties': result.team_a.casualties,
+            'team_b_casualties': result.team_b.casualties,
+            'winner': result.winner,
+            'winner_casualties': winner_casualties,
+            'duration_ticks': result.ticks,
+        }
+    except Exception as e:
+        # Return error result for this simulation (will be filtered out)
+        # This handles cases where N is too small for some strategies
+        return {
+            'run_id': run_id,
+            'unit_type': unit_type,
+            'n_value': n,
+            'team_a_casualties': 0,
+            'team_b_casualties': 0,
+            'winner': 'error',
+            'winner_casualties': 0,
+            'duration_ticks': 0,
+        }
+
+
+## @}
+
+## @class DataCollector
+#  @brief Collects simulation data by running Lanchester scenarios.
 
 class DataCollector:
     """
-    Collects simulation data by running scenarios with varying parameters.
+    @brief  Collects simulation data by running Lanchester scenarios.
     
-    Workflow:
+    @details Produces pandas DataFrames for data analysis.
+    
+    @par Example:
+    @code
         collector = DataCollector(ai_name='DAFT', num_repetitions=10)
         data = collector.collect_lanchester(
             unit_types=['Knight', 'Crossbow'],
-            n_range=range(1, 100)
+            n_range=range(5, 50, 5)
         )
-        # data can now be passed to any Plotter
+    @endcode
     """
     
-    AVAILABLE_AIS = ['BRAINDEAD', 'DAFT', 'SOMEIQ']
+    ## @var AVAILABLE_AIS
+    #  @brief List of available AI strategies.
+    AVAILABLE_AIS = ['BRAINDEAD', 'DAFT', 'SOMEIQ', 'RPC']
     
     def __init__(self, ai_name: str = 'DAFT', num_repetitions: int = 10):
         """
-        Initialize the data collector.
-        
-        @param ai_name: Name of AI to use for both sides
-        @param num_repetitions: Number of times to repeat each configuration
+        @brief  Initialize the data collector.
+        @param  ai_name AI strategy name for both teams.
+        @param  num_repetitions Number of repetitions per configuration.
         """
         self.ai_name = ai_name.upper()
         self.num_repetitions = num_repetitions
-        self.simulation_controller = SimulationController()
     
     def collect_lanchester(self, unit_types: List[str], 
-                           n_range: range) -> CollectedData:
+                           n_range: range) -> LanchesterData:
         """
-        Collect Lanchester analysis data.
+        @brief  Collect Lanchester analysis data into DataFrame.
+        @param  unit_types List of unit type names (e.g., ['Knight', 'Crossbow']).
+        @param  n_range Range of N values to test.
+        @return LanchesterData object containing all simulation results.
         
-        Runs Lanchester(type, N) for each type in unit_types and N in n_range,
-        repeating num_repetitions times for each configuration.
-        
-        Signature: Lanchester(type, N) creates N units vs 2N units
-        
-        @param unit_types: List of unit type names ['Knight', 'Crossbow']
-        @param n_range: Range of N values to test
-        @return: CollectedData with all simulation results
+        @details Creates Lanchester scenarios: Team A (N units) vs Team B (2N units).
         """
-        data = CollectedData(
-            unit_types=list(unit_types),
-            n_range=list(n_range),
+        # Initialize data container
+        data = LanchesterData(
             ai_name=self.ai_name,
             scenario_name='Lanchester',
-            num_repetitions=self.num_repetitions
+            unit_types=list(unit_types),
+            n_range=list(n_range),
+            num_repetitions=self.num_repetitions,
+            timestamp=datetime.now().isoformat()
         )
         
+        # Calculate total simulations
         total_configs = len(unit_types) * len(n_range)
-        current = 0
+        total_simulations = total_configs * self.num_repetitions
         
-        print(f"\n{'='*60}")
-        print(f"DATA COLLECTION: Lanchester Analysis")
-        print(f"{'='*60}")
-        print(f"AI: {self.ai_name}")
-        print(f"Unit types: {unit_types}")
-        print(f"N range: {list(n_range)[:5]}...{list(n_range)[-1]} ({len(n_range)} values)")
-        print(f"Repetitions per config: {self.num_repetitions}")
-        print(f"Total simulations: {total_configs * self.num_repetitions}")
-        print(f"{'='*60}\n")
-        
+        # Prepare all simulation arguments
+        all_args = []
+        run_id = 0
         for unit_type in unit_types:
-            print(f"\n[{unit_type}] Starting collection...")
-            
-            data.results[unit_type] = {}
-            data.plot_data[unit_type] = PlotData(unit_type=unit_type)
-            
             for n in n_range:
-                current += 1
-                progress = (current / total_configs) * 100
-                print(f"  [{progress:5.1f}%] {unit_type} N={n}: ", end='', flush=True)
-                
-                # Run simulations for this (type, N) configuration
-                aggregated = self._run_batch(
-                    unit_type=unit_type,
-                    n=n
-                )
-                
-                # Store results
-                data.results[unit_type][n] = aggregated
-                data.plot_data[unit_type].add_data_point(n, aggregated)
-                
-                # Print summary
-                win_rate = aggregated.team_b_win_rate * 100
-                b_cas = aggregated.avg_team_b_casualties
-                print(f"{self.num_repetitions} runs | 2N win: {win_rate:.0f}% | 2N casualties: {b_cas:.1f}")
+                for rep in range(self.num_repetitions):
+                    all_args.append((self.ai_name, unit_type, n, run_id, rep))
+                    run_id += 1
         
-        print(f"\n{'='*60}")
-        print(f"DATA COLLECTION COMPLETE")
-        print(f"{'='*60}\n")
+        # Run simulations with multiprocessing
+        results = self._run_parallel(all_args, total_simulations)
+        
+        # Filter out error results (from simulations that failed)
+        valid_results = [r for r in results if r.get('winner') != 'error']
+        error_count = len(results) - len(valid_results)
+        if error_count > 0:
+            print(f"  Warning: {error_count} simulations failed (N too small for AI)")
+        
+        # Add all valid results to DataFrame
+        data.add_results(valid_results)
+        
+        # Print compact results
+        self._print_results(data)
         
         return data
     
-    def _run_batch(self, unit_type: str, n: int) -> AggregatedResults:
+    def _run_parallel(self, all_args: List[Tuple], total: int) -> List[Dict[str, Any]]:
         """
-        Run a batch of simulations for one (type, N) configuration.
-        
-        @param unit_type: Type of units
-        @param n: Number of units for team A (team B gets 2*n)
-        @return: Aggregated results from all runs
+        @brief  Run simulations in parallel using ProcessPoolExecutor.
+        @param  all_args List of argument tuples for each simulation.
+        @param  total Total number of simulations for progress reporting.
+        @return List of result dictionaries.
         """
-        aggregated = AggregatedResults(
-            scenario_name='Lanchester',
-            scenario_params={'unit_type': unit_type, 'n': n},
-            num_runs=0
-        )
+        import sys
         
-        for _ in range(self.num_repetitions):
-            # Create fresh scenario: N vs 2N
-            scenario = Lanchester(unit_type, n)
-            
-            # Assign generals (same AI for both sides)
-            scenario.general_a = self._create_general(scenario.units_a, scenario.units_b)
-            scenario.general_b = self._create_general(scenario.units_b, scenario.units_a)
-            
-            # Run simulation using SimulationController
-            self.simulation_controller.initialize_simulation(
-                scenario,
-                tick_speed=5,
-                paused=False,
-                unlocked=True
-            )
-            output = self.simulation_controller.simulation.simulate()
-            
-            # Collect results
-            result = BattleDataCollector.collect_from_scenario(scenario, output)
-            result.scenario_name = 'Lanchester'
-            result.scenario_params = {'unit_type': unit_type, 'n': n}
-            
-            aggregated.add_result(result)
+        results = []
+        completed = 0
         
-        return aggregated
+        # Determine number of workers
+        max_workers = min(mp.cpu_count(), 8)  # Cap at 8 for efficiency
+        
+        # Progress bar settings
+        bar_width = 40
+        
+        def print_progress(done: int, total: int):
+            """Print a single-line progress bar with \r."""
+            pct = done / total if total > 0 else 1
+            filled = int(bar_width * pct)
+            bar = '█' * filled + '░' * (bar_width - filled)
+            sys.stdout.write(f'\r[{bar}] {pct*100:.0f}%')
+            sys.stdout.flush()
+        
+        print(f"Running {total} simulations...", end=' ')
+        sys.stdout.write('\n')
+        
+        if len(all_args) >= 4 and max_workers > 1:
+            # Parallel execution
+            with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                futures = {executor.submit(_run_single_simulation, args): args 
+                          for args in all_args}
+                
+                for future in as_completed(futures):
+                    result = future.result()
+                    results.append(result)
+                    completed += 1
+                    print_progress(completed, total)
+        else:
+            # Sequential for small batches
+            for args in all_args:
+                result = _run_single_simulation(args)
+                results.append(result)
+                completed += 1
+                print_progress(completed, total)
+        
+        # Final newline after progress bar
+        print()  # Move to next line
+        
+        return results
     
-    def _create_general(self, units_a, units_b) -> General:
-        """Create a general with the configured AI strategy."""
-        if self.ai_name == 'BRAINDEAD':
-            strategy_map = {
-                UnitType.CROSSBOWMAN: StrategieBrainDead(None),
-                UnitType.KNIGHT: StrategieBrainDead(None),
-                UnitType.PIKEMAN: StrategieBrainDead(None),
-            }
-            return General(unitsA=units_a, unitsB=units_b, sS=None, sT=strategy_map)
+    def _print_results(self, data: LanchesterData):
+        """@brief Print compact results."""
+        summary = data.get_full_summary()
+        if summary.empty:
+            return
         
-        elif self.ai_name == 'SOMEIQ':
-            strategy_map = {
-                UnitType.CROSSBOWMAN: StrategieCrossbowmanSomeIQ(),
-                UnitType.KNIGHT: StrategieKnightSomeIQ(),
-                UnitType.PIKEMAN: StrategiePikemanSomeIQ(),
-            }
-            return General(unitsA=units_a, unitsB=units_b, 
-                          sS=StrategieStartSomeIQ(), sT=strategy_map)
+        parts = []
+        for _, row in summary.iterrows():
+            unit = row['unit_type']
+            win_rate = row['overall_team_b_win_rate'] * 100
+            parts.append(f"{unit}: {win_rate:.0f}%")
         
-        else:  # Default to DAFT
-            strategy_map = {
-                UnitType.CROSSBOWMAN: StrategieDAFT(None),
-                UnitType.KNIGHT: StrategieDAFT(None),
-                UnitType.PIKEMAN: StrategieDAFT(None),
-            }
-            return General(unitsA=units_a, unitsB=units_b, sS=None, sT=strategy_map)
+        print(f"Done. {' | '.join(parts)}")
 
+
+## @defgroup CLIUtilities CLI Parsing Utilities
+## @{
 
 def parse_types_arg(types_str: str) -> List[str]:
     """
-    Parse the types argument from CLI.
+    @brief  Parse unit types argument from CLI.
+    @param  types_str String like '[Knight,Crossbow]' or 'Knight,Crossbow'.
+    @return List of normalized unit type names.
     
-    Examples:
+    @par Example:
         '[Knight,Crossbow]' -> ['Knight', 'Crossbow']
-        '[Knight]' -> ['Knight']
-        'Knight,Crossbow' -> ['Knight', 'Crossbow']
-    
-    @param types_str: String representation of types list
-    @return: List of unit type names
     """
     # Remove brackets if present
     types_str = types_str.strip('[]')
@@ -296,16 +297,12 @@ def parse_types_arg(types_str: str) -> List[str]:
 
 def parse_range_arg(range_str: str) -> range:
     """
-    Parse the range argument from CLI.
+    @brief  Parse range argument from CLI.
+    @param  range_str String like 'range(1,100)' or '1-100' or '1:100:5'.
+    @return Python range object.
     
-    Examples:
-        'range(1,100)' -> range(1, 100)
+    @par Example:
         'range(1,100,5)' -> range(1, 100, 5)
-        '1-100' -> range(1, 101)
-        '1:100:5' -> range(1, 100, 5)
-    
-    @param range_str: String representation of range
-    @return: Python range object
     """
     range_str = range_str.strip()
     
@@ -336,3 +333,5 @@ def parse_range_arg(range_str: str) -> range:
     
     # Default fallback
     return range(5, 51, 5)
+
+## @}

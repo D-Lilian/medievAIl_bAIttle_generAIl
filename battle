@@ -1,0 +1,20 @@
+#!/bin/bash
+# battle - Main entry point for the Medieval Battle simulation CLI
+#
+# This wrapper script passes all arguments to the Python script,
+# preserving special characters like [], (), etc.
+#
+# Usage:
+#     battle run <scenario> <AI1> <AI2> [-t] [-d DATAFILE]
+#     battle load <savefile>
+#     battle tourney -G AI1 AI2 ... [-S SCENARIO1 SCENARIO2] [-N=10] [-na]
+#     battle plot <AI> <plotter> <scenario> [types] range(min,max) [-N=10]
+#
+# Examples:
+#     battle run classic DAFT BRAINDEAD
+#     battle plot DAFT PlotLanchester Lanchester [Knight,Crossbow] range(1,100)
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Pass all arguments to Python main.py
+exec python3 "$SCRIPT_DIR/main.py" "$@"

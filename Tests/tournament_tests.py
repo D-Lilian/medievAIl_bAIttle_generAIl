@@ -190,7 +190,8 @@ class TestTournamentRunner(unittest.TestCase):
         from Tournament.runner import TournamentRunner
         
         self.assertIn('cavalry_charge', TournamentRunner.SCENARIO_MAP)
-        self.assertIn('defensive_siege', TournamentRunner.SCENARIO_MAP)
+        self.assertIn('shield_wall', TournamentRunner.SCENARIO_MAP)
+        self.assertIn('classic', TournamentRunner.SCENARIO_MAP)
 
 
 class TestTournamentReport(unittest.TestCase):

@@ -30,8 +30,10 @@ class General:
                  sT,
                  sS=None,
                  UnitSubscriptions: dict = None,
+                 name: str = "Unknown",
                  ):
 
+        self.name = name
         self.MyUnits = unitsA
         self.HistUnits = unitsB
         self.UnitsDepleted = {
@@ -89,8 +91,7 @@ class General:
         # N'est appelé qu'au début
         self.log.info(f"Beggining strategy")
         if(self.sS):
-            sS = self.sS() # On passe le general en paramère de la stratégie
-            sS.apply_order(self)
+            self.sS.apply_order(self)
 
         if self.sT == None:
             self.log.debug("Aucune strategie pour les troupes")
@@ -108,8 +109,10 @@ class General:
                 c+=1
         return c
 
-   # def __str__(self):
-   #     return f"General({len(self.MyUnits)}U , sS={self.sS.__name__ if self.sS else "None"}, sT={[type(s).__name__ for s in self.sT.values()] if self.sT else "None"})"
+    def __str__(self):
+        sS_name = type(self.sS).__name__ if self.sS else "None"
+        sT_names = [type(s).__name__ for s in self.sT.values()] if self.sT else "None"
+        return f"General({len(self.MyUnits)}U , sS={sS_name}, sT={sT_names})"
 
 
     def CreateOrders(self): # réappliquer la stratégie par type sur chaque unité

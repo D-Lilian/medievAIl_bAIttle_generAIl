@@ -10,10 +10,15 @@ Follows Single Responsibility Principle - only handles report generation.
 
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List
 
 from Tournament.results import TournamentResults
+from Tournament.config import TournamentConfig
+from Tournament.runner import TournamentRunner
 
+# Path to CSS file (same directory as this module)
+CSS_FILE_PATH = Path(__file__).parent / "tournament_report.css"
 
 class TournamentReportGenerator:
     """
@@ -315,7 +320,16 @@ class TournamentReportGenerator:
         '''
     
     def _get_css(self) -> str:
-        """Get CSS styles for the report."""
+        """Load CSS styles from external file."""
+        try:
+            with open(CSS_FILE_PATH, 'r', encoding='utf-8') as f:
+                return f.read()
+        except FileNotFoundError:
+            # Fallback to minimal inline CSS if file not found
+            return self._get_fallback_css()
+    
+    def _get_fallback_css(self) -> str:
+        """Minimal fallback CSS if external file is missing."""
         return '''
         :root {
             --primary-color: #2c3e50;
@@ -327,280 +341,17 @@ class TournamentReportGenerator:
             --bg-color: #f8f9fa;
             --card-bg: #ffffff;
         }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg-color);
-            color: var(--primary-color);
-            line-height: 1.6;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        header {
-            text-align: center;
-            padding: 30px;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border-radius: 10px;
-            margin-bottom: 30px;
-        }
-        
-        header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-        
-        .timestamp {
-            opacity: 0.8;
-        }
-        
-        section {
-            background: var(--card-bg);
-            border-radius: 10px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        section h2 {
-            color: var(--primary-color);
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid var(--accent-color);
-        }
-        
-        .description {
-            color: var(--secondary-color);
-            margin-bottom: 20px;
-            font-style: italic;
-        }
-        
-        .config-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-        }
-        
-        .config-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 15px;
-            background: var(--bg-color);
-            border-radius: 5px;
-        }
-        
-        .config-item .label {
-            font-weight: bold;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        
-        th, td {
-            padding: 12px 15px;
-            text-align: center;
-            border: 1px solid #ddd;
-        }
-        
-        th {
-            background: var(--primary-color);
-            color: white;
-            font-weight: bold;
-        }
-        
-        tr:nth-child(even) {
-            background: var(--bg-color);
-        }
-        
-        tr:hover {
-            background: #e3e8ed;
-        }
-        
-        .win-rate {
-            font-weight: bold;
-        }
-        
-        .win-rate.high {
-            color: var(--success-color);
-        }
-        
-        .win-rate.medium {
-            color: var(--warning-color);
-        }
-        
-        .win-rate.low {
-            color: var(--danger-color);
-        }
-        
-        .matrix-cell {
-            min-width: 80px;
-        }
-        
-        .self-play {
-            background: #f0f0f0 !important;
-            font-style: italic;
-        }
-        
-        .scenario-section {
-            margin-top: 25px;
-            padding: 20px;
-            background: var(--bg-color);
-            border-radius: 8px;
-        }
-        
-        .scenario-section h3 {
-            color: var(--secondary-color);
-            margin-bottom: 15px;
-        }
-        
-        footer {
-            text-align: center;
-            padding: 20px;
-            color: var(--secondary-color);
-            font-size: 0.9rem;
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 15px;
-            font-size: 0.85rem;
-            font-weight: bold;
-        }
-        
-        .badge.gold {
-            background: linear-gradient(135deg, #ffd700, #ffb347);
-            color: #5d4e37;
-        }
-        
-        .badge.silver {
-            background: linear-gradient(135deg, #c0c0c0, #a8a8a8);
-            color: #333;
-        }
-        
-        .badge.bronze {
-            background: linear-gradient(135deg, #cd7f32, #b87333);
-            color: white;
-        }
-        
-        /* Summary Cards */
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-        }
-        
-        .summary-card {
-            display: flex;
-            align-items: center;
-            padding: 20px;
-            background: var(--bg-color);
-            border-radius: 10px;
-            border-left: 4px solid var(--accent-color);
-        }
-        
-        .summary-card.winner {
-            border-left-color: var(--success-color);
-            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
-        }
-        
-        .card-icon {
-            font-size: 1.5rem;
-            font-weight: bold;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--primary-color);
-            color: white;
-            border-radius: 50%;
-            margin-right: 15px;
-        }
-        
-        .card-content {
-            flex: 1;
-        }
-        
-        .card-value {
-            font-size: 1.4rem;
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-        
-        .card-label {
-            font-size: 0.85rem;
-            color: var(--secondary-color);
-        }
-        
-        .card-detail {
-            font-size: 0.9rem;
-            color: var(--accent-color);
-            font-weight: 500;
-        }
-        
-        /* Bar Chart */
-        .chart-container {
-            margin-top: 25px;
-            padding: 20px;
-            background: var(--bg-color);
-            border-radius: 8px;
-        }
-        
-        .chart-container h4 {
-            margin-bottom: 15px;
-            color: var(--secondary-color);
-        }
-        
-        .bar-row {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        
-        .bar-label {
-            width: 120px;
-            font-weight: 500;
-            text-align: right;
-            padding-right: 15px;
-        }
-        
-        .bar-container {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            background: #e0e0e0;
-            border-radius: 4px;
-            height: 28px;
-            overflow: hidden;
-        }
-        
-        .bar {
-            height: 100%;
-            border-radius: 4px;
-            transition: width 0.5s ease;
-            min-width: 2px;
-        }
-        
-        .bar-value {
-            margin-left: 10px;
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: sans-serif; background: var(--bg-color); color: var(--primary-color); line-height: 1.6; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 30px; background: var(--primary-color); color: white; border-radius: 10px; margin-bottom: 30px; }
+        section { background: var(--card-bg); border-radius: 10px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px 15px; text-align: center; border: 1px solid #ddd; }
+        th { background: var(--primary-color); color: white; }
+        .win-rate.high { color: var(--success-color); }
+        .win-rate.medium { color: var(--warning-color); }
+        .win-rate.low { color: var(--danger-color); }
         '''
     
     def _generate_overall_table(self, overall: Dict, generals: List[str]) -> str:

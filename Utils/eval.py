@@ -1,123 +1,60 @@
-from datetime import datetime
 from Utils.parse_cli import args
-from Controller.terminal_controller import TerminalController
 from Controller.simulation_controller import SimulationController
 from Controller.tournament_controller import TournamentController
 from Controller.plot_controller import PlotController
 from Model.scenario import Scenario
-from Model.units import Knight, Pikeman, Team
-from Utils.map_generator import MapGenerator
 from Utils.predefined_scenarios import PredefinedScenarios
-
-# Fabrique d'IA: à partir d'un nom, créer un General avec les stratégies correspondantes
-from Model.generals import General
-from Model.strategies import (
-    StrategieBrainDead,
-    StrategieDAFT,
-    StrategieCrossbowmanSomeIQ,
-    StrategieKnightSomeIQ,
-    StrategiePikemanSomeIQ,
-    StrategieStartSomeIQ,
-    StrategieSimpleAttackBestAvoidWorst,
-)
-from Model.units import UnitType
-
-
-def create_general(name: str, unitsA, unitsB) -> General:
-    name_up = name.upper()
-    if name_up == "BRAINDEAD":
-        sT = {
-            UnitType.CROSSBOWMAN: StrategieBrainDead(None),
-            UnitType.KNIGHT: StrategieBrainDead(None),
-            UnitType.PIKEMAN: StrategieBrainDead(None),
-        }
-        return General(unitsA=unitsA, unitsB=unitsB, sS=None, sT=sT)
-    elif name_up == "DAFT":
-        sT = {
-            UnitType.CROSSBOWMAN: StrategieDAFT(None),
-            UnitType.KNIGHT: StrategieDAFT(None),
-            UnitType.PIKEMAN: StrategieDAFT(None),
-        }
-        return General(unitsA=unitsA, unitsB=unitsB, sS=None, sT=sT)
-    elif name_up == "SOMEIQ":
-        sT = {
-            UnitType.CROSSBOWMAN: StrategieCrossbowmanSomeIQ(),
-            UnitType.KNIGHT: StrategieKnightSomeIQ(),
-            UnitType.PIKEMAN: StrategiePikemanSomeIQ(),
-        }
-        sS = StrategieStartSomeIQ()
-        return General(unitsA=unitsA, unitsB=unitsB, sS=sS, sT=sT)
-    elif name_up == "RPC":
-        # Rock-Paper-Counter: each unit type targets its counter
-        sT = {
-            UnitType.CROSSBOWMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.PIKEMAN, hatedTroup=UnitType.KNIGHT),
-            UnitType.KNIGHT: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.CROSSBOWMAN, hatedTroup=UnitType.PIKEMAN),
-            UnitType.PIKEMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.KNIGHT, hatedTroup=UnitType.CROSSBOWMAN),
-        }
-        return General(unitsA=unitsA, unitsB=unitsB, sS=None, sT=sT)
-    else:
-        raise ValueError(f"Nom d'IA inconnu: {name}. Disponibles: BRAINDEAD, DAFT, SOMEIQ, RPC")
+from Model.general_factory import create_general
 
 
 def run(args):
+    """Run a battle scenario."""
+    from Controller.hybrid_controller import HybridController, ViewMode
+    
     print(f"Running scenario: {args.scenario} with AIs: {args.ai1} vs {args.ai2}")
-    # Préparer la sélection du scénario en dehors des branches terminal/non-terminal
-    scenario_map = {
-        "classical_medieval_battle": PredefinedScenarios.classic_medieval_battle,
-        "defensive_siege": PredefinedScenarios.defensive_siege,
-        "cavalry_charge": PredefinedScenarios.cavalry_charge,
-        "cannae_envelopment": PredefinedScenarios.cannae_envelopment,
-        "british_square": PredefinedScenarios.british_square,
-    }
-    requested = getattr(args, "scenario", None)
-    if requested and requested in scenario_map:
-        selected_scenario = scenario_map[requested]()
-    else:
-        # défaut: scénario classique
-        selected_scenario = PredefinedScenarios.classic_medieval_battle()
+    
+    # Use the centralized scenario registry
+    try:
+        selected_scenario = PredefinedScenarios.get_scenario(args.scenario)
+    except ValueError as e:
+        print(f"Error: {e}")
+        print(f"Available scenarios: {PredefinedScenarios.list_scenarios()}")
+        return
 
-    # Les unités du scénario sélectionné (communes aux deux branches)
-    all_units = selected_scenario.units
-    team_a_units = selected_scenario.units_a
-    team_b_units = selected_scenario.units_b
+    # Create generals
+    ai1 = create_general(args.ai1, selected_scenario.units_a, selected_scenario.units_b)
+    ai2 = create_general(args.ai2, selected_scenario.units_b, selected_scenario.units_a)
+    
+    # Create Scenario
+    game = Scenario(
+        units=selected_scenario.units,
+        units_a=selected_scenario.units_a,
+        units_b=selected_scenario.units_b,
+        general_a=ai1,
+        general_b=ai2,
+        size_x=selected_scenario.size_x,
+        size_y=selected_scenario.size_y,
+    )
 
-    if not args.t:
-        print("No terminal view selected.")
-        # Créer les deux généraux selon les noms fournis
-        ai1 = create_general(args.ai1, team_a_units, team_b_units)
-        ai2 = create_general(args.ai2, team_b_units, team_a_units)
-        # Construire le Scenario pour la simulation
-        game = Scenario(
-            units=all_units,
-            units_a=team_a_units,
-            units_b=team_b_units,
-            general_a=ai1,
-            general_b=ai2,
-            size_x=120,
-            size_y=120,
-        )
-        # Exécuter la simulation ici seulement (branche sans terminal)
-        SimulationController.start_simulation(game)
-
-    else:
-        print("Terminal view enabled.")
-        # Laisser la partie Terminal intacte (utilisation existante)
-        ai1 = create_general(args.ai1, team_a_units, team_b_units)
-        ai2 = create_general(args.ai2, team_b_units, team_a_units)
-        # Construire le Scenario pour la simulation
-        game2 = Scenario(
-            units=all_units,
-            units_a=team_a_units,
-            units_b=team_b_units,
-            general_a=ai1,
-            general_b=ai2,
-            size_x=120,
-            size_y=120,
-        )
-        simulationController = SimulationController()
-        controller = TerminalController(game2, simulationController)
-        controller.run()
-        simulationController.start_simulation(game2)
+    sim_controller = SimulationController()
+    
+    # Determine initial view mode
+    initial_mode = ViewMode.TERMINAL if args.terminal else ViewMode.PYGAME
+    initial_tick = 10 if args.terminal else 60
+    
+    print(f"Starting in {'Terminal' if args.terminal else 'Pygame (2.5D)'} view. Press F9 to switch views.")
+    
+    # Initialize simulation
+    sim_controller.initialize_simulation(game, tick_speed=initial_tick, paused=True, unlocked=False)
+    
+    # Create hybrid controller (allows switching between views with F9)
+    controller = HybridController(sim_controller, game, initial_mode=initial_mode)
+    
+    # Start simulation thread
+    sim_controller.start_simulation()
+    
+    # Run view loop (blocking) - handles view switching internally
+    controller.run()
 
 
 def tourney(args):
@@ -128,13 +65,37 @@ def tourney(args):
 
 
 def load(args):
-    print("")
-    # Appel de la fonction correspondant voir avec jp
-
-
-def save(args):
-    print("")
-    # Appel de la fonction correspondant voir avec jp
+    """Load a saved game and run it."""
+    from Controller.hybrid_controller import HybridController, ViewMode
+    from Utils.save_load import SaveLoad
+    
+    print(f"Loading game from: {args.savefile}")
+    
+    # Load scenario from save file
+    scenario = SaveLoad.load_game(args.savefile)
+    if scenario is None:
+        print("Failed to load game.")
+        return
+    
+    sim_controller = SimulationController()
+    
+    # Default to pygame view for loaded games
+    initial_mode = ViewMode.PYGAME
+    initial_tick = 60
+    
+    print("Game loaded. Press F9 to switch views.")
+    
+    # Initialize simulation
+    sim_controller.initialize_simulation(scenario, tick_speed=initial_tick, paused=True, unlocked=False)
+    
+    # Create hybrid controller
+    controller = HybridController(sim_controller, scenario, initial_mode=initial_mode)
+    
+    # Start simulation thread
+    sim_controller.start_simulation()
+    
+    # Run view loop
+    controller.run()
 
 
 def plot(args):
@@ -142,22 +103,14 @@ def plot(args):
     PlotController.run_plot(args)
 
 
-def Lanchester(args):
-    print("")
-    # pas d ecran terminal
-
-
 def main():
-    # Conserver eval et ajouter 'args' dans l'environnement pour éviter NameError
     dispatch_env = {
         "__builtins__": __builtins__,
         "args": args,
-        "tourney": tourney,
         "run": run,
         "load": load,
-        "save": save,
+        "tourney": tourney,
         "plot": plot,
-        "Lanchester": Lanchester,
     }
     eval(f"{args.command}(args)", dispatch_env)
 

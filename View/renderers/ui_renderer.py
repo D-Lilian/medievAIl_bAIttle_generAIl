@@ -63,7 +63,7 @@ class UIRenderer(BaseRenderer):
                 line += 1
 
         # Help line
-        help_text = "P:Pause M:Zoom +/-:Tick ZQSD:Scroll(+Maj) F1-F4:Panels E:Save TAB:Report ESC:Quit"
+        help_text = "P:Pause M:Zoom +/-:Tick ZQSD:Scroll(+Maj) F1-F4:Panels E:Save TAB:Report F9:2.5D ESC:Quit"
         self.safe_addstr(line, 2, help_text, ui_attr)
 
         # Notification overlay

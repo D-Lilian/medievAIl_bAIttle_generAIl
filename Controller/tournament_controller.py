@@ -72,6 +72,13 @@ class TournamentController:
         # Print summary
         TournamentController._print_standings(results, generals)
 
+        # Auto-open report in browser
+        if report_path:
+            import webbrowser
+            import os
+            print(f"\nOpening report in browser...")
+            webbrowser.open(f"file://{os.path.abspath(report_path)}")
+
         return report_path
 
     @staticmethod

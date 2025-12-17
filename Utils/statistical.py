@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 """
 @file statistical.py
-@brief Statistical Analysis Module for Battle Simulations
+@brief Statistical Analysis for Battle Simulations
 
 @details
-Provides comprehensive statistical analysis tools for battle data including:
+Provides statistical analysis tools for battle data:
 - Descriptive statistics
-- Hypothesis testing (t-tests, chi-square, ANOVA)
-- Effect size calculations (Cohen's d, eta-squared)
+- Hypothesis testing (t-tests, ANOVA)
+- Effect size calculations (Cohen's d)
 - Confidence intervals
-- Correlation analysis
-- Distribution analysis
+- Lanchester's Laws fitting
 
-Part of the Analysis module - follows Single Responsibility Principle.
+Part of Utils module.
 """
 
 import warnings
@@ -520,70 +519,82 @@ class LanchesterAnalyzer:
     
     def test_lanchester_law(self, data: Dict[str, PlotData]) -> Dict[str, Any]:
         """
-        Test which Lanchester Law best fits the data for each unit type.
+        Test which Lanchester Law best fits the data for each unit type,
+        using Adjusted R-squared for fair model comparison.
         
-        Linear Law: casualties ∝ N (R² closer to 1 for linear fit)
-        Square Law: casualties ∝ N² (R² closer to 1 for quadratic fit)
+        Linear Law: casualties ∝ N
+        Square Law: casualties ∝ N²
         
         @param data: Dictionary of PlotData per unit type
         @return: Analysis results
         """
         results = {}
-        
+
+        def _calculate_adjusted_r2(r2: float, n_obs: int, k_predictors: int) -> float:
+            """Calculate adjusted R-squared to penalize model complexity."""
+            if n_obs - k_predictors - 1 <= 0:
+                return r2  # Cannot compute, return raw R2
+            return 1 - (1 - r2) * (n_obs - 1) / (n_obs - k_predictors - 1)
+
         for unit_type, plot_data in data.items():
             if not plot_data.n_values or not plot_data.avg_team_b_casualties:
                 continue
             
-            n = np.array(plot_data.n_values)
+            n_obs = len(plot_data.n_values)
+            if n_obs < 3: # Need enough data points for comparison
+                continue
+
+            n_arr = np.array(plot_data.n_values)
             casualties = np.array(plot_data.avg_team_b_casualties)
             
-            # Fit linear model: y = a*n + b
+            # --- Fit models and get raw R-squared ---
             try:
-                slope_lin, intercept_lin, r_lin, p_lin, se_lin = stats.linregress(n, casualties)
+                slope_lin, intercept_lin, r_lin, p_lin, se_lin = stats.linregress(n_arr, casualties)
                 r2_linear = r_lin ** 2
             except Exception:
                 r2_linear = 0
                 slope_lin = p_lin = 0
             
-            # Fit quadratic model: y = a*n² + b*n + c
             try:
-                coeffs_quad = np.polyfit(n, casualties, 2)
-                predicted_quad = np.polyval(coeffs_quad, n)
+                coeffs_quad = np.polyfit(n_arr, casualties, 2)
+                predicted_quad = np.polyval(coeffs_quad, n_arr)
                 ss_res = np.sum((casualties - predicted_quad) ** 2)
                 ss_tot = np.sum((casualties - np.mean(casualties)) ** 2)
                 r2_quadratic = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
             except Exception:
                 r2_quadratic = 0
-                coeffs_quad = [0, 0, 0]
             
-            # Fit square root model: y = a*sqrt(n) + b (alternative for ranged)
             try:
-                sqrt_n = np.sqrt(n)
-                slope_sqrt, intercept_sqrt, r_sqrt, p_sqrt, se_sqrt = stats.linregress(sqrt_n, casualties)
+                sqrt_n = np.sqrt(n_arr)
+                slope_sqrt, _, r_sqrt, _, _ = stats.linregress(sqrt_n, casualties)
                 r2_sqrt = r_sqrt ** 2
             except Exception:
                 r2_sqrt = 0
+
+            # --- Calculate Adjusted R-squared for fair comparison ---
+            adj_r2_linear = _calculate_adjusted_r2(r2_linear, n_obs, k_predictors=1)
+            adj_r2_quadratic = _calculate_adjusted_r2(r2_quadratic, n_obs, k_predictors=2)
+            adj_r2_sqrt = _calculate_adjusted_r2(r2_sqrt, n_obs, k_predictors=1)
             
-            # Determine best fit
+            # Determine best fit using Adjusted R-squared
             fits = {
-                'Linear': r2_linear,
-                'Quadratic': r2_quadratic,
-                'Square Root': r2_sqrt
+                'Linear': adj_r2_linear,
+                'Quadratic': adj_r2_quadratic,
+                'Square Root': adj_r2_sqrt
             }
             best_fit = max(fits, key=fits.get)
             
-            # Expected law based on unit type
+            # --- Interpretation ---
             is_ranged = unit_type.lower() in ['crossbowman', 'crossbow', 'archer', 'ranged']
             expected_law = "Square Law (ranged)" if is_ranged else "Linear Law (melee)"
             
-            # Actual law interpretation
             if best_fit == 'Linear':
                 actual_law = "Linear Law"
                 conclusion = "casualties scale linearly with N"
             elif best_fit == 'Quadratic':
                 actual_law = "Square Law"
                 conclusion = "casualties scale quadratically with N"
-            else:
+            else: # Square Root
                 actual_law = "Sub-linear"
                 conclusion = "casualties scale sub-linearly (sqrt) with N"
             
@@ -594,15 +605,18 @@ class LanchesterAnalyzer:
                 'r2_linear': r2_linear,
                 'r2_quadratic': r2_quadratic,
                 'r2_sqrt': r2_sqrt,
-                'best_fit': best_fit,
-                'best_r2': fits[best_fit],
+                'adj_r2_linear': adj_r2_linear,
+                'adj_r2_quadratic': adj_r2_quadratic,
+                'adj_r2_sqrt': adj_r2_sqrt,
+                'best_fit_model': best_fit,
+                'best_adj_r2': fits[best_fit],
                 'linear_slope': slope_lin,
                 'linear_p_value': p_lin,
                 'matches_theory': (
                     (is_ranged and best_fit in ['Quadratic', 'Square Root']) or
                     (not is_ranged and best_fit == 'Linear')
                 ),
-                'n_observations': len(n),
+                'n_observations': n_obs,
             }
         
         return results

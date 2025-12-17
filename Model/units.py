@@ -88,13 +88,8 @@ class Unit:
         if not self.can_attack():
             self.reload -= t
 
-            # Dans votre fichier Units.py
-
     def __str__(self):
         return f"{self.unit_type} {self.__hash__()} (Team {self.team}) at ({self.x},{self.y})"
-
-
-
 
 class Crossbowman(Unit):
     def __init__(self, team, x, y):

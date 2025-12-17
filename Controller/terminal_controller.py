@@ -53,6 +53,12 @@ class TerminalController:
         else:
             self.view = TerminalView(scenario.size_x, scenario.size_y, tick_speed=sim_controller.get_tick_speed())
 
+        # Set general names for report generation
+        if hasattr(scenario.general_a, 'name'):
+            self.view.report_generator.general_a_name = scenario.general_a.name
+        if hasattr(scenario.general_b, 'name'):
+            self.view.report_generator.general_b_name = scenario.general_b.name
+
         # Connect save callback
         self.view.on_quick_save = self._handle_save
 
@@ -103,8 +109,10 @@ class TerminalController:
                 # 3. Sync speed from view to simulation controller
                 #    ViewState.tick_speed <-> Simulation.tick_speed (via SimulationController)
                 if self.view.tick_speed != self.sim_controller.get_tick_speed():
-                    # Use set_tick_speed for efficient direct sync
-                    self.sim_controller.set_tick_speed(self.view.tick_speed)
+                    while self.sim_controller.get_tick_speed() < self.view.tick_speed:
+                        self.sim_controller.increase_tick()
+                    while self.sim_controller.get_tick_speed() > self.view.tick_speed:
+                        self.sim_controller.decrease_tick()
 
                 # 4. Sync pause state
                 #    ViewState.paused <-> Simulation.paused (via SimulationController)
