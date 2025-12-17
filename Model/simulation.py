@@ -14,6 +14,8 @@ import math
 
 from Model.units import *
 
+from Utils.logs import logger
+
 # Number chosen to make simulation fast but realistic
 # So that reload time and tick speed are compatible
 DEFAULT_NUMBER_OF_TICKS_PER_SECOND = 10
@@ -24,6 +26,7 @@ class Simulation:
     def __init__(self, scenario, tick_speed=10, paused=False, unlocked=False):
         self.scenario = scenario
         self.reload_units = []
+        self.log = logger.bind(simulation=str(self))
 
         self.tick_speed = tick_speed
         self.tick = 0
