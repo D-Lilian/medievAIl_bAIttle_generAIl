@@ -14,9 +14,11 @@ Manages the execution and lifecycle of orders given to units.
 
 
 from Utils.logs import logger, setup_logger
-from Model.units import Unit
+from Model.units import Unit, UnitType
 from Model.simulation import Simulation
 
+
+# TODO FAIRE VIDEOS DES DIFFERENTS COMPORTEMENTS
 
 
 class Order:
@@ -92,9 +94,12 @@ class DontMoveOrder(Order):
         super().__init__(unit)
         self.unit = unit
         self.nb = nb
+        self._direction = -1
 
 
     def Try(self, simu:Simulation):
+        simu.move_one_step_from_target_in_direction(self.unit, self.unit, -90*self._direction) # Fait croire a simu que l'unité a move
+        self._direction *=-1
         if self.nb == 0:
             return True
         if self.nb < 0:
@@ -122,15 +127,15 @@ class AvoidOrder(Order):
 
 # Ici c'est un ordre qui vérifie systématiquement que l'unité n'est pas toute seule, cad que dans sa ligne of sight il ya au moins un allié, sinon, elle se dirige vers l'allié le plus proche
 class StayInFriendlySpaceOrder(Order):
-    def __init__(self, unit, typeUnits):
+    def __init__(self, unit, typeUnit):
         super().__init__(unit)
         self.unit = unit
-        self.typeUnits = typeUnits
+        self.typeUnit = typeUnit
         #self.type = "permanent"
 
 
     def Try(self, simu):
-        friendly = simu.get_nearest_friendly_in_sight(self.unit, type_units=self.typeUnits)
+        friendly = simu.get_nearest_friendly_in_sight(self.unit, type_target=self.typeUnit)
         if friendly is None:
             return False # Il ya aucune enemy nearby
 
@@ -179,7 +184,6 @@ class AttackOrder(Order):
         self.target = target
 
     def Try(self, simu):
-        # todo enlever le isinrgange
         if simu.is_in_reach(self.unit, self.target):
             killed = simu.attack_unit(self.unit, self.target)
             if not killed:
