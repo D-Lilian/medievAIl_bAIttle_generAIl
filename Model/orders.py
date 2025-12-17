@@ -343,14 +343,14 @@ class OrderManager:
         self._by_order[order] = prio_max
 
         if self._head is None:
-            self.log.debug(f"Adding order at the beggining with prio {prio_max}")
+            self.log.info(f"Adding order at the beggining with prio {prio_max}")
             self._head = self._tail = node
             return
 
         self._tail.next = node
         node.prev = self._tail
         self._tail = node
-        self.log.debug(f"Adding order with max priority of {prio_max}")
+        self.log.info(f"Adding order with max priority of {prio_max}")
 
 
     def FlushOrders(self):
