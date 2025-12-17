@@ -92,7 +92,7 @@ if __name__ == "__main__":
             UnitType.KNIGHT: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.CROSSBOWMAN, hatedTroup=UnitType.PIKEMAN),
             UnitType.PIKEMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.KNIGHT, hatedTroup=UnitType.CROSSBOWMAN),
             UnitType.CROSSBOWMAN: StrategieSimpleAttackBestAvoidWorst(favoriteTroup=UnitType.PIKEMAN, hatedTroup=UnitType.KNIGHT),
-        })
+        },size_x=120, size_y=120)
     SOMEIQ.sS = StrategieStartSomeIQ
 
 
@@ -112,7 +112,6 @@ if __name__ == "__main__":
     scenario = Scenario(units, units_a, units_b, SOMEIQ, RPC2, size_x=120, size_y=120)
 
 
-    RANDOMIQ1 = General(units_a, units_b, sS=None, sT=None)
     # rouge RPC
     # bleu DAFT1
 
@@ -148,6 +147,8 @@ if __name__ == "__main__":
     view.run()
 
     print("Simulation started")
+
+    # TODO Fix Squad n==0, fix position a alterner, fix explication code, fix commentaire, fix strategie 2 mouvements,
 
     # while simulation_controller.get_tick() < 600:
     #     print(simulation_controller.get_tick())

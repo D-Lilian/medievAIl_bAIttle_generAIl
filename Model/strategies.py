@@ -257,7 +257,26 @@ class StrategieStartSomeIQ(StrategyStart):
         soufredouleurs = general.generate_squad({UnitType.KNIGHT:5})
         for sf in soufredouleurs:
             sf.order_manager.RemoveOrderAtPriority(-1) # on lui enlève le déplacement en arrière
-            sf.order_manager.Add(SacrificeOrder(sf, 0, 50+soufredouleurs.index(sf)*10 ), -1)
+
+            #sf.order_manager.Add(SacrificeOrder(sf, 0, 50+soufredouleurs.index(sf)*10 ), -1)
+
+            sf.order_manager.Add(SacrificeOrder(sf,  (sf.x-20) %120, (sf.y+50 )%120+soufredouleurs.index(sf)*10 ), -1)
+            #sf.order_manager.Add(SacrificeOrder(sf,  (sf.x) %120, (sf.y +50)%120+soufredouleurs.index(sf)*10 ), -1)
+
+            # faire systeme pourcentage
+
+        soufredouleurs = general.generate_squad({UnitType.KNIGHT:3})
+        for sf in soufredouleurs:
+            sf.order_manager.RemoveOrderAtPriority(-1) # on lui enlève le déplacement en arrière
+
+            #sf.order_manager.Add(SacrificeOrder(sf, 0, 50+soufredouleurs.index(sf)*10 ), -1)
+
+            sf.order_manager.Add(SacrificeOrder(sf,  (sf.x+50) %120, (sf.y-20 )%120+soufredouleurs.index(sf)*10 ), -1)
+
+        #soufredouleurs = general.generate_squad({UnitType.KNIGHT:3})
+        #for sf in soufredouleurs:
+        #    sf.order_manager.RemoveOrderAtPriority(-1) # on lui enlève le déplacement en arrière
+        #    sf.order_manager.Add(SacrificeOrder(sf, 50, 50+soufredouleurs.index(sf)*10 ), -1)
 
 
         #soufredouleur1 = general.GetRandomUnit()
