@@ -102,7 +102,7 @@ class PlotController:
             data = collector.collect_symmetric(unit_types, n_range)
         
         # Save raw data
-        data_path = Path(PlotController.DEFAULT_OUTPUT_DIR) / "lanchester_data.csv"
+        data_path = Path(PlotController.DEFAULT_OUTPUT_DIR) / "data.csv"
         data.save_csv(str(data_path))
         
         # Generate plot
