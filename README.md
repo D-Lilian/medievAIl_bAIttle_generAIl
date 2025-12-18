@@ -179,6 +179,7 @@ medievAIl_bAIttle_generAIl/
 │
 ├── battle                 # Entry point (bash script)
 ├── main.py                # Python entry point & CLI dispatcher
+├── game_manager.py        # Legacy game manager (deprecated)
 │
 ├── Model/                 # MODEL - Business logic
 │   ├── units.py           # Unit classes (Knight, Pikeman, Crossbowman)
@@ -222,16 +223,18 @@ medievAIl_bAIttle_generAIl/
 ├── Utils/                 # UTILITIES
 │   ├── parse_cli.py       # Argument parsing
 │   ├── predefined_scenarios.py  # Predefined scenarios
+│   ├── map_generator.py   # Map generation utilities
 │   ├── save_load.py       # Save/load (.pkl)
 │   ├── statistical.py     # Statistical analysis
 │   ├── logs.py            # Logging (loguru)
 │   └── errors.py          # Custom exceptions
 │
 ├── Tests/                 # UNIT TESTS
+│   ├── general_factory_tests.py
 │   ├── orders_test.py
 │   ├── plotting_tests.py
-│   ├── tournament_tests.py
-│   └── general_factory_tests.py
+│   ├── simulation_tests.py
+│   └── tournament_tests.py
 │
 ├── Reports/               # OUTPUT - Generated reports
 └── assets/                # ASSETS - Sprites and images
