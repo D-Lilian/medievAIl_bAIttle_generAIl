@@ -164,6 +164,7 @@ The `Lanchester` scenario tests combat theory with **N vs 2N** battles:
 - **Analysis**: Plot Team B casualties vs N
 
 The analysis compares the **observed slope** to theoretical predictions:
+
 - Melee units should have slope ≈ 1.0 (each Team A unit kills one Team B unit)
 - Ranged units should have slope ≈ 0.27 (focus fire reduces casualties)
 
@@ -174,6 +175,7 @@ The analysis compares the **observed slope** to theoretical predictions:
 ```
 
 **Output:**
+
 - Plot showing empirical Team B casualties per unit type
 - Statistical report with slope analysis
 - HTML report with detailed interpretation

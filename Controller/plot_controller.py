@@ -76,13 +76,13 @@ class PlotController:
         is_lanchester_scenario = scenario.lower() == "lanchester"
         
         if is_lanchester_plotter and not is_lanchester_scenario:
-            print(f"Error: PlotLanchester requires 'Lanchester' scenario (N vs 2N).")
+            print("Error: PlotLanchester requires 'Lanchester' scenario (N vs 2N).")
             print(f"Usage: ./battle plot {ai} PlotLanchester Lanchester '[types]' 'range(...)'")
             return {"error": "PlotLanchester requires Lanchester scenario"}
         
         if is_lanchester_scenario and not is_lanchester_plotter:
-            print(f"Error: 'Lanchester' scenario should only be used with PlotLanchester.")
-            print(f"For other plots, use a different scenario (e.g., 'classic', 'shield_wall').")
+            print("Error: 'Lanchester' scenario should only be used with PlotLanchester.")
+            print("For other plots, use a different scenario (e.g., 'classic', 'shield_wall').")
             return {"error": "Lanchester scenario requires PlotLanchester"}
         
         # Display compact config
@@ -266,7 +266,7 @@ class PlotController:
         
         # Check if slope is close to zero (2:1 advantage too dominant)
         if slope < 0.05:
-            return f"Slope ≈ 0: The 2:1 numerical advantage is overwhelming. Team B wins with minimal casualties."
+            return "Slope ≈ 0: The 2:1 numerical advantage is overwhelming. Team B wins with minimal casualties."
         
         # Determine which law the data matches
         error_linear = abs(slope - theoretical_linear)
