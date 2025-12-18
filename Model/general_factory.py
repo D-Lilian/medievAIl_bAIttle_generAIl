@@ -8,7 +8,7 @@ Centralizes general creation logic to avoid duplication across modules.
 Supports all AI strategies: BRAINDEAD, DAFT, SOMEIQ, RPC.
 
 Used by:
-- Utils.eval (CLI entry point)
+- main.py (CLI entry point)
 - Plotting.collector (for Lanchester analysis)
 - Tournament.runner (for tournament matches)
 

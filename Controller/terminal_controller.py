@@ -6,7 +6,7 @@
 @details
 Controls the terminal view display. Communicates with the simulation
 ONLY through SimulationController. Receives SimulationController and
-Scenario from eval.py.
+Scenario from main.py.
 
 Implements the "Game Loop" pattern for the terminal interface.
 
@@ -39,8 +39,8 @@ class TerminalController:
         """
         @brief Initialize the controller.
 
-        @param sim_controller SimulationController instance (from eval.py)
-        @param scenario Scenario instance (from eval.py)
+        @param sim_controller SimulationController instance (from main.py)
+        @param scenario Scenario instance (from main.py)
         @param view Optional TerminalView instance. If None, a new one is created.
         """
         self.sim_controller = sim_controller
@@ -132,12 +132,12 @@ def run_terminal_view(sim_controller: SimulationController, scenario: Scenario) 
     @brief Helper function to launch the terminal view.
 
     @details
-    Entry point for external callers (e.g., eval.py).
+    Entry point for external callers (e.g., main.py).
     Creates a TerminalController with the SimulationController and Scenario, then runs the interactive terminal view.
     Tick speed is retrieved from sim_controller.get_tick_speed().
 
-    @param sim_controller SimulationController instance (from eval.py)
-    @param scenario Scenario instance (from eval.py)
+    @param sim_controller SimulationController instance (from main.py)
+    @param scenario Scenario instance (from main.py)
 
     @code
     from Controller.terminal_controller import run_terminal_view

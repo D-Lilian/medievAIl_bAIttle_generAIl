@@ -178,7 +178,7 @@ The project follows the **MVC** (Model-View-Controller) pattern with specialized
 medievAIl_bAIttle_generAIl/
 │
 ├── battle                 # Entry point (bash script)
-├── main.py                # Python entry point
+├── main.py                # Python entry point & CLI dispatcher
 │
 ├── Model/                 # MODEL - Business logic
 │   ├── units.py           # Unit classes (Knight, Pikeman, Crossbowman)
@@ -220,7 +220,6 @@ medievAIl_bAIttle_generAIl/
 │   └── report.py          # Tournament HTML reports
 │
 ├── Utils/                 # UTILITIES
-│   ├── eval.py            # CLI dispatcher (run, load, plot, tourney)
 │   ├── parse_cli.py       # Argument parsing
 │   ├── predefined_scenarios.py  # Predefined scenarios
 │   ├── save_load.py       # Save/load (.pkl)

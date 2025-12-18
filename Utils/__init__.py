@@ -5,7 +5,6 @@
 
 Includes:
 - errors: Custom exceptions
-- eval: Safe expression evaluation
 - logs: Logging configuration
 - map_generator: Map generation utilities
 - parse_cli: Command line argument parsing

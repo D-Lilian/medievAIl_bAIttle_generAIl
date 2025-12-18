@@ -9,7 +9,7 @@ Follows Single Responsibility Principle - only handles configuration.
 """
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 
 
 @dataclass
@@ -20,4 +20,3 @@ class TournamentConfig:
     rounds_per_matchup: int = 10
     alternate_positions: bool = True
     max_ticks: int = 1000
-    num_processes: Optional[int] = None # Number of processes for parallel execution, None for cpu_count()
