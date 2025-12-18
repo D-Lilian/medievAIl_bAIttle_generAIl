@@ -106,7 +106,7 @@ class TournamentRunner:
     Orchestrates running a complete tournament between AI generals in parallel.
     """
     
-    AVAILABLE_GENERALS = ['BRAINDEAD', 'DAFT', 'SOMEIQ', 'RPC']
+    AVAILABLE_GENERALS = ['BRAINDEAD', 'DAFT', 'SOMEIQ', 'RPC', 'RANDOMIQ']
     SCENARIO_MAP = SCENARIO_MAP  # Expose module-level map as class attribute
     
     def __init__(self, config: TournamentConfig):
@@ -118,32 +118,40 @@ class TournamentRunner:
         """
         Run the complete tournament in parallel.
         """
+        import sys
+        
         # --- 1. Prepare all match jobs ---
         jobs = self._prepare_jobs()
         total_matches = len(jobs)
         
-        self._print_header(total_matches)
-        
-        # --- 2. Run jobs in parallel ---
         # Use a sensible number of processes, defaulting to os.cpu_count()
         num_processes = self.config.num_processes or multiprocessing.cpu_count()
         
-        print(f"Running {total_matches} matches in parallel on {num_processes} processes...")
+        # Progress bar settings
+        bar_width = 40
         
+        def print_progress(done: int, total: int):
+            """Print a single-line progress bar with \r."""
+            pct = done / total if total > 0 else 1
+            filled = int(bar_width * pct)
+            bar = '█' * filled + '░' * (bar_width - filled)
+            sys.stdout.write(f'\r[{bar}] {pct*100:.0f}%')
+            sys.stdout.flush()
+        
+        print(f"Running {total_matches} matches...")
+        
+        # --- 2. Run jobs in parallel ---
         all_results = []
         with multiprocessing.Pool(processes=num_processes) as pool:
-            # Using imap_unordered to get results as they complete for progress tracking
             for i, result in enumerate(pool.imap_unordered(_run_match_worker, jobs), 1):
                 all_results.append(result)
-                print(f"\r  Progress: {i}/{total_matches} matches completed ({i/total_matches:.1%})", end='', flush=True)
+                print_progress(i, total_matches)
 
-        print("\n\nAll matches finished. Aggregating results...")
+        print()  # Move to next line after progress bar
         
         # --- 3. Process results ---
         for result in all_results:
             self.results.add_match(result)
-        
-        self._print_footer(total_matches)
         
         return self.results
         
@@ -172,21 +180,3 @@ class TournamentRunner:
                     job = (general_a_name, general_b_name, scenario_name, False)
                 jobs.append(job)
         return jobs
-
-    def _print_header(self, total_matches: int):
-        """Prints the tournament start banner."""
-        print(f"\n{'='*60}")
-        print("PARALLEL TOURNAMENT START")
-        print(f"{'='*60}")
-        print(f"Generals: {self.config.generals}")
-        print(f"Scenarios: {self.config.scenarios}")
-        print(f"Rounds per matchup: {self.config.rounds_per_matchup}")
-        print(f"Alternate positions: {self.config.alternate_positions}")
-        print(f"Total matches to run: {total_matches}")
-        print(f"{'='*60}\n")
-        
-    def _print_footer(self, total_matches: int):
-        """Prints the tournament end banner."""
-        print(f"\n{'='*60}")
-        print(f"TOURNAMENT COMPLETE - {total_matches} matches played")
-        print(f"{'='*60}\n")

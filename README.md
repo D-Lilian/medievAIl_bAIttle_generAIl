@@ -111,6 +111,7 @@ Loads a `.pkl` save file from `save/` directory.
 | `DAFT` | Attack globally nearest enemy |
 | `SOMEIQ` | Unit-specific tactics with formations |
 | `RPC` | Rock-Paper-Counter targeting |
+| `RANDOMIQ` | Random strategy selection |
 
 ### General Architecture
 

@@ -935,9 +935,6 @@ PLOTTERS: Dict[str, type] = {
     # Lanchester (main analysis) - casualties vs N with theoretical curves
     'PlotLanchester': PlotLanchester,
     'lanchester': PlotLanchester,
-    # Backward-compatible aliases (keep a single implementation)
-    'PlotLanchesterCasualties': PlotLanchester,
-    'casualties_lanchester': PlotLanchester,
     
     # Generic plot types
     'PlotWinRate': PlotWinRate,

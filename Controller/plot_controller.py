@@ -72,7 +72,7 @@ class PlotController:
             return {"error": "Unknown plotter"}
         
         # Check Lanchester plotter/scenario consistency
-        is_lanchester_plotter = plotter_name.lower() in ('plotlanchester', 'lanchester', 'plotlanchestercasualties', 'casualties_lanchester')
+        is_lanchester_plotter = plotter_name.lower() in ('plotlanchester', 'lanchester')
         is_lanchester_scenario = scenario.lower() == "lanchester"
         
         if is_lanchester_plotter and not is_lanchester_scenario:

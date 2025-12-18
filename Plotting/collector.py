@@ -175,7 +175,7 @@ class DataCollector:
     
     ## @var AVAILABLE_AIS
     #  @brief List of available AI strategies.
-    AVAILABLE_AIS = ['BRAINDEAD', 'DAFT', 'SOMEIQ', 'RPC']
+    AVAILABLE_AIS = ['BRAINDEAD', 'DAFT', 'SOMEIQ', 'RPC', 'RANDOMIQ']
     
     def __init__(self, ai_name: str = 'DAFT', num_repetitions: int = 10):
         """

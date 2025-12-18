@@ -200,7 +200,6 @@ class TestScenarioPlotters(unittest.TestCase):
         expected_plotters = [
             # Lanchester (special case)
             'PlotLanchester', 'lanchester',
-            'PlotLanchesterCasualties', 'casualties_lanchester',
             # Generic plot types
             'PlotWinRate', 'winrate',
             'PlotCasualties', 'casualties',

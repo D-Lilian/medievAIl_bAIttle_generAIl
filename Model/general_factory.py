@@ -27,6 +27,7 @@ from Model.strategies import (
     StrategiePikemanSomeIQ,
     StrategieStartSomeIQ,
     StrategieSimpleAttackBestAvoidWorst,
+    StrategieRandomIQ,
 )
 
 
@@ -34,7 +35,7 @@ from Model.strategies import (
 # AVAILABLE AI STRATEGIES
 # =============================================================================
 
-AVAILABLE_AIS = ['BRAINDEAD', 'DAFT', 'SOMEIQ', 'RPC']
+AVAILABLE_AIS = ['BRAINDEAD', 'DAFT', 'SOMEIQ', 'RPC', 'RANDOMIQ']
 
 
 def get_available_ais() -> List[str]:
@@ -104,6 +105,11 @@ def create_general(name: str, unitsA, unitsB) -> General:
             ),
         }
         return General(unitsA=unitsA, unitsB=unitsB, sS=None, sT=sT, name=name_up)
+    
+    elif name_up == "RANDOMIQ":
+        # Random strategy - applies random orders
+        sS = StrategieRandomIQ()
+        return General(unitsA=unitsA, unitsB=unitsB, sS=sS, sT=None, name=name_up)
     
     else:
         available = ', '.join(AVAILABLE_AIS)

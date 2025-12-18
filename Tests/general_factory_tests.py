@@ -128,7 +128,7 @@ class TestGeneralFactory(unittest.TestCase):
             Crossbowman(team='B', x=55, y=10),
         ]
         
-        for ai_name in ['BRAINDEAD', 'DAFT', 'SOMEIQ', 'RPC']:
+        for ai_name in ['BRAINDEAD', 'DAFT', 'SOMEIQ', 'RPC', 'RANDOMIQ']:
             general = create_general(ai_name, units_a, units_b)
             self.assertIsInstance(general, General)
 

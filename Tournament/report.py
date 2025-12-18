@@ -457,7 +457,7 @@ class TournamentReportGenerator:
             
             sections.append(f'''
             <div class="scenario-section">
-                <h3>📍 {scenario}</h3>
+                <h3>{scenario}</h3>
                 {table}
             </div>
             ''')
