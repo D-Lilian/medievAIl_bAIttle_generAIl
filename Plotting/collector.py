@@ -20,6 +20,20 @@ from typing import List, Dict, Any, Tuple
 from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
+import signal
+
+# Timeout in seconds for each simulation (prevents infinite battles)
+SIMULATION_TIMEOUT = 30  # 30 seconds max per battle
+
+
+class SimulationTimeout(Exception):
+    """Raised when a simulation exceeds the time limit."""
+    pass
+
+
+def _timeout_handler(signum, frame):
+    """Signal handler for simulation timeout."""
+    raise SimulationTimeout("Simulation exceeded time limit")
 
 from Model.simulation import Simulation
 from Model.general_factory import create_general
@@ -44,6 +58,13 @@ def _run_single_simulation(args: Tuple[str, str, int, int, int]) -> Dict[str, An
     """
     ai_name, unit_type, n, run_id, repetition = args
     
+    # Set up timeout (Unix only - signal.SIGALRM)
+    try:
+        signal.signal(signal.SIGALRM, _timeout_handler)
+        signal.alarm(SIMULATION_TIMEOUT)
+    except (AttributeError, ValueError):
+        pass  # Windows or already in signal handler
+    
     try:
         # Create fresh scenario: N units (Team A) vs 2N units (Team B)
         scenario = Lanchester(unit_type, n)
@@ -52,9 +73,8 @@ def _run_single_simulation(args: Tuple[str, str, int, int, int]) -> Dict[str, An
         scenario.general_a = create_general(ai_name, scenario.units_a, scenario.units_b)
         scenario.general_b = create_general(ai_name, scenario.units_b, scenario.units_a)
         
-        # Run simulation (fast mode, extended time limit for Lanchester accuracy)
-        # 10000 ticks is ~4x the default (2400), enough for large N battles
-        simulation = Simulation(scenario, tick_speed=100, paused=False, unlocked=True, max_ticks=10000)
+        # Run simulation (fast mode, no tick limit - timeout handles long battles)
+        simulation = Simulation(scenario, tick_speed=100, paused=False, unlocked=True, max_ticks=0)
         output = simulation.simulate()
         
         # Collect results using BattleDataCollector
@@ -79,6 +99,18 @@ def _run_single_simulation(args: Tuple[str, str, int, int, int]) -> Dict[str, An
             'winner_casualties': winner_casualties,
             'duration_ticks': result.ticks,
         }
+    except SimulationTimeout:
+        # Timeout: battle took too long, mark as draw
+        return {
+            'run_id': run_id,
+            'unit_type': unit_type,
+            'n_value': n,
+            'team_a_casualties': 0,
+            'team_b_casualties': 0,
+            'winner': 'timeout',
+            'winner_casualties': 0,
+            'duration_ticks': 0,
+        }
     except Exception:
         # Return error result for this simulation (will be filtered out)
         # This handles cases where N is too small for some strategies
@@ -92,6 +124,12 @@ def _run_single_simulation(args: Tuple[str, str, int, int, int]) -> Dict[str, An
             'winner_casualties': 0,
             'duration_ticks': 0,
         }
+    finally:
+        # Cancel the alarm
+        try:
+            signal.alarm(0)
+        except (AttributeError, ValueError):
+            pass
 
 
 def _run_symmetric_simulation(args: Tuple[str, str, int, int, int, bool]) -> Dict[str, Any]:
@@ -104,6 +142,13 @@ def _run_symmetric_simulation(args: Tuple[str, str, int, int, int, bool]) -> Dic
     """
     ai_name, unit_type, n, run_id, repetition, _ = args
     
+    # Set up timeout (Unix only - signal.SIGALRM)
+    try:
+        signal.signal(signal.SIGALRM, _timeout_handler)
+        signal.alarm(SIMULATION_TIMEOUT)
+    except (AttributeError, ValueError):
+        pass  # Windows or already in signal handler
+    
     try:
         # Create symmetric scenario: N units vs N units
         from Plotting.lanchester import LanchesterSymmetric
@@ -113,8 +158,8 @@ def _run_symmetric_simulation(args: Tuple[str, str, int, int, int, bool]) -> Dic
         scenario.general_a = create_general(ai_name, scenario.units_a, scenario.units_b)
         scenario.general_b = create_general(ai_name, scenario.units_b, scenario.units_a)
         
-        # Run simulation (no time limit for Lanchester accuracy)
-        simulation = Simulation(scenario, tick_speed=100, paused=False, unlocked=True, max_ticks=10000)
+        # Run simulation (no tick limit - timeout handles long battles)
+        simulation = Simulation(scenario, tick_speed=100, paused=False, unlocked=True, max_ticks=0)
         output = simulation.simulate()
         
         result = BattleDataCollector.collect_from_scenario(scenario, output)
@@ -136,6 +181,17 @@ def _run_symmetric_simulation(args: Tuple[str, str, int, int, int, bool]) -> Dic
             'winner_casualties': winner_casualties,
             'duration_ticks': result.ticks,
         }
+    except SimulationTimeout:
+        return {
+            'run_id': run_id,
+            'unit_type': unit_type,
+            'n_value': n,
+            'team_a_casualties': 0,
+            'team_b_casualties': 0,
+            'winner': 'timeout',
+            'winner_casualties': 0,
+            'duration_ticks': 0,
+        }
     except Exception:
         return {
             'run_id': run_id,
@@ -147,6 +203,11 @@ def _run_symmetric_simulation(args: Tuple[str, str, int, int, int, bool]) -> Dic
             'winner_casualties': 0,
             'duration_ticks': 0,
         }
+    finally:
+        try:
+            signal.alarm(0)
+        except (AttributeError, ValueError):
+            pass
 
 
 ## @}
