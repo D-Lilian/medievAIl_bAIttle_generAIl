@@ -232,7 +232,7 @@ class StrategieRandomIQ(StrategyStart):
                     unit,
                     random.choice([UnitType.PIKEMAN,
                                    UnitType.CROSSBOWMAN,
-                                   UnitType.KNIGHT
+                                   UnitType.KNIGHT,
                                    UnitType.NONE])
                 ),
             ]
@@ -299,7 +299,7 @@ class StrategieStartSomeIQ(StrategyStart):
 
             #sf.order_manager.Add(SacrificeOrder(sf, 0, 50+soufredouleurs.index(sf)*10 ), -1)
 
-            sf.order_manager.Add(SacrificeOrder(sf,  (sf.x-20) %120, (sf.y+50 )%120+soufredouleurs.index(sf)*10 ), -1)
+            sf.order_manager.Add(SacrificeOrder(sf,  (sf.x-20) %general.size_x, (sf.y+50 )%general.size_y+soufredouleurs.index(sf)*10 ), -1)
             #sf.order_manager.Add(SacrificeOrder(sf,  (sf.x) %120, (sf.y +50)%120+soufredouleurs.index(sf)*10 ), -1)
 
             # faire systeme pourcentage
@@ -310,7 +310,7 @@ class StrategieStartSomeIQ(StrategyStart):
 
             #sf.order_manager.Add(SacrificeOrder(sf, 0, 50+soufredouleurs.index(sf)*10 ), -1)
 
-            sf.order_manager.Add(SacrificeOrder(sf,  (sf.x+50) %120, (sf.y-20 )%120+soufredouleurs.index(sf)*10 ), -1)
+            sf.order_manager.Add(SacrificeOrder(sf,  (sf.x+50) %general.size_x, (sf.y-20 )%general.size_y+soufredouleurs.index(sf)*10 ), -1)
 
         #soufredouleurs = general.generate_squad({UnitType.KNIGHT:3})
         #for sf in soufredouleurs:
