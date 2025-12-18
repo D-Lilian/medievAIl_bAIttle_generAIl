@@ -119,19 +119,21 @@ class TournamentRunner:
         Run the complete tournament in parallel.
         """
         import sys
+        from concurrent.futures import ProcessPoolExecutor, as_completed
         
         # --- 1. Prepare all match jobs ---
         jobs = self._prepare_jobs()
         total_matches = len(jobs)
         
-        # Use a sensible number of processes, defaulting to os.cpu_count()
-        num_processes = self.config.num_processes or multiprocessing.cpu_count()
+        # Use a sensible number of workers
+        max_workers = min(multiprocessing.cpu_count(), 8)
         
         # Progress bar settings
         bar_width = 40
+        completed = 0
         
         def print_progress(done: int, total: int):
-            """Print a single-line progress bar with \r."""
+            """Print a single-line progress bar with \\r."""
             pct = done / total if total > 0 else 1
             filled = int(bar_width * pct)
             bar = '█' * filled + '░' * (bar_width - filled)
@@ -140,13 +142,18 @@ class TournamentRunner:
         
         print(f"Running {total_matches} matches...")
         
-        # --- 2. Run jobs in parallel ---
+        # --- 2. Run jobs in parallel using ProcessPoolExecutor ---
         all_results = []
-        with multiprocessing.Pool(processes=num_processes) as pool:
-            for i, result in enumerate(pool.imap_unordered(_run_match_worker, jobs), 1):
+        
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(_run_match_worker, job): job for job in jobs}
+            
+            for future in as_completed(futures):
+                result = future.result()
                 all_results.append(result)
-                print_progress(i, total_matches)
-
+                completed += 1
+                print_progress(completed, total_matches)
+        
         print()  # Move to next line after progress bar
         
         # --- 3. Process results ---

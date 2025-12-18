@@ -34,10 +34,6 @@ from Plotting.lanchester import Lanchester
 ## @defgroup WorkerFunctions Multiprocessing Worker Functions
 ## @{
 
-## @var MIN_N_VALUE
-#  @brief Minimum N value for Lanchester simulations to avoid strategy errors.
-MIN_N_VALUE = 5
-
 def _run_single_simulation(args: Tuple[str, str, int, int, int]) -> Dict[str, Any]:
     """
     @brief  Run a single Lanchester simulation (multiprocessing worker).

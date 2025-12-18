@@ -55,7 +55,6 @@ class TournamentReportGenerator:
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(html)
         
-        print(f"\nTournament report generated: {filename}")
         return filename
     
     def _generate_html(self, results: TournamentResults) -> str:

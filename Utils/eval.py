@@ -59,9 +59,7 @@ def run(args):
 
 def tourney(args):
     """Run a tournament between AI generals. Delegates to TournamentController."""
-    report_path = TournamentController.run_tournament(args)
-    if report_path:
-        print(f"\nFull report: {report_path}")
+    TournamentController.run_tournament(args)
 
 
 def load(args):

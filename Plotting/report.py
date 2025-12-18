@@ -554,22 +554,18 @@ class PlotReportGenerator:
         
         <div class="grid grid-4">
             <div class="stat-card success">
-                <div class="stat-icon">N</div>
                 <div class="stat-value">{total_sims}</div>
                 <div class="stat-label">Total Simulations</div>
             </div>
             <div class="stat-card melee">
-                <div class="stat-icon">R</div>
                 <div class="stat-value">{data.num_repetitions}</div>
                 <div class="stat-label">Runs per Config</div>
             </div>
             <div class="stat-card ranged">
-                <div class="stat-icon">V</div>
                 <div class="stat-value">{len(data.n_range) if data.n_range else 0}</div>
                 <div class="stat-label">N Values Tested</div>
             </div>
             <div class="stat-card warning">
-                <div class="stat-icon">AI</div>
                 <div class="stat-value font-mono" style="font-size: 1rem;">{data.ai_name}</div>
                 <div class="stat-label">AI Strategy</div>
             </div>

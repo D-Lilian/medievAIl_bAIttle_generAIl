@@ -43,9 +43,10 @@ class TournamentController:
         rounds = getattr(args, "N", TournamentController.DEFAULT_ROUNDS)
         alternate = not getattr(args, "no_alternate", False)
 
-        # Calculate total matches
+        # Calculate total matches: each pair plays on each scenario, N rounds
+        # With alternation, positions swap but total matches stay the same
         num_matchups = len(generals) * len(generals) * len(scenarios)
-        total_matches = num_matchups * rounds * (2 if alternate else 1)
+        total_matches = num_matchups * rounds
 
         # Display compact config (Lanchester style)
         print(f"\nTournament: {', '.join(generals)} | {', '.join(scenarios)} | {rounds}x = {total_matches} matches")
