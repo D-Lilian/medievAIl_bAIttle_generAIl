@@ -80,12 +80,22 @@ def create_general(name: str, unitsA, unitsB) -> General:
         return General(unitsA=unitsA, unitsB=unitsB, sS=None, sT=sT, name=name_up)
     
     elif name_up == "SOMEIQ":
+        # Same configuration as game_manager.py SOMEIQ
         sT = {
-            UnitType.CROSSBOWMAN: StrategieCrossbowmanSomeIQ(),
-            UnitType.KNIGHT: StrategieKnightSomeIQ(),
-            UnitType.PIKEMAN: StrategiePikemanSomeIQ(),
+            UnitType.CROSSBOWMAN: StrategieSimpleAttackBestAvoidWorst(
+                favoriteTroup=UnitType.PIKEMAN,
+                hatedTroup=UnitType.KNIGHT
+            ),
+            UnitType.KNIGHT: StrategieSimpleAttackBestAvoidWorst(
+                favoriteTroup=UnitType.CROSSBOWMAN,
+                hatedTroup=UnitType.PIKEMAN
+            ),
+            UnitType.PIKEMAN: StrategieSimpleAttackBestAvoidWorst(
+                favoriteTroup=UnitType.KNIGHT,
+                hatedTroup=UnitType.CROSSBOWMAN
+            ),
         }
-        sS = StrategieStartSomeIQ()
+        sS = StrategieStartSomeIQ
         return General(unitsA=unitsA, unitsB=unitsB, sS=sS, sT=sT, name=name_up)
     
     elif name_up == "RPC":
