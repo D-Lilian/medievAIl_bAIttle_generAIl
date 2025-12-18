@@ -73,52 +73,42 @@ def create_general(name: str, unitsA, unitsB) -> General:
     
     elif name_up == "DAFT":
         sT = {
-            UnitType.CROSSBOWMAN: StrategieDAFT(UnitType.CROSSBOWMAN),
-            UnitType.KNIGHT: StrategieDAFT(UnitType.KNIGHT),
-            UnitType.PIKEMAN: StrategieDAFT(UnitType.PIKEMAN),
+            UnitType.CROSSBOWMAN: StrategieDAFT(None),
+            UnitType.KNIGHT: StrategieDAFT(None),
+            UnitType.PIKEMAN: StrategieDAFT(None),
         }
         return General(unitsA=unitsA, unitsB=unitsB, sS=None, sT=sT, name=name_up)
     
     elif name_up == "SOMEIQ":
-        # Same configuration as game_manager.py SOMEIQ
         sT = {
-            UnitType.CROSSBOWMAN: StrategieSimpleAttackBestAvoidWorst(
-                favoriteTroup=UnitType.PIKEMAN,
-                hatedTroup=UnitType.KNIGHT
-            ),
-            UnitType.KNIGHT: StrategieSimpleAttackBestAvoidWorst(
-                favoriteTroup=UnitType.CROSSBOWMAN,
-                hatedTroup=UnitType.PIKEMAN
-            ),
-            UnitType.PIKEMAN: StrategieSimpleAttackBestAvoidWorst(
-                favoriteTroup=UnitType.KNIGHT,
-                hatedTroup=UnitType.CROSSBOWMAN
-            ),
+            UnitType.CROSSBOWMAN: StrategieCrossbowmanSomeIQ(),
+            UnitType.KNIGHT: StrategieKnightSomeIQ(),
+            UnitType.PIKEMAN: StrategiePikemanSomeIQ(),
         }
-        sS = StrategieStartSomeIQ
+        sS = StrategieStartSomeIQ()
         return General(unitsA=unitsA, unitsB=unitsB, sS=sS, sT=sT, name=name_up)
     
     elif name_up == "RPC":
-        # Rock-Paper-Counter: each unit type targets its counter (like game_manager.py)
+        # Rock-Paper-Counter: each unit type targets its counter
         sT = {
             UnitType.CROSSBOWMAN: StrategieSimpleAttackBestAvoidWorst(
                 favoriteTroup=UnitType.PIKEMAN, 
-                hatedTroup=None
+                hatedTroup=UnitType.KNIGHT
             ),
             UnitType.KNIGHT: StrategieSimpleAttackBestAvoidWorst(
                 favoriteTroup=UnitType.CROSSBOWMAN, 
-                hatedTroup=None
+                hatedTroup=UnitType.PIKEMAN
             ),
             UnitType.PIKEMAN: StrategieSimpleAttackBestAvoidWorst(
                 favoriteTroup=UnitType.KNIGHT, 
-                hatedTroup=None
+                hatedTroup=UnitType.CROSSBOWMAN
             ),
         }
         return General(unitsA=unitsA, unitsB=unitsB, sS=None, sT=sT, name=name_up)
     
     elif name_up == "RANDOMIQ":
-        # Random strategy - applies random orders (like game_manager.py)
-        sS = StrategieRandomIQ
+        # Random strategy - applies random orders
+        sS = StrategieRandomIQ()
         return General(unitsA=unitsA, unitsB=unitsB, sS=sS, sT=None, name=name_up)
     
     else:
