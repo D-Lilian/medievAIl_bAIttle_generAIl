@@ -170,6 +170,23 @@ Team A (N units) vs Team B (2N units). Analyze winner casualties to verify the l
 | F9 | Switch to 2.5D view |
 | ESC | Exit |
 
+
+## PyGame Controls
+
+| Key                       | Action                  |
+|---------------------------|-------------------------|
+| P                         | Pause/Resume            |
+| Mouse Wheel               | Zoom                    |
+| C                         | Center on all units     |
+| ZQSD/Arrows (Shift) Click | Move camera             |
+| +/-                       | Speed up/down           |
+| F4                        | Toggle info panels      |
+| F5                        | Toggle minimap          |
+| F9                        | Switch to terminal view |
+| E                         | Quick save              |
+| Tab                       | Generate HTML report    |
+| ESC                       | Exit                    |
+
 ## Architecture
 
 The project follows the **MVC** (Model-View-Controller) pattern with specialized modules.
