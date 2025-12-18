@@ -170,7 +170,6 @@ Team A (N units) vs Team B (2N units). Analyze winner casualties to verify the l
 | F9 | Switch to 2.5D view |
 | ESC | Exit |
 
-
 ## PyGame Controls
 
 | Key                       | Action                  |
