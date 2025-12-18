@@ -179,7 +179,6 @@ medievAIl_bAIttle_generAIl/
 │
 ├── battle                 # Entry point (bash script)
 ├── main.py                # Python entry point & CLI dispatcher
-├── game_manager.py        # Legacy game manager (deprecated)
 │
 ├── Model/                 # MODEL - Business logic
 │   ├── units.py           # Unit classes (Knight, Pikeman, Crossbowman)
