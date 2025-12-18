@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-@file plotting_tests.py
-@brief Plotting Module Tests - Unit tests for Plotting components
+@file       plotting_tests.py
+@brief      Plotting Module Tests - Unit tests for Plotting components.
+@author     MedievAIl Team
+@version    2.0
 
-@details
-Tests for:
-- Data structures (PlotData, BattleResult, etc.)
-- Scenario-specific plotters
-- Data collector
-- Plotter registry
-
+@details    Tests for:
+            - Data structures (PlotData, BattleResult, LanchesterData, etc.)
+            - Scenario-specific plotters
+            - Data collector
+            - Plotter registry
+            - CLI argument parsing
 """
 import unittest
 import os
@@ -17,9 +18,12 @@ import tempfile
 import shutil
 from unittest.mock import Mock, patch, MagicMock
 
+import pandas as pd
+import numpy as np
+
 
 class TestPlotData(unittest.TestCase):
-    """Test PlotData dataclass."""
+    """Test PlotData dataclass (legacy support)."""
 
     def test_plot_data_creation(self):
         """Test PlotData can be created with default values."""
@@ -75,6 +79,108 @@ class TestBattleResult(unittest.TestCase):
         self.assertAlmostEqual(stats.casualty_rate, 0.3)
 
 
+class TestLanchesterData(unittest.TestCase):
+    """Test LanchesterData pandas DataFrame container."""
+
+    def test_lanchester_data_creation(self):
+        """Test LanchesterData can be created with required parameters."""
+        from Plotting.data import LanchesterData
+        
+        data = LanchesterData(
+            ai_name="DAFT",
+            scenario_name="Lanchester",
+            unit_types=["Knight"],
+            n_range=range(5, 15, 5),
+            num_repetitions=2
+        )
+        
+        self.assertEqual(data.ai_name, "DAFT")
+        self.assertEqual(data.scenario_name, "Lanchester")
+        self.assertEqual(data.unit_types, ["Knight"])
+        self.assertTrue(data.df.empty)
+
+    def test_lanchester_data_add_result(self):
+        """Test adding results to LanchesterData."""
+        from Plotting.data import LanchesterData
+        
+        data = LanchesterData(
+            ai_name="DAFT",
+            scenario_name="Lanchester",
+            unit_types=["Knight"],
+            n_range=range(5, 15, 5),
+            num_repetitions=2
+        )
+        
+        data.add_result({
+            'run_id': 1,
+            'unit_type': "Knight",
+            'n_value': 10,
+            'team_a_casualties': 5,
+            'team_b_casualties': 10,
+            'winner': "B",
+            'winner_casualties': 10,
+            'duration_ticks': 100
+        })
+        
+        self.assertEqual(len(data.df), 1)
+        self.assertEqual(data.df.iloc[0]['unit_type'], "Knight")
+        self.assertEqual(data.df.iloc[0]['n_value'], 10)
+
+    def test_lanchester_data_essential_columns(self):
+        """Test that LanchesterData uses essential columns."""
+        from Plotting.data import LanchesterData
+        
+        data = LanchesterData(
+            ai_name="DAFT",
+            scenario_name="Lanchester",
+            unit_types=["Knight"],
+            n_range=range(5, 10),
+            num_repetitions=1
+        )
+        
+        data.add_result({
+            'run_id': 1,
+            'unit_type': "Knight",
+            'n_value': 5,
+            'team_a_casualties': 3,
+            'team_b_casualties': 5,
+            'winner': "B",
+            'winner_casualties': 5,
+            'duration_ticks': 50
+        })
+        
+        # Check that DataFrame has the essential columns
+        expected_cols = {'run_id', 'unit_type', 'n_value', 'team_a_casualties', 
+                         'team_b_casualties', 'winner', 'winner_casualties', 'duration_ticks'}
+        self.assertTrue(expected_cols.issubset(set(data.df.columns)))
+
+    def test_lanchester_data_summary(self):
+        """Test get_summary_by_type_and_n aggregation."""
+        from Plotting.data import LanchesterData
+        
+        data = LanchesterData(
+            ai_name="DAFT",
+            scenario_name="Lanchester",
+            unit_types=["Knight"],
+            n_range=range(5, 10),
+            num_repetitions=2
+        )
+        
+        # Add multiple runs for same n value
+        data.add_result({'run_id': 1, 'unit_type': "Knight", 'n_value': 5, 
+                         'team_a_casualties': 3, 'team_b_casualties': 5, 
+                         'winner': "B", 'winner_casualties': 5, 'duration_ticks': 50})
+        data.add_result({'run_id': 2, 'unit_type': "Knight", 'n_value': 5, 
+                         'team_a_casualties': 4, 'team_b_casualties': 6, 
+                         'winner': "B", 'winner_casualties': 6, 'duration_ticks': 60})
+        
+        summary = data.get_summary_by_type_and_n()
+        
+        self.assertEqual(len(summary), 1)  # One row per n_value/unit_type combo
+        self.assertAlmostEqual(summary.iloc[0]['mean_team_a_casualties'], 3.5)
+        self.assertAlmostEqual(summary.iloc[0]['mean_team_b_casualties'], 5.5)
+
+
 class TestScenarioPlotters(unittest.TestCase):
     """Test scenario-specific plotters."""
 
@@ -86,60 +192,71 @@ class TestScenarioPlotters(unittest.TestCase):
         """Clean up temporary directory."""
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_plotter_registry_contains_all_scenarios(self):
-        """Test that all scenario plotters are registered."""
-        from Plotting.scenario_plotters import SCENARIO_PLOTTERS
+    def test_plotter_registry_contains_main_plotters(self):
+        """Test that main plot types are registered."""
+        from Plotting.base import PLOTTERS
         
-        expected_scenarios = [
-            'Lanchester', 'lanchester',
-            'ClassicMedieval', 'classic_medieval_battle',
-            'CavalryCharge', 'cavalry_charge',
-            'DefensiveSiege', 'defensive_siege',
-            'CannaeEnvelopment', 'cannae_envelopment',
-            'RomanLegion', 'roman_legion',
-            'BritishSquare', 'british_square',
+        # Updated list - removed PlotSurvivors/survivors which don't exist
+        expected_plotters = [
+            # Lanchester (special case)
+            'PlotLanchester', 'lanchester',
+            # Generic plot types
+            'PlotWinRate', 'winrate',
+            'PlotCasualties', 'casualties',
+            'PlotDuration', 'duration',
+            'PlotComparison', 'comparison',
+            'PlotHeatmap', 'heatmap',
+            'PlotRawData', 'raw',
         ]
         
-        for scenario in expected_scenarios:
-            self.assertIn(scenario, SCENARIO_PLOTTERS, 
-                         f"Missing plotter for scenario: {scenario}")
+        for plotter_name in expected_plotters:
+            self.assertIn(plotter_name, PLOTTERS, 
+                         f"Missing plotter: {plotter_name}")
 
-    def test_get_scenario_plotter(self):
-        """Test get_scenario_plotter factory function."""
-        from Plotting.scenario_plotters import get_scenario_plotter, PlotLanchester
+    def test_get_plotter_factory(self):
+        """Test get_plotter factory function."""
+        from Plotting.base import get_plotter, PlotLanchester
         
-        plotter = get_scenario_plotter('Lanchester', self.temp_dir)
+        plotter = get_plotter('PlotLanchester', self.temp_dir)
         self.assertIsInstance(plotter, PlotLanchester)
 
-    def test_get_scenario_plotter_unknown(self):
-        """Test get_scenario_plotter raises error for unknown scenario."""
-        from Plotting.scenario_plotters import get_scenario_plotter
+    def test_get_plotter_unknown(self):
+        """Test get_plotter raises error for unknown plotter."""
+        from Plotting.base import get_plotter
         
         with self.assertRaises(ValueError):
-            get_scenario_plotter('UnknownScenario', self.temp_dir)
+            get_plotter('UnknownPlotter', self.temp_dir)
 
-    def test_plotter_generates_file(self):
-        """Test that plotter generates a PNG file."""
-        from Plotting.scenario_plotters import PlotLanchester
-        from Plotting.data import PlotData
+    def test_plotter_with_lanchester_data(self):
+        """Test that plotter works with LanchesterData."""
+        from Plotting.base import PlotLanchester
+        from Plotting.data import LanchesterData
         
         plotter = PlotLanchester(self.temp_dir)
         
-        # Create mock data
-        data = {
-            "Knight": PlotData(unit_type="Knight"),
-        }
-        data["Knight"].n_values = [5, 10, 15]
-        data["Knight"].avg_winner_casualties = [0.5, 1.0, 1.5]
-        data["Knight"].team_b_win_rates = [1.0, 1.0, 1.0]
-        data["Knight"].avg_ticks = [50, 60, 70]
-        data["Knight"].avg_team_a_casualties = [5, 10, 15]
-        data["Knight"].avg_team_b_casualties = [0.5, 1.0, 1.5]
+        # Create LanchesterData with test data
+        data = LanchesterData(
+            ai_name="DAFT",
+            scenario_name="Lanchester",
+            unit_types=["Knight"],
+            n_range=range(5, 20, 5),
+            num_repetitions=2
+        )
         
-        filepath = plotter.plot(data)
+        # Add test results using proper dict format
+        for i, n in enumerate([5, 10, 15]):
+            data.add_result({'run_id': i*2, 'unit_type': "Knight", 'n_value': n, 
+                             'team_a_casualties': n-1, 'team_b_casualties': n*2-3, 
+                             'winner': "B", 'winner_casualties': n*2-3, 'duration_ticks': 50+i*10})
+            data.add_result({'run_id': i*2+1, 'unit_type': "Knight", 'n_value': n, 
+                             'team_a_casualties': n-2, 'team_b_casualties': n*2-2, 
+                             'winner': "B", 'winner_casualties': n*2-2, 'duration_ticks': 55+i*10})
         
-        self.assertTrue(os.path.exists(filepath))
-        self.assertTrue(filepath.endswith('.png'))
+        filepath = plotter.plot(data, ai_name="DAFT")
+        
+        filepath_str = str(filepath)
+        self.assertTrue(os.path.exists(filepath_str))
+        self.assertTrue(filepath_str.endswith('.png'))
 
 
 class TestPlotterRegistry(unittest.TestCase):
@@ -239,6 +356,40 @@ class TestLanchesterScenario(unittest.TestCase):
             scenario = LanchesterScenario.create(unit_type, 5)
             self.assertEqual(len(scenario.units_a), 5)
             self.assertEqual(len(scenario.units_b), 10)
+
+    def test_lanchester_constants_defined(self):
+        """Test Lanchester module has named constants."""
+        from Plotting import lanchester
+        
+        # Check constants are defined
+        self.assertTrue(hasattr(lanchester, 'MAP_SIZE_MIN'))
+        self.assertTrue(hasattr(lanchester, 'MAP_SIZE_MAX'))
+        self.assertTrue(hasattr(lanchester, 'ENGAGEMENT_GAP'))
+        self.assertTrue(hasattr(lanchester, 'MARGIN'))
+        self.assertTrue(hasattr(lanchester, 'MAX_UNITS_PER_TEAM'))
+        
+        # Check reasonable values
+        self.assertGreater(lanchester.MAP_SIZE_MAX, lanchester.MAP_SIZE_MIN)
+        self.assertGreater(lanchester.MAX_UNITS_PER_TEAM, 0)
+
+    def test_lanchester_max_units_validation(self):
+        """Test Lanchester validates max units."""
+        from Plotting.lanchester import LanchesterScenario, MAX_UNITS_PER_TEAM
+        
+        with self.assertRaises(ValueError) as context:
+            LanchesterScenario.create('Knight', MAX_UNITS_PER_TEAM + 1)
+        
+        self.assertIn('exceeds max', str(context.exception))
+
+    def test_lanchester_negative_units_validation(self):
+        """Test Lanchester validates positive unit count."""
+        from Plotting.lanchester import LanchesterScenario
+        
+        with self.assertRaises(ValueError):
+            LanchesterScenario.create('Knight', 0)
+        
+        with self.assertRaises(ValueError):
+            LanchesterScenario.create('Knight', -5)
 
 
 if __name__ == '__main__':

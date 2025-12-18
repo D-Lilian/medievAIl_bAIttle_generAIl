@@ -26,7 +26,7 @@ Usage:
     # Configure tournament
     config = TournamentConfig(
         generals=["DAFT", "BRAINDEAD", "SOMEIQ"],
-        scenarios=["classical_medieval_battle", "cavalry_charge"],
+        scenarios=["classic", "cavalry_charge"],
         rounds_per_matchup=10,
         alternate_positions=True
     )

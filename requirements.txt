@@ -17,5 +17,8 @@ plotnine
 # Statistical Analysis
 scipy
 
+# Game Development
+pygame
+
 # HTML Reports (included in standard library)
-# jinja2  # Optional: for advanced templating
+jinja2  # Optional: for advanced templating

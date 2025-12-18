@@ -1,105 +1,111 @@
 # -*- coding: utf-8 -*-
 """
 @package Plotting
-@brief Plotting and Data Collection Module for Battle Simulations
+@brief Data Science Plotting and Visualization Module
 
 @details
-This module handles all plotting-related functionality:
-
-- Data collection from simulations
-- Base plotter interface
-- Matplotlib-based plotters
-- ggplot2-style plotters (via plotnine)
-- Report generation
-
-Architecture follows SOLID principles:
-- Single Responsibility: Each class handles one type of plotting
-- Open/Closed: Easy to add new plotters
-- Liskov Substitution: All plotters implement BasePlotter interface
-- Interface Segregation: Separate interfaces for different plot types
-- Dependency Inversion: Plotters depend on PlotData abstraction
-
-Usage:
-    from Plotting import DataCollector, get_plotter, PlotReportGenerator
-    
-    # Collect simulation data
-    collector = DataCollector(ai_name="DAFT", num_repetitions=10)
-    data = collector.collect_lanchester(["Knight", "Crossbowman"], range(5, 50, 5))
-    
-    # Generate plot
-    plotter = get_plotter("GGPlotLanchester", output_dir="Reports")
-    plot_path = plotter.plot(data.plot_data)
-    
-    # Generate report
-    report_gen = PlotReportGenerator(output_dir="Reports")
-    report_path = report_gen.generate(data, plot_path)
+Professional data science plotting module using:
+- pandas DataFrames for data storage
+- plotnine (ggplot2-style) for visualization
+- Lanchester's Laws analysis for battle simulation
+- Unit comparison and damage analysis
 """
 
-from Plotting.data import (
+from .data import (
+    LanchesterData,
+    create_empty_dataframe,
+    BATTLE_COLUMNS,
     BattleResult,
     AggregatedResults,
     PlotData,
+    TeamStats,
     BattleDataCollector,
 )
 
-from Plotting.collector import (
-    CollectedData,
+from .collector import (
     DataCollector,
     parse_types_arg,
     parse_range_arg,
 )
 
-from Plotting.base import (
+from .base import (
     BasePlotter,
     PLOTTERS,
     get_plotter,
-)
-
-from Plotting.scenario_plotters import (
-    ScenarioPlotter,
+    list_plotters,
+    theme_battle,
+    PALETTE_UNITS,
+    PALETTE_TEAMS,
+    PALETTE_RESULTS,
+    PALETTE_COMBAT,
+    UNIT_TYPES,
+    # Lanchester analysis
     PlotLanchester,
-    PlotClassicMedieval,
-    PlotCavalryCharge,
-    PlotDefensiveSiege,
-    PlotCannaeEnvelopment,
-    PlotRomanLegion,
-    PlotBritishSquare,
-    SCENARIO_PLOTTERS,
-    get_scenario_plotter,
+    # Generic analysis
+    PlotWinRate,
+    PlotCasualties,
+    PlotDuration,
+    PlotComparison,
+    PlotHeatmap,
+    PlotRawData,
+    # Scenario analysis
+    PlotScenarioOverview,
+    PlotTeamPerformance,
+    PlotCasualtiesDistribution,
+    PlotBattleTimeline,
+    PlotWinnerAnalysis,
+    # Unit analysis
+    PlotUnitComparison,
+    PlotDamageMatrix,
+    PlotKillEfficiency,
 )
 
-from Plotting.report import PlotReportGenerator
+from .report import PlotReportGenerator
 
 __all__ = [
-    # Data structures
+    # Data containers
+    'LanchesterData',
+    'create_empty_dataframe',
+    'BATTLE_COLUMNS',
     'BattleResult',
     'AggregatedResults',
     'PlotData',
+    'TeamStats',
     'BattleDataCollector',
-    
     # Data collection
-    'CollectedData',
     'DataCollector',
     'parse_types_arg',
     'parse_range_arg',
-    
-    # Base plotting
+    # Plotting infrastructure
     'BasePlotter',
     'PLOTTERS',
     'get_plotter',
-    
-    # Scenario-specific plotters
-    'ScenarioPlotter',
+    'list_plotters',
+    'theme_battle',
+    'PALETTE_UNITS',
+    'PALETTE_TEAMS',
+    'PALETTE_RESULTS',
+    'PALETTE_COMBAT',
+    'UNIT_TYPES',
+    # Lanchester
     'PlotLanchester',
-    'PlotClassicMedieval',
-    'PlotCavalryCharge',
-    'PlotDefensiveSiege',
-    'PlotCannaeEnvelopment',
-    'PlotRomanLegion',
-    'PlotBritishSquare',
-    'SCENARIO_PLOTTERS',
-    'get_scenario_plotter',
-    
+    # Generic
+    'PlotWinRate',
+    'PlotCasualties',
+    'PlotDuration',
+    'PlotComparison',
+    'PlotHeatmap',
+    'PlotRawData',
+    # Scenario
+    'PlotScenarioOverview',
+    'PlotTeamPerformance',
+    'PlotCasualtiesDistribution',
+    'PlotBattleTimeline',
+    'PlotWinnerAnalysis',
+    # Unit analysis
+    'PlotUnitComparison',
+    'PlotDamageMatrix',
+    'PlotKillEfficiency',
     # Reporting
     'PlotReportGenerator',
 ]

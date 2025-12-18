@@ -1,16 +1,27 @@
 # -*- coding: utf-8 -*-
 """
-@file plot_controller.py
-@brief Plot Controller - Manages plotting and statistical analysis
+@file       plot_controller.py
+@brief      Orchestrates Lanchester analysis workflow.
 
-@details
-Handles plot generation, data collection, and statistical analysis.
-Follows Single Responsibility Principle - only orchestrates plotting workflow.
+@details    Complete workflow:
+            1. Data collection (simulations -> DataFrame)
+            2. Plot generation (plotnine)
+            3. Statistical analysis
+            4. HTML report generation
+
+@see DataCollector, PlotReportGenerator
 """
 
 import os
-from datetime import datetime
+import re
+import webbrowser
+import subprocess
+import sys
+from pathlib import Path
 from typing import List, Optional, Dict, Any
+
+import pandas as pd
+import numpy as np
 
 from Plotting import (
     DataCollector, 
@@ -18,205 +29,273 @@ from Plotting import (
     parse_range_arg,
     PLOTTERS, 
     get_plotter,
-    PlotReportGenerator
+    PlotReportGenerator,
+    LanchesterData,
 )
 
 
 class PlotController:
     """
-    Controller for plot generation and analysis.
+    @brief  Controller for Lanchester analysis and plot generation.
     
-    Handles:
-    - Data collection from simulations
-    - Plot generation with various plotters
-    - Statistical analysis (optional)
-    - Report generation
+    @details Coordinates data collection, plotting, statistical analysis,
+             and report generation.
     """
     
+    ## @var DEFAULT_OUTPUT_DIR
+    #  @brief Default directory for output files.
     DEFAULT_OUTPUT_DIR = "Reports"
     
     @staticmethod
     def run_plot(args) -> Dict[str, Optional[str]]:
         """
-        Run plot command from CLI arguments.
-        
-        @param args: CLI arguments
-        @return: Dictionary with paths to generated files
+        @brief  Run plot command from CLI arguments.
+        @param  args CLI arguments from argparse.
+        @return Dictionary with paths to generated files.
         """
         # Parse arguments
         ai = args.ai
         plotter_name = args.plotter
         scenario = args.scenario
-        types_str = args.types
-        range_str = args.range_expr
+        
+        # Parse types: "[Knight,Crossbow]" -> ["Knight", "Crossbow"]
+        unit_types = parse_types_arg(args.types)
+        
+        # Parse range: "range(20,100,20)" -> range(20, 100, 20)
+        n_range = parse_range_arg(args.range_expr)
+        
         num_reps = args.N
-        do_stats = getattr(args, "stats", False) or plotter_name.startswith("Advanced")
-        
-        # Parse types and range
-        unit_types = parse_types_arg(types_str)
-        n_range = parse_range_arg(range_str)
-        
-        # Display configuration
-        PlotController._print_config(ai, plotter_name, scenario, unit_types, n_range, num_reps, do_stats)
         
         # Validate plotter
         if plotter_name not in PLOTTERS:
-            print(f"\nError: Unknown plotter '{plotter_name}'")
-            print(f"Available: {list(PLOTTERS.keys())}")
+            print(f"Error: Unknown plotter '{plotter_name}'. Available: {list(PLOTTERS.keys())}")
             return {"error": "Unknown plotter"}
         
-        # Step 1: Collect data
-        print(f"\n[Step 1/4] Collecting simulation data...")
+        # Check Lanchester plotter/scenario consistency
+        is_lanchester_plotter = plotter_name.lower() in ('plotlanchester', 'lanchester')
+        is_lanchester_scenario = scenario.lower() == "lanchester"
+        
+        if is_lanchester_plotter and not is_lanchester_scenario:
+            print(f"Error: PlotLanchester requires 'Lanchester' scenario (N vs 2N).")
+            print(f"Usage: ./battle plot {ai} PlotLanchester Lanchester '[types]' 'range(...)'")
+            return {"error": "PlotLanchester requires Lanchester scenario"}
+        
+        if is_lanchester_scenario and not is_lanchester_plotter:
+            print(f"Error: 'Lanchester' scenario should only be used with PlotLanchester.")
+            print(f"For other plots, use a different scenario (e.g., 'classic', 'shield_wall').")
+            return {"error": "Lanchester scenario requires PlotLanchester"}
+        
+        # Display compact config
+        if is_lanchester_plotter:
+            total_sims = len(unit_types) * len(n_range) * num_reps
+            print(f"\nLanchester Analysis: {ai} | {', '.join(unit_types)} | N={list(n_range)} | {num_reps}x = {total_sims} sims")
+        else:
+            total_sims = len(unit_types) * len(n_range) * num_reps
+            print(f"\n{plotter_name}: {ai} | {', '.join(unit_types)} | N={list(n_range)} | {num_reps}x = {total_sims} sims")
+        
         collector = DataCollector(ai_name=ai, num_repetitions=num_reps)
         
-        if scenario.lower() == "lanchester":
+        if is_lanchester_scenario:
             data = collector.collect_lanchester(unit_types, n_range)
         else:
-            print(f"Error: Unknown scenario '{scenario}'")
-            return {"error": "Unknown scenario"}
+            # For generic scenarios, use symmetric battles (N vs N)
+            data = collector.collect_symmetric(unit_types, n_range)
         
-        # Step 2: Generate plot
-        print(f"\n[Step 2/4] Generating plot with {plotter_name}...")
+        # Save raw data
+        data_path = Path(PlotController.DEFAULT_OUTPUT_DIR) / "lanchester_data.csv"
+        data.save_csv(str(data_path))
+        
+        # Generate plot
         plotter = get_plotter(plotter_name, output_dir=PlotController.DEFAULT_OUTPUT_DIR)
-        plot_path = plotter.plot(data.plot_data)
-        print(f"  Plot saved: {plot_path}")
+        plot_path = plotter.plot(data, ai_name=ai)
         
-        # Step 3: Statistical analysis
-        stats_path = None
-        if do_stats:
-            stats_path = PlotController._run_statistical_analysis(data, unit_types)
+        # Only generate full report for PlotLanchester
+        if is_lanchester_plotter:
+            # Statistical analysis
+            stats_results = PlotController._run_statistical_analysis(data, verbose=False)
+            
+            # Generate report (auto-opens in browser)
+            report_gen = PlotReportGenerator(output_dir=PlotController.DEFAULT_OUTPUT_DIR)
+            report_path = report_gen.generate(data, plot_path, stats_results, auto_open=True)
+            
+            # Compact summary
+            PlotController._print_compact_summary(data, plot_path, report_path)
         else:
-            print(f"\n[Step 3/4] Skipping statistical analysis (use --stats to enable)")
-        
-        # Step 4: Generate report
-        print(f"\n[Step 4/4] Generating markdown report...")
-        report_gen = PlotReportGenerator(output_dir=PlotController.DEFAULT_OUTPUT_DIR)
-        report_path = report_gen.generate(data, plot_path)
-        print(f"  Report saved: {report_path}")
-        
-        # Print summary
-        PlotController._print_summary(plot_path, report_path, stats_path)
+            report_path = None
+            print(f"\n✓ Plot saved: {plot_path}")
         
         return {
-            "plot": plot_path,
-            "report": report_path,
-            "stats": stats_path
+            "data": str(data_path),
+            "plot": str(plot_path),
+            "report": str(report_path) if report_path else None
         }
     
     @staticmethod
-    def _print_config(ai: str, plotter: str, scenario: str, 
-                      unit_types: List[str], n_range: range, 
-                      num_reps: int, do_stats: bool):
-        """Print configuration summary."""
-        print(f"\n{'=' * 60}")
-        print(f"PLOT COMMAND - {'FULL ANALYSIS' if do_stats else 'STANDARD'}")
-        print(f"{'=' * 60}")
-        print(f"  AI:          {ai}")
-        print(f"  Plotter:     {plotter}")
-        print(f"  Scenario:    {scenario}")
-        print(f"  Types:       {unit_types}")
-        n_list = list(n_range)
-        range_str = f"{n_list[:3]}...{n_list[-1]}" if len(n_list) > 3 else str(n_list)
-        print(f"  Range:       {range_str}")
-        print(f"  Repetitions: {num_reps}")
-        print(f"  Statistics:  {do_stats}")
-        print(f"{'=' * 60}")
+    def _run_statistical_analysis(data: LanchesterData, verbose: bool = True) -> Dict[str, Any]:
+        """
+        @brief  Run statistical analysis testing Lanchester's Laws.
+        @param  data LanchesterData with simulation results.
+        @param  verbose Print progress to console.
+        @return Dictionary with statistical test results.
+        
+        @details Tests Linear Law (casualties ∝ N) vs Square Law (casualties ∝ N²).
+        """
+        results = {
+            'lanchester_tests': {},
+            'descriptive': {},
+            'raw_df_summary': None
+        }
+        
+        if data.df.empty:
+            return results
+        
+        # Get summary DataFrame
+        summary = data.get_summary_by_type_and_n()
+        
+        if summary.empty:
+            return results
+        
+        # Store raw summary
+        results['raw_df_summary'] = summary.to_dict(orient='records')
+        
+        # Test Lanchester laws for each unit type
+        for unit_type in data.unit_types:
+            type_data = summary[summary['unit_type'] == unit_type]
+            
+            if len(type_data) < 3:
+                continue
+            
+            n_values = type_data['n_value'].values
+            casualties = type_data['mean_winner_casualties'].values
+            
+            # Skip if all casualties are zero or constant (no variance)
+            if np.std(casualties) == 0:
+                results['lanchester_tests'][unit_type] = {
+                    'linear_r2': 0.0,
+                    'quadratic_r2': 0.0,
+                    'best_fit': "N/A (constant casualties)",
+                    'best_r2': 0.0,
+                    'interpretation': f"Casualties are constant ({casualties[0]:.1f}) - no scaling pattern detected."
+                }
+                continue
+            
+            # Fit linear model: casualties = a * N + b
+            try:
+                linear_coeffs = np.polyfit(n_values, casualties, 1)
+                linear_pred = np.polyval(linear_coeffs, n_values)
+                ss_res = np.sum((casualties - linear_pred)**2)
+                ss_tot = np.sum((casualties - np.mean(casualties))**2)
+                linear_r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+            except:
+                linear_r2 = 0
+            
+            # Fit quadratic model: casualties = a * N² + b * N + c
+            try:
+                quad_coeffs = np.polyfit(n_values, casualties, 2)
+                quad_pred = np.polyval(quad_coeffs, n_values)
+                ss_res = np.sum((casualties - quad_pred)**2)
+                ss_tot = np.sum((casualties - np.mean(casualties))**2)
+                quad_r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+            except:
+                quad_r2 = 0
+            
+            # Determine best fit
+            best_fit = "Linear (Lanchester's Linear Law)" if linear_r2 > quad_r2 else "Quadratic (Lanchester's Square Law)"
+            best_r2 = max(linear_r2, quad_r2)
+            
+            results['lanchester_tests'][unit_type] = {
+                'linear_r2': float(linear_r2),
+                'quadratic_r2': float(quad_r2),
+                'best_fit': best_fit,
+                'best_r2': float(best_r2),
+                'interpretation': PlotController._interpret_lanchester(unit_type, linear_r2, quad_r2)
+            }
+        
+        # Descriptive statistics by unit type
+        for unit_type in data.unit_types:
+            type_df = data.df[data.df['unit_type'] == unit_type]
+            
+            # Skip if no valid data for this unit type
+            if len(type_df) == 0:
+                results['descriptive'][unit_type] = {
+                    'n_simulations': 0,
+                    'casualties_mean': 0.0,
+                    'casualties_std': 0.0,
+                    'casualties_min': 0,
+                    'casualties_max': 0,
+                    'duration_mean': 0.0,
+                    'win_rate_2n': 0.0,
+                }
+                continue
+            
+            results['descriptive'][unit_type] = {
+                'n_simulations': len(type_df),
+                'casualties_mean': float(type_df['winner_casualties'].mean()),
+                'casualties_std': float(type_df['winner_casualties'].std()),
+                'casualties_min': int(type_df['winner_casualties'].min()),
+                'casualties_max': int(type_df['winner_casualties'].max()),
+                'duration_mean': float(type_df['duration_ticks'].mean()),
+                'win_rate_2n': float((type_df['winner'] == 'B').mean()),
+            }
+        
+        return results
     
     @staticmethod
-    def _run_statistical_analysis(data, unit_types: List[str]) -> Optional[str]:
-        """Run statistical analysis and generate report."""
-        print(f"\n[Step 3/4] Performing statistical analysis...")
+    def _interpret_lanchester(unit_type: str, linear_r2: float, quad_r2: float) -> str:
+        """@brief Generate interpretation of Lanchester test results."""
         
-        try:
-            from Analysis import LanchesterAnalyzer, create_analysis_dataframe, AnalysisDashboard
-            
-            analyzer = LanchesterAnalyzer()
-            
-            # Test Lanchester laws
-            print("  - Testing Lanchester Laws...")
-            lanchester_results = analyzer.test_lanchester_law(data.plot_data)
-            for unit_type, result in lanchester_results.items():
-                print(f"    {unit_type}: {result['best_fit']} (R²={result['best_r2']:.3f})")
-            
-            # Compare unit types
-            comparison = None
-            if len(unit_types) >= 2:
-                print("  - Comparing unit types...")
-                comparison = analyzer.compare_unit_types(data.plot_data)
-            
-            # Create DataFrame
-            df = create_analysis_dataframe(data.plot_data)
-            
-            # Generate markdown report
-            print("  - Generating statistical report...")
-            stats_path = PlotController._write_stats_report(
-                lanchester_results, comparison, df
-            )
-            print(f"  Report: {stats_path}")
-            
-            # Generate visualizations
-            print("  - Generating visualizations...")
-            dashboard = AnalysisDashboard(output_dir=PlotController.DEFAULT_OUTPUT_DIR)
-            plots = dashboard.generate_lanchester_dashboard(data.plot_data)
-            for name, path in plots.items():
-                if not str(path).startswith("Error"):
-                    print(f"    {name}: {path}")
-            
-            return stats_path
-            
-        except ImportError as e:
-            print(f"  Warning: Missing packages: {e}")
-            return None
-        except Exception as e:
-            print(f"  Warning: Analysis failed: {e}")
-            return None
+        is_melee = unit_type.lower() in ['knight', 'pikeman', 'infantry', 'melee']
+        is_ranged = unit_type.lower() in ['crossbowman', 'crossbow', 'archer', 'ranged']
+        
+        if linear_r2 > quad_r2:
+            fit_type = "Linear Law"
+            expected_for = "melee combat"
+        else:
+            fit_type = "Square Law"
+            expected_for = "ranged combat"
+        
+        if is_melee and linear_r2 > quad_r2:
+            return f"✓ As expected for melee units, casualties follow the Linear Law."
+        elif is_ranged and quad_r2 > linear_r2:
+            return f"✓ As expected for ranged units, casualties follow the Square Law."
+        elif is_melee and quad_r2 > linear_r2:
+            return f"⚠ Unexpected: Melee unit shows Square Law behavior (focus fire possible?)."
+        elif is_ranged and linear_r2 > quad_r2:
+            return f"⚠ Unexpected: Ranged unit shows Linear Law behavior (limited focus fire?)."
+        else:
+            return f"Unit follows {fit_type}, typical for {expected_for}."
     
     @staticmethod
-    def _write_stats_report(lanchester_results: Dict, comparison: Optional[Dict], 
-                            df) -> str:
-        """Write statistical report to markdown file."""
-        os.makedirs(PlotController.DEFAULT_OUTPUT_DIR, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        path = os.path.join(PlotController.DEFAULT_OUTPUT_DIR, f"stats_report_{timestamp}.md")
+    def _open_results(plot_path: str, report_path: str):
+        """@brief Open plot and report in default applications."""
+        print("\nOpening results...")
         
-        with open(path, "w") as f:
-            f.write("# Statistical Analysis Report\n\n")
-            f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-            
-            # Lanchester results
-            f.write("## Lanchester Law Analysis\n\n")
-            for unit_type, result in lanchester_results.items():
-                f.write(f"### {unit_type}\n\n")
-                f.write(f"- **Best Fit**: {result['best_fit']}\n")
-                f.write(f"- **R² (Linear)**: {result['r2_linear']:.4f}\n")
-                f.write(f"- **R² (Quadratic)**: {result['r2_quadratic']:.4f}\n")
-                f.write(f"- **Conclusion**: {result['conclusion']}\n\n")
-            
-            # Comparisons
-            if comparison and "pairwise_comparisons" in comparison:
-                f.write("## Unit Type Comparisons\n\n")
-                f.write("| Comparison | p-value | Effect Size | Significant |\n")
-                f.write("|------------|---------|-------------|-------------|\n")
-                for comp in comparison["pairwise_comparisons"]:
-                    sig = "Yes" if comp["significant"] else "No"
-                    f.write(f"| {comp['comparison']} | {comp['p_value']:.4f} | {comp['effect_size']:.3f} | {sig} |\n")
-                f.write("\n")
-            
-            # Summary stats
-            f.write("## Summary Statistics\n\n```\n")
-            f.write(df.describe().to_string())
-            f.write("\n```\n")
+        # Open the plot image
+        if plot_path and os.path.exists(plot_path):
+            abs_plot = os.path.abspath(plot_path)
+            if sys.platform == 'linux':
+                subprocess.Popen(['xdg-open', abs_plot], 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            elif sys.platform == 'darwin':
+                subprocess.Popen(['open', abs_plot])
+            else:
+                os.startfile(abs_plot)
         
-        return path
+        # Open the report in browser
+        if report_path and os.path.exists(report_path):
+            abs_report = os.path.abspath(report_path)
+            webbrowser.open(f"file://{abs_report}")
     
     @staticmethod
-    def _print_summary(plot_path: str, report_path: str, stats_path: Optional[str]):
-        """Print final summary."""
-        print(f"\n{'=' * 60}")
-        print("COMPLETE")
-        print(f"{'=' * 60}")
-        print(f"  Plot:   {plot_path}")
-        print(f"  Report: {report_path}")
-        if stats_path:
-            print(f"  Stats:  {stats_path}")
-        print(f"{'=' * 60}\n")
+    def _print_compact_summary(data: LanchesterData, plot_path: Path, report_path: Path):
+        """@brief Print compact summary line."""
+        if not data.df.empty:
+            stats = []
+            for unit_type in data.unit_types:
+                type_df = data.df[data.df['unit_type'] == unit_type]
+                if len(type_df) > 0:
+                    win_rate = (type_df['winner'] == 'B').mean() * 100
+                    stats.append(f"{unit_type}: {win_rate:.0f}% win")
+            if stats:
+                print(f"Results: {' | '.join(stats)}")
+        print(f"Output: {plot_path}")

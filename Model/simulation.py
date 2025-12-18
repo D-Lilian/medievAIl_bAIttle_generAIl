@@ -108,18 +108,11 @@ class Simulation:
 
     def finished(self):
         """Check if the simulation has finished."""
-        count_a = 0
-        count_b = 0
+        # Optimized: use any() with generator for early exit
+        has_alive_a = any(u.hp > 0 for u in self.scenario.units_a)
+        has_alive_b = any(u.hp > 0 for u in self.scenario.units_b)
 
-        for unit in self.scenario.units_a:
-            if unit.hp > 0:
-                count_a += 1
-        for unit in self.scenario.units_b:
-            if unit.hp > 0:
-                count_b += 1
-
-        if count_a == 0 or count_b == 0:
-            print("Ticks : ", self.tick, "Team A units left:", count_a, "  | Team B units left:", count_b)
+        if not has_alive_a or not has_alive_b:
             return True
 
         return self.tick >= DEFAULT_NUMBER_OF_TICKS_PER_SECOND * 240

@@ -43,15 +43,13 @@ class TournamentController:
         rounds = getattr(args, "N", TournamentController.DEFAULT_ROUNDS)
         alternate = not getattr(args, "no_alternate", False)
 
-        # Display configuration
-        print(f"\n{'=' * 60}")
-        print("TOURNAMENT CONFIGURATION")
-        print(f"{'=' * 60}")
-        print(f"  Generals:   {generals}")
-        print(f"  Scenarios:  {scenarios}")
-        print(f"  Rounds:     {rounds}")
-        print(f"  Alternate:  {alternate}")
-        print(f"{'=' * 60}\n")
+        # Calculate total matches: each pair plays on each scenario, N rounds
+        # With alternation, positions swap but total matches stay the same
+        num_matchups = len(generals) * len(generals) * len(scenarios)
+        total_matches = num_matchups * rounds
+
+        # Display compact config (Lanchester style)
+        print(f"\nTournament: {', '.join(generals)} | {', '.join(scenarios)} | {rounds}x = {total_matches} matches")
 
         # Create config
         config = TournamentConfig(
@@ -69,28 +67,31 @@ class TournamentController:
         report_gen = TournamentReportGenerator()
         report_path = report_gen.generate(results)
 
-        # Print summary
-        TournamentController._print_standings(results, generals)
+        # Print compact summary
+        TournamentController._print_compact_standings(results, generals, report_path)
+
+        # Auto-open report in browser
+        if report_path:
+            import webbrowser
+            import os
+            webbrowser.open(f"file://{os.path.abspath(report_path)}")
 
         return report_path
 
     @staticmethod
-    def _print_standings(results, generals: List[str]):
-        """Print final tournament standings."""
+    def _print_compact_standings(results, generals: List[str], report_path: str):
+        """Print compact tournament standings (Lanchester style)."""
         overall = results.get_overall_scores()
-
-        print(f"\n{'=' * 60}")
-        print("FINAL STANDINGS")
-        print(f"{'=' * 60}")
 
         sorted_generals = sorted(
             generals, key=lambda g: overall.get(g, {}).get("win_rate", 0), reverse=True
         )
 
+        # Build compact ranking line
+        rankings = []
         for rank, general in enumerate(sorted_generals, 1):
             data = overall.get(general, {"win_rate": 0, "wins": 0, "total": 0})
-            print(
-                f"  {rank}. {general}: {data['win_rate']:.1f}% ({data['wins']}/{data['total']} wins)"
-            )
-
-        print(f"{'=' * 60}")
+            rankings.append(f"{rank}. {general} {data['win_rate']:.0f}%")
+        
+        print(f"\nDone. {' | '.join(rankings)}")
+        print(f"✓ Report: {report_path}")

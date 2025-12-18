@@ -3,31 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Battle Report - {timestamp}</title>
-    <link rel="stylesheet" href="../Utils/battle_report.css">
+    <title>Battle Report - {{ timestamp }}</title>
+    <style>{{ css_content | safe }}</style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>Battle Report</h1>
-            <p>Generated on {generation_datetime}</p>
+            <p>Generated on {{ generation_datetime }}</p>
         </header>
 
         <div class="stats-grid">
             <div class="stat-card">
-                <span class="stat-value">{simulation_time}s</span>
+                <span class="stat-value">{{ simulation_time }}s</span>
                 <span class="stat-label">Simulation Time</span>
             </div>
             <div class="stat-card">
-                <span class="stat-value" style="color: var(--team1-color)">{team1_units}</span>
-                <span class="stat-label">Team 1 Units</span>
+                <span class="stat-value" style="color: var(--team1-color)">{{ team1_units }}</span>
+                <span class="stat-label">Team 1 ({{ general_a_name }})</span>
             </div>
             <div class="stat-card">
-                <span class="stat-value" style="color: var(--team2-color)">{team2_units}</span>
-                <span class="stat-label">Team 2 Units</span>
+                <span class="stat-value" style="color: var(--team2-color)">{{ team2_units }}</span>
+                <span class="stat-label">Team 2 ({{ general_b_name }})</span>
             </div>
             <div class="stat-card">
-                <span class="stat-value">{total_units}</span>
+                <span class="stat-value">{{ total_units }}</span>
                 <span class="stat-label">Total Active</span>
             </div>
         </div>
@@ -44,21 +44,21 @@
             <details class="map-details">
                 <summary>Battle Map</summary>
                 <div class="map-wrapper">
-                    <div id="battleMap" class="battle-map-outer">{battle_map}</div>
+                    <div id="battleMap" class="battle-map-outer">{{ battle_map | safe }}</div>
                 </div>
             </details>
         </section>
 
-        {breakdown_section}
+        {{ breakdown_section | safe }}
 
         <div class="teams-container">
-            {team_sections}
+            {{ team_sections | safe }}
         </div>
 
         <div class="legend">
             <h3>Unit Legend</h3>
             <ul>
-                {legend_items}
+                {{ legend_items | safe }}
             </ul>
         </div>
 

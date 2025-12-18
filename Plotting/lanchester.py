@@ -1,121 +1,226 @@
 # -*- coding: utf-8 -*-
 """
-@file lanchester_scenario.py
-@brief Lanchester Scenario - Creates scenarios for testing Lanchester's Laws
+@file lanchester.py
+@brief Lanchester Scenario Factory for Testing Lanchester's Laws
 
 @details
-Generates scenarios where N units fight against 2*N units of the same type.
-Used to test and visualize Lanchester's Laws (Linear vs Square Law).
+Creates N vs 2N battle scenarios to test Lanchester's Laws:
 
-Lanchester's Laws:
-- Linear Law: Losses proportional to N (applies to melee combat)
-- Square Law: Losses proportional to N² (applies to ranged combat)
+- Linear Law (Melee): Casualties ∝ N, one-on-one combat
+- Square Law (Ranged): Casualties ∝ N², focus fire possible
 
+Also provides symmetric scenarios (N vs N) for general analysis.
+
+Usage:
+    from Plotting.lanchester import Lanchester, LanchesterSymmetric
+    
+    scenario = Lanchester("Knight", 20)  # 20 vs 40 Knights (Lanchester)
+    scenario = LanchesterSymmetric("Knight", 30)  # 30 vs 30 Knights (Symmetric)
 """
 
 from Model.scenario import Scenario
 from Model.units import Knight, Crossbowman, Pikeman
 
 
+# =============================================================================
+# CONFIGURATION CONSTANTS
+# =============================================================================
+
+# Map size limits
+MAP_SIZE_MIN = 50
+MAP_SIZE_MAX = 200
+MAP_SIZE_BASE = 40  # Base size before scaling with units
+
+# Unit positioning
+ENGAGEMENT_GAP = 6  # Horizontal distance between teams (units engage quickly)
+MARGIN = 5  # Distance from map edges
+UNIT_SPACING_MAX = 2.0  # Maximum vertical spacing between units
+
+# Performance limits
+MAX_UNITS_PER_TEAM = 500  # Maximum N value (performance concern)
+
+
+# =============================================================================
+# UNIT TYPE REGISTRY
+# =============================================================================
+
+UNIT_TYPES = {
+    'Knight': Knight,
+    'Crossbowman': Crossbowman,
+    'Crossbow': Crossbowman,
+    'Pikeman': Pikeman,
+    'Melee': Knight,
+    'Ranged': Crossbowman,
+    'Archer': Crossbowman,
+}
+
+
 class LanchesterScenario:
     """
-    Factory for creating Lanchester test scenarios.
+    Factory for N vs 2N Lanchester test scenarios.
     
-    Creates asymmetric battles where N units face 2*N units of the same type,
-    positioned within range for immediate engagement.
+    Units are positioned in line formations facing each other,
+    close enough for immediate engagement.
     """
     
-    # Mapping of unit type names to unit classes
-    UNIT_CLASSES = {
-        'Knight': Knight,
-        'Crossbowman': Crossbowman, 
-        'Crossbow': Crossbowman,
-        'Pikeman': Pikeman,
-        'Melee': Knight,       # Default melee type
-        'Archer': Crossbowman,  # Default ranged type
-    }
+    @staticmethod
+    def get_supported_types() -> list:
+        """Return list of supported unit type names."""
+        return list(UNIT_TYPES.keys())
     
     @staticmethod
-    def create(unit_type: str, n: int, size_x: int = 120, size_y: int = 120) -> Scenario:
+    def create(unit_type: str, n: int) -> Scenario:
         """
-        Create a Lanchester scenario: N units (Team A) vs 2*N units (Team B).
+        Create a Lanchester scenario: N units (A) vs 2N units (B).
         
-        @param unit_type: Type of units ('Knight', 'Crossbowman', 'Pikeman', 'Melee', 'Archer')
-        @param n: Base number of units for Team A (Team B gets 2*n)
-        @param size_x: Battlefield width
-        @param size_y: Battlefield height
+        @param unit_type: Unit type name (Knight, Crossbowman, Pikeman, etc.)
+        @param n: Base unit count for Team A (Team B gets 2*n)
         @return: Scenario ready for simulation
+        @raises ValueError: If unit_type is unknown or n is invalid
+        @raises TypeError: If n is not an integer
         """
-        if unit_type not in LanchesterScenario.UNIT_CLASSES:
-            raise ValueError(f"Unknown unit type: {unit_type}. Available: {list(LanchesterScenario.UNIT_CLASSES.keys())}")
+        # Validate unit type
+        if unit_type not in UNIT_TYPES:
+            available = ', '.join(UNIT_TYPES.keys())
+            raise ValueError(f"Unknown unit type: '{unit_type}'. Available: {available}")
         
-        unit_class = LanchesterScenario.UNIT_CLASSES[unit_type]
+        # Validate unit count
+        if not isinstance(n, int):
+            raise TypeError(f"Unit count must be integer, got {type(n).__name__}")
         
-        # Determine engagement distance based on unit type
-        # Ranged units need to be within range, melee units need to be close
-        is_ranged = unit_class in [Crossbowman]
-        engagement_distance = 4 if is_ranged else 3  # Within attack range
+        if n <= 0:
+            raise ValueError(f"Unit count must be positive, got {n}")
         
-        # Position teams facing each other at center
-        center_y = size_y // 2
-        team_a_x = (size_x // 2) - engagement_distance
-        team_b_x = (size_x // 2) + engagement_distance
+        if n > MAX_UNITS_PER_TEAM:
+            raise ValueError(f"Unit count {n} exceeds max {MAX_UNITS_PER_TEAM} (performance concern)")
         
-        # Create units with appropriate spacing
-        units_a = LanchesterScenario._create_formation(
-            unit_class, 'A', n, team_a_x, center_y, size_y
+        unit_class = UNIT_TYPES[unit_type]
+        
+        # Map size scales with unit count
+        total_units = 3 * n  # N + 2N
+        map_size = min(MAP_SIZE_MAX, max(MAP_SIZE_MIN, MAP_SIZE_BASE + total_units // 2))
+        
+        # Teams face each other in the center
+        center_x = map_size // 2
+        center_y = map_size // 2
+        
+        team_a_x = center_x - ENGAGEMENT_GAP // 2
+        team_b_x = center_x + ENGAGEMENT_GAP // 2
+        
+        # Create line formations
+        units_a = LanchesterScenario._create_line(
+            unit_class, 'A', n, team_a_x, center_y, map_size
         )
-        units_b = LanchesterScenario._create_formation(
-            unit_class, 'B', 2 * n, team_b_x, center_y, size_y
+        units_b = LanchesterScenario._create_line(
+            unit_class, 'B', 2 * n, team_b_x, center_y, map_size
         )
-        
-        all_units = units_a + units_b
         
         return Scenario(
-            units=all_units,
+            units=units_a + units_b,
             units_a=units_a,
             units_b=units_b,
             general_a=None,
             general_b=None,
-            size_x=size_x,
-            size_y=size_y
+            size_x=map_size,
+            size_y=map_size
         )
     
     @staticmethod
-    def _create_formation(unit_class, team: str, count: int, 
-                          x_pos: float, center_y: float, map_height: int) -> list:
+    def _create_line(unit_class, team: str, count: int,
+                     x: float, center_y: float, map_size: int) -> list:
         """
-        Create a line formation of units.
+        Create a vertical line formation of units.
         
-        @param unit_class: Class to instantiate (Knight, Crossbowman, etc.)
-        @param team: Team identifier ('A' or 'B')
-        @param count: Number of units to create
-        @param x_pos: X position for the formation
+        @param unit_class: Unit class to instantiate
+        @param team: 'A' or 'B'
+        @param count: Number of units
+        @param x: X position for all units
         @param center_y: Center Y position
-        @param map_height: Height of the map for spacing calculation
+        @param map_size: Map height for bounds checking
         @return: List of unit instances
         """
         units = []
-        spacing = min(2.5, (map_height - 20) / max(count, 1))
-        start_y = max(5, center_y - (count * spacing) / 2)
+        
+        # Calculate spacing to fit all units
+        available_height = map_size - 2 * MARGIN
+        spacing = min(UNIT_SPACING_MAX, available_height / max(count, 1))
+        
+        # Start position to center the formation
+        total_height = (count - 1) * spacing
+        start_y = center_y - total_height / 2
         
         for i in range(count):
             y = start_y + i * spacing
-            # Clamp Y to stay within map bounds
-            y = max(2, min(y, map_height - 2))
-            unit = unit_class(team=team, x=x_pos, y=y)
+            # Clamp to map bounds
+            y = max(MARGIN, min(y, map_size - MARGIN))
+            
+            unit = unit_class(team=team, x=x, y=y)
             units.append(unit)
         
         return units
 
 
-# Convenience function for CLI integration
 def Lanchester(unit_type: str, n: int) -> Scenario:
     """
-    Create a Lanchester scenario for testing Lanchester's Laws.
+    Convenience function to create a Lanchester scenario.
     
-    @param unit_type: Type of units ('Knight', 'Crossbowman', 'Melee', 'Archer')
-    @param n: Base number of units (Team A=N, Team B=2*N)
+    @param unit_type: Type of units (Knight, Crossbowman, Pikeman)
+    @param n: Base count for Team A (Team B = 2*n)
     @return: Configured Scenario
+    
+    Example:
+        scenario = Lanchester("Knight", 20)  # 20 Knights vs 40 Knights
     """
     return LanchesterScenario.create(unit_type, n)
+
+
+def LanchesterSymmetric(unit_type: str, n: int) -> Scenario:
+    """
+    Create a symmetric battle scenario (N vs N).
+    
+    @param unit_type: Type of units (Knight, Crossbowman, Pikeman)
+    @param n: Unit count for both teams
+    @return: Configured Scenario
+    
+    Example:
+        scenario = LanchesterSymmetric("Knight", 30)  # 30 vs 30 Knights
+    """
+    if unit_type not in UNIT_TYPES:
+        available = ', '.join(UNIT_TYPES.keys())
+        raise ValueError(f"Unknown unit type: '{unit_type}'. Available: {available}")
+    
+    if not isinstance(n, int) or n <= 0:
+        raise ValueError(f"Unit count must be a positive integer, got {n}")
+    
+    if n > MAX_UNITS_PER_TEAM:
+        raise ValueError(f"Unit count {n} exceeds max {MAX_UNITS_PER_TEAM}")
+    
+    unit_class = UNIT_TYPES[unit_type]
+    
+    # Map size scales with unit count
+    total_units = 2 * n
+    map_size = min(MAP_SIZE_MAX, max(MAP_SIZE_MIN, MAP_SIZE_BASE + total_units // 2))
+    
+    center_x = map_size // 2
+    center_y = map_size // 2
+    
+    team_a_x = center_x - ENGAGEMENT_GAP // 2
+    team_b_x = center_x + ENGAGEMENT_GAP // 2
+    
+    # Both teams have N units
+    units_a = LanchesterScenario._create_line(
+        unit_class, 'A', n, team_a_x, center_y, map_size
+    )
+    units_b = LanchesterScenario._create_line(
+        unit_class, 'B', n, team_b_x, center_y, map_size
+    )
+    
+    return Scenario(
+        units=units_a + units_b,
+        units_a=units_a,
+        units_b=units_b,
+        general_a=None,
+        general_b=None,
+        size_x=map_size,
+        size_y=map_size
+    )
