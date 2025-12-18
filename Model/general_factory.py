@@ -93,15 +93,15 @@ def create_general(name: str, unitsA, unitsB) -> General:
         sT = {
             UnitType.CROSSBOWMAN: StrategieSimpleAttackBestAvoidWorst(
                 favoriteTroup=UnitType.PIKEMAN, 
-                hatedTroup=UnitType.KNIGHT
+                hatedTroup=None,
             ),
             UnitType.KNIGHT: StrategieSimpleAttackBestAvoidWorst(
                 favoriteTroup=UnitType.CROSSBOWMAN, 
-                hatedTroup=UnitType.PIKEMAN
+                hatedTroup=None,
             ),
             UnitType.PIKEMAN: StrategieSimpleAttackBestAvoidWorst(
                 favoriteTroup=UnitType.KNIGHT, 
-                hatedTroup=UnitType.CROSSBOWMAN
+                hatedTroup=None,
             ),
         }
         return General(unitsA=unitsA, unitsB=unitsB, sS=None, sT=sT, name=name_up)
