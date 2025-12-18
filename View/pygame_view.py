@@ -213,7 +213,6 @@ class PygameView:
             self.simulation_controller.toggle_pause()
 
         elif event.key == pygame.K_F9:
-            print("F9 pressed - Switching view")  # Debug
             return "SWITCH"
 
         elif event.key == pygame.K_F4:

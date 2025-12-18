@@ -177,7 +177,6 @@ class HybridController:
         pygame_view.paused = self.sim_controller.simulation.paused
 
         result = pygame_view.run()
-        print(result)
 
         # Cleanup pygame
         pygame_view.cleanup()
