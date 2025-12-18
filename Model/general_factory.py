@@ -73,9 +73,9 @@ def create_general(name: str, unitsA, unitsB) -> General:
     
     elif name_up == "DAFT":
         sT = {
-            UnitType.CROSSBOWMAN: StrategieDAFT(None),
-            UnitType.KNIGHT: StrategieDAFT(None),
-            UnitType.PIKEMAN: StrategieDAFT(None),
+            UnitType.CROSSBOWMAN: StrategieDAFT(UnitType.CROSSBOWMAN),
+            UnitType.KNIGHT: StrategieDAFT(UnitType.KNIGHT),
+            UnitType.PIKEMAN: StrategieDAFT(UnitType.PIKEMAN),
         }
         return General(unitsA=unitsA, unitsB=unitsB, sS=None, sT=sT, name=name_up)
     
@@ -99,26 +99,26 @@ def create_general(name: str, unitsA, unitsB) -> General:
         return General(unitsA=unitsA, unitsB=unitsB, sS=sS, sT=sT, name=name_up)
     
     elif name_up == "RPC":
-        # Rock-Paper-Counter: each unit type targets its counter
+        # Rock-Paper-Counter: each unit type targets its counter (like game_manager.py)
         sT = {
             UnitType.CROSSBOWMAN: StrategieSimpleAttackBestAvoidWorst(
                 favoriteTroup=UnitType.PIKEMAN, 
-                hatedTroup=UnitType.KNIGHT
+                hatedTroup=None
             ),
             UnitType.KNIGHT: StrategieSimpleAttackBestAvoidWorst(
                 favoriteTroup=UnitType.CROSSBOWMAN, 
-                hatedTroup=UnitType.PIKEMAN
+                hatedTroup=None
             ),
             UnitType.PIKEMAN: StrategieSimpleAttackBestAvoidWorst(
                 favoriteTroup=UnitType.KNIGHT, 
-                hatedTroup=UnitType.CROSSBOWMAN
+                hatedTroup=None
             ),
         }
         return General(unitsA=unitsA, unitsB=unitsB, sS=None, sT=sT, name=name_up)
     
     elif name_up == "RANDOMIQ":
-        # Random strategy - applies random orders
-        sS = StrategieRandomIQ()
+        # Random strategy - applies random orders (like game_manager.py)
+        sS = StrategieRandomIQ
         return General(unitsA=unitsA, unitsB=unitsB, sS=sS, sT=None, name=name_up)
     
     else:
