@@ -1,5 +1,7 @@
 from time import sleep
 
+from os import environ
+environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 import pygame
 import sys
 import os
