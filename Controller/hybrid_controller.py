@@ -18,6 +18,7 @@ from typing import Optional
 
 from Controller.simulation_controller import SimulationController
 from Model.scenario import Scenario
+from Utils.save_load import SaveLoad
 
 
 class ViewMode(Enum):
@@ -52,6 +53,7 @@ class HybridController:
         self.scenario = scenario
         self.current_mode = initial_mode
         self.running = False
+        self.save_load = SaveLoad(scenario)
         
     def run(self):
         """
@@ -127,6 +129,15 @@ class HybridController:
                 return original_process()
             
             terminal_view.input_handler.process = process_with_switch
+
+            # Connect save callback
+            def handle_save():
+                self.save_load.save_game()
+                terminal_view.state.notification = "Game Saved!"
+                terminal_view.state.notification_time = __import__('time').time()
+            
+            terminal_view.on_quick_save = handle_save
+            terminal_view.input_handler.on_quick_save = handle_save
 
             if terminal_view.paused != self.sim_controller.simulation.paused:
                 terminal_view.paused = not terminal_view.paused
