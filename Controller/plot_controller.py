@@ -138,7 +138,12 @@ class PlotController:
         @param  verbose Print progress to console.
         @return Dictionary with statistical test results.
         
-        @details Tests Linear Law (casualties ∝ N) vs Square Law (casualties ∝ N²).
+        @details Lanchester's Laws for N vs 2N scenario:
+        - Linear Law (Melee): Team B casualties = N (slope ≈ 1.0)
+        - Square Law (Ranged): Team B casualties ≈ 0.27*N (slope ≈ 0.27)
+        
+        Both predict linear scaling, but with different slopes.
+        We fit a linear model and compare the slope to theoretical predictions.
         """
         results = {
             'lanchester_tests': {},
@@ -158,57 +163,63 @@ class PlotController:
         # Store raw summary
         results['raw_df_summary'] = summary.to_dict(orient='records')
         
+        # Theoretical slopes for N vs 2N scenario
+        # Linear Law (Melee): casualties = N → slope = 1.0
+        # Square Law (Ranged): casualties = 2N - sqrt(4N² - N²) = 2N - N*sqrt(3) ≈ 0.27N → slope ≈ 0.27
+        THEORETICAL_SLOPE_LINEAR = 1.0
+        THEORETICAL_SLOPE_SQUARE = 2.0 - np.sqrt(3)  # ≈ 0.268
+        
         # Test Lanchester laws for each unit type
+        # Use Team B casualties (2N side) for analysis
         for unit_type in data.unit_types:
             type_data = summary[summary['unit_type'] == unit_type]
             
-            if len(type_data) < 3:
+            if len(type_data) < 2:
                 continue
             
             n_values = type_data['n_value'].values
-            casualties = type_data['mean_winner_casualties'].values
+            casualties = type_data['mean_team_b_casualties'].values
             
             # Skip if all casualties are zero or constant (no variance)
-            if np.std(casualties) == 0:
+            if np.std(casualties) == 0 or len(n_values) < 2:
                 results['lanchester_tests'][unit_type] = {
-                    'linear_r2': 0.0,
-                    'quadratic_r2': 0.0,
+                    'slope': 0.0,
+                    'r2': 0.0,
+                    'theoretical_linear': THEORETICAL_SLOPE_LINEAR,
+                    'theoretical_square': THEORETICAL_SLOPE_SQUARE,
                     'best_fit': "N/A (constant casualties)",
-                    'best_r2': 0.0,
-                    'interpretation': f"Casualties are constant ({casualties[0]:.1f}) - no scaling pattern detected."
+                    'interpretation': f"Casualties are constant ({casualties[0]:.1f}) - 2:1 advantage too dominant."
                 }
                 continue
             
-            # Fit linear model: casualties = a * N + b
+            # Fit linear model: casualties = slope * N + intercept
             try:
-                linear_coeffs = np.polyfit(n_values, casualties, 1)
-                linear_pred = np.polyval(linear_coeffs, n_values)
+                slope, intercept = np.polyfit(n_values, casualties, 1)
+                linear_pred = slope * n_values + intercept
                 ss_res = np.sum((casualties - linear_pred)**2)
                 ss_tot = np.sum((casualties - np.mean(casualties))**2)
-                linear_r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
-            except:
-                linear_r2 = 0
+                r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+            except Exception:
+                slope, intercept, r2 = 0, 0, 0
             
-            # Fit quadratic model: casualties = a * N² + b * N + c
-            try:
-                quad_coeffs = np.polyfit(n_values, casualties, 2)
-                quad_pred = np.polyval(quad_coeffs, n_values)
-                ss_res = np.sum((casualties - quad_pred)**2)
-                ss_tot = np.sum((casualties - np.mean(casualties))**2)
-                quad_r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
-            except:
-                quad_r2 = 0
+            # Compare slope to theoretical predictions
+            error_linear = abs(slope - THEORETICAL_SLOPE_LINEAR)
+            error_square = abs(slope - THEORETICAL_SLOPE_SQUARE)
             
-            # Determine best fit
-            best_fit = "Linear (Lanchester's Linear Law)" if linear_r2 > quad_r2 else "Quadratic (Lanchester's Square Law)"
-            best_r2 = max(linear_r2, quad_r2)
+            if error_linear < error_square:
+                best_fit = "Linear Law"
+            else:
+                best_fit = "Square Law"
             
             results['lanchester_tests'][unit_type] = {
-                'linear_r2': float(linear_r2),
-                'quadratic_r2': float(quad_r2),
+                'slope': float(slope),
+                'intercept': float(intercept),
+                'r2': float(r2),
+                'theoretical_linear': THEORETICAL_SLOPE_LINEAR,
+                'theoretical_square': THEORETICAL_SLOPE_SQUARE,
                 'best_fit': best_fit,
-                'best_r2': float(best_r2),
-                'interpretation': PlotController._interpret_lanchester(unit_type, linear_r2, quad_r2)
+                'slope_error': float(min(error_linear, error_square)),
+                'interpretation': PlotController._interpret_lanchester(unit_type, slope, r2, THEORETICAL_SLOPE_LINEAR, THEORETICAL_SLOPE_SQUARE)
             }
         
         # Descriptive statistics by unit type
@@ -241,29 +252,44 @@ class PlotController:
         return results
     
     @staticmethod
-    def _interpret_lanchester(unit_type: str, linear_r2: float, quad_r2: float) -> str:
-        """@brief Generate interpretation of Lanchester test results."""
+    def _interpret_lanchester(unit_type: str, slope: float, r2: float, 
+                              theoretical_linear: float, theoretical_square: float) -> str:
+        """
+        @brief Generate interpretation of Lanchester test results.
         
+        @details Compares observed slope to theoretical predictions:
+        - Linear Law (Melee): slope ≈ 1.0 (each Team A unit kills one Team B unit)
+        - Square Law (Ranged): slope ≈ 0.27 (focus fire reduces casualties)
+        """
         is_melee = unit_type.lower() in ['knight', 'pikeman', 'infantry', 'melee']
         is_ranged = unit_type.lower() in ['crossbowman', 'crossbow', 'archer', 'ranged']
         
-        if linear_r2 > quad_r2:
-            fit_type = "Linear Law"
-            expected_for = "melee combat"
-        else:
-            fit_type = "Square Law"
-            expected_for = "ranged combat"
+        # Check if slope is close to zero (2:1 advantage too dominant)
+        if slope < 0.05:
+            return f"Slope ≈ 0: The 2:1 numerical advantage is overwhelming. Team B wins with minimal casualties."
         
-        if is_melee and linear_r2 > quad_r2:
-            return f"✓ As expected for melee units, casualties follow the Linear Law."
-        elif is_ranged and quad_r2 > linear_r2:
-            return f"✓ As expected for ranged units, casualties follow the Square Law."
-        elif is_melee and quad_r2 > linear_r2:
-            return f"⚠ Unexpected: Melee unit shows Square Law behavior (focus fire possible?)."
-        elif is_ranged and linear_r2 > quad_r2:
-            return f"⚠ Unexpected: Ranged unit shows Linear Law behavior (limited focus fire?)."
+        # Determine which law the data matches
+        error_linear = abs(slope - theoretical_linear)
+        error_square = abs(slope - theoretical_square)
+        
+        if error_linear < error_square:
+            observed_law = "Linear Law"
+            expected_slope = theoretical_linear
         else:
-            return f"Unit follows {fit_type}, typical for {expected_for}."
+            observed_law = "Square Law"
+            expected_slope = theoretical_square
+        
+        # Generate interpretation
+        if is_melee and observed_law == "Linear Law":
+            return f"✓ Slope={slope:.3f} (expected ≈{expected_slope:.2f}). Melee unit follows Linear Law as expected."
+        elif is_ranged and observed_law == "Square Law":
+            return f"✓ Slope={slope:.3f} (expected ≈{expected_slope:.2f}). Ranged unit follows Square Law as expected."
+        elif is_melee and observed_law == "Square Law":
+            return f"⚠ Slope={slope:.3f}. Melee unit shows Square Law behavior (R²={r2:.3f})."
+        elif is_ranged and observed_law == "Linear Law":
+            return f"⚠ Slope={slope:.3f}. Ranged unit shows Linear Law behavior (R²={r2:.3f})."
+        else:
+            return f"Slope={slope:.3f}, R²={r2:.3f}. Closest to {observed_law}."
     
     @staticmethod
     def _open_results(plot_path: str, report_path: str):
