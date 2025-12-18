@@ -144,16 +144,41 @@ general_b = create_general("DAFT", scenario.units_b, scenario.units_a)
 | `cavalry_charge` | 100v100 | Heavy cavalry |
 | `shield_wall` | 120v120 | Defensive |
 | `cannae` | 150v150 | Hammer and anvil |
-| `Lanchester` | N vs 2N | For analysis |
+| `Lanchester` | N vs 2N | For Lanchester's Laws analysis |
 
 ## Lanchester's Laws
 
-The `Lanchester` scenario tests combat theory:
+The `Lanchester` scenario tests combat theory with **N vs 2N** battles:
 
-- **Linear Law** (Melee): Casualties ∝ N
-- **Square Law** (Ranged): Casualties ∝ √N
+### Theoretical Predictions
 
-Team A (N units) vs Team B (2N units). Analyze winner casualties to verify the laws.
+| Law | Combat Type | Team B Casualties | Slope |
+|-----|-------------|-------------------|-------|
+| **Linear Law** | Melee (1v1) | N | 1.0 |
+| **Square Law** | Ranged (focus fire) | 2N - √(4N² - N²) ≈ 0.27N | ≈ 0.27 |
+
+### How It Works
+
+- **Team A**: N units
+- **Team B**: 2N units (always wins)
+- **Analysis**: Plot Team B casualties vs N
+
+The analysis compares the **observed slope** to theoretical predictions:
+
+- Melee units should have slope ≈ 1.0 (each Team A unit kills one Team B unit)
+- Ranged units should have slope ≈ 0.27 (focus fire reduces casualties)
+
+### Running the Analysis
+
+```bash
+./battle plot DAFT PlotLanchester Lanchester '[Knight,Crossbowman,Pikeman]' 'range(10,100,10)' -N 10
+```
+
+**Output:**
+
+- Plot showing empirical Team B casualties per unit type
+- Statistical report with slope analysis
+- HTML report with detailed interpretation
 
 ## Terminal Controls
 

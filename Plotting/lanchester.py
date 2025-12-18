@@ -6,21 +6,25 @@
 @details
 Creates N vs 2N battle scenarios to test Lanchester's Laws:
 
-- Linear Law (Melee): Casualties ∝ N, one-on-one combat
-- Square Law (Ranged): Casualties ∝ N², focus fire possible
+- Linear Law (Melee): Winner casualties = N (1v1 combat, each A kills one B)
+- Square Law (Ranged): Winner casualties = 2N - sqrt((2N)² - N²) ≈ 0.27N
+
+The 2N side always wins. By varying N and plotting the casualties sustained
+by the winning side, you can verify the scaling laws:
+- Melee: casualties scale linearly with N
+- Ranged: casualties scale much slower (square root relation)
 
 Also provides symmetric scenarios (N vs N) for general analysis.
 
 Usage:
     from Plotting.lanchester import Lanchester, LanchesterSymmetric
     
-    scenario = Lanchester("Knight", 20)  # 20 vs 40 Knights (Lanchester)
-    scenario = LanchesterSymmetric("Knight", 30)  # 30 vs 30 Knights (Symmetric)
+    scenario = Lanchester("Knight", 20)  # 20 vs 40 Knights (N vs 2N)
+    scenario = LanchesterSymmetric("Knight", 30)  # 30 vs 30 Knights
 """
 
 from Model.scenario import Scenario
 from Model.units import Knight, Crossbowman, Pikeman
-
 
 # =============================================================================
 # CONFIGURATION CONSTANTS
@@ -57,7 +61,7 @@ UNIT_TYPES = {
 
 class LanchesterScenario:
     """
-    Factory for N vs 2N Lanchester test scenarios.
+    Factory for N vs ratio*N Lanchester test scenarios (default ratio=1.5).
     
     Units are positioned in line formations facing each other,
     close enough for immediate engagement.
@@ -69,15 +73,22 @@ class LanchesterScenario:
         return list(UNIT_TYPES.keys())
     
     @staticmethod
-    def create(unit_type: str, n: int) -> Scenario:
+    def create(unit_type: str, n: int, ratio: float = 2.0) -> Scenario:
         """
-        Create a Lanchester scenario: N units (A) vs 2N units (B).
+        Create a Lanchester scenario: N units (A) vs ratio*N units (B).
         
         @param unit_type: Unit type name (Knight, Crossbowman, Pikeman, etc.)
-        @param n: Base unit count for Team A (Team B gets 2*n)
+        @param n: Base unit count for Team A
+        @param ratio: Multiplier for Team B size (default 2.0 for N vs 2N)
         @return: Scenario ready for simulation
         @raises ValueError: If unit_type is unknown or n is invalid
         @raises TypeError: If n is not an integer
+        
+        Lanchester's Laws predict:
+        - Linear Law (Melee): Winner casualties = N (1v1 combat, difference survives)
+        - Square Law (Ranged): Winner casualties = 2N - sqrt((2N)^2 - N^2) ≈ 0.27N
+        
+        The 2N side always wins. Plotting casualties vs N reveals the scaling law.
         """
         # Validate unit type
         if unit_type not in UNIT_TYPES:
@@ -96,8 +107,11 @@ class LanchesterScenario:
         
         unit_class = UNIT_TYPES[unit_type]
         
+        # Calculate Team B size
+        n_b = max(n + 1, int(n * ratio))
+        
         # Map size scales with unit count
-        total_units = 3 * n  # N + 2N
+        total_units = n + n_b
         map_size = min(MAP_SIZE_MAX, max(MAP_SIZE_MIN, MAP_SIZE_BASE + total_units // 2))
         
         # Teams face each other in the center
@@ -112,7 +126,7 @@ class LanchesterScenario:
             unit_class, 'A', n, team_a_x, center_y, map_size
         )
         units_b = LanchesterScenario._create_line(
-            unit_class, 'B', 2 * n, team_b_x, center_y, map_size
+            unit_class, 'B', n_b, team_b_x, center_y, map_size
         )
         
         return Scenario(
@@ -160,18 +174,19 @@ class LanchesterScenario:
         return units
 
 
-def Lanchester(unit_type: str, n: int) -> Scenario:
+def Lanchester(unit_type: str, n: int, ratio: float = 2.0) -> Scenario:
     """
     Convenience function to create a Lanchester scenario.
     
     @param unit_type: Type of units (Knight, Crossbowman, Pikeman)
-    @param n: Base count for Team A (Team B = 2*n)
+    @param n: Base count for Team A (Team B = ratio*n, default 2N)
+    @param ratio: Size ratio for Team B (default 2.0 for N vs 2N)
     @return: Configured Scenario
     
     Example:
-        scenario = Lanchester("Knight", 20)  # 20 Knights vs 40 Knights
+        scenario = Lanchester("Knight", 20)  # 20 Knights vs 40 Knights (2x)
     """
-    return LanchesterScenario.create(unit_type, n)
+    return LanchesterScenario.create(unit_type, n, ratio=ratio)
 
 
 def LanchesterSymmetric(unit_type: str, n: int) -> Scenario:

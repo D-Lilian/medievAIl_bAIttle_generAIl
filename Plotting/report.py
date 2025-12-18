@@ -530,19 +530,19 @@ class PlotReportGenerator:
     <main class="container">
         <!-- Theory Section -->
         <div class="theory-box">
-            <h2>Lanchester's Laws Theory</h2>
+            <h2>Lanchester's Laws Theory (N vs 2N)</h2>
             <div class="theory-grid">
                 <div class="law-card">
                     <h3>Linear Law (Melee)</h3>
-                    <p>In close combat, each soldier can only engage one enemy at a time. 
-                    Casualties are directly proportional to army size.</p>
-                    <div class="formula">casualties ∝ N</div>
+                    <p>In close combat, each soldier engages one enemy at a time. 
+                    Team B (2N) loses N casualties before winning.</p>
+                    <div class="formula">Team B casualties = N (slope ≈ 1.0)</div>
                 </div>
                 <div class="law-card">
                     <h3>Square Law (Ranged)</h3>
-                    <p>In ranged combat, multiple soldiers can focus fire on the same target. 
-                    Combat effectiveness scales quadratically.</p>
-                    <div class="formula">effectiveness ∝ N²</div>
+                    <p>In ranged combat, focus fire allows concentration of attacks. 
+                    Team B wins with fewer casualties.</p>
+                    <div class="formula">Team B casualties ≈ 0.27N (slope ≈ 0.27)</div>
                 </div>
             </div>
         </div>
@@ -664,30 +664,32 @@ class PlotReportGenerator:
             html += '<div class="grid grid-2 mb-2">'
             
             for unit_type, result in lanchester.items():
-                linear_r2 = result.get('linear_r2', 0)
-                quad_r2 = result.get('quadratic_r2', 0)
+                slope = result.get('slope', 0)
+                r2 = result.get('r2', 0)
+                theoretical_linear = result.get('theoretical_linear', 1.0)
+                theoretical_square = result.get('theoretical_square', 0.27)
                 best_fit = result.get('best_fit', 'Unknown')
                 interpretation = result.get('interpretation', '')
                 
-                card_class = "linear" if best_fit == "Linear" else "quadratic"
-                is_confirmed = 'confirms' in interpretation.lower() or 'linear' in interpretation.lower()
+                card_class = "linear" if "Linear" in best_fit else "quadratic"
+                is_confirmed = '✓' in interpretation
                 
                 html += f"""
                 <div class="result-card {card_class} {'confirmed' if is_confirmed else ''}">
-                    <h4>{unit_type} <span class="badge-{card_class}">{best_fit} Law</span></h4>
+                    <h4>{unit_type} <span class="badge-{card_class}">{best_fit}</span></h4>
                     <p>{interpretation}</p>
                     <div class="metrics">
                         <div class="metric">
-                            <span class="metric-value">{linear_r2:.4f}</span>
-                            <span class="metric-label">Linear R²</span>
+                            <span class="metric-value">{slope:.3f}</span>
+                            <span class="metric-label">Observed Slope</span>
                         </div>
                         <div class="metric">
-                            <span class="metric-value">{quad_r2:.4f}</span>
-                            <span class="metric-label">Quadratic R²</span>
+                            <span class="metric-value">{r2:.3f}</span>
+                            <span class="metric-label">R²</span>
                         </div>
                         <div class="metric">
-                            <span class="metric-value">{abs(linear_r2 - quad_r2):.4f}</span>
-                            <span class="metric-label">Δ R²</span>
+                            <span class="metric-value">{theoretical_linear:.2f} / {theoretical_square:.2f}</span>
+                            <span class="metric-label">Theory (Lin/Sq)</span>
                         </div>
                     </div>
                 </div>
@@ -699,37 +701,40 @@ class PlotReportGenerator:
             html += """
             <div class="card mt-2">
                 <div class="card-header">
-                    <span class="card-title">Regression Analysis Details</span>
+                    <span class="card-title">Slope Analysis Details</span>
                 </div>
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
                             <tr>
                                 <th>Unit Type</th>
-                                <th>Linear R²</th>
-                                <th>Quadratic R²</th>
-                                <th>Best Fit</th>
-                                <th>Conclusion</th>
+                                <th>Observed Slope</th>
+                                <th>R²</th>
+                                <th>Linear Theory</th>
+                                <th>Square Theory</th>
+                                <th>Best Match</th>
                             </tr>
                         </thead>
                         <tbody>
             """
             
             for unit_type, result in lanchester.items():
-                linear_r2 = result.get('linear_r2', 0)
-                quad_r2 = result.get('quadratic_r2', 0)
+                slope = result.get('slope', 0)
+                r2 = result.get('r2', 0)
+                theoretical_linear = result.get('theoretical_linear', 1.0)
+                theoretical_square = result.get('theoretical_square', 0.27)
                 best_fit = result.get('best_fit', 'Unknown')
                 
-                conclusion = "Melee behavior confirmed" if best_fit == "Linear" else "Ranged behavior confirmed"
-                badge_class = "linear" if best_fit == "Linear" else "quadratic"
+                badge_class = "linear" if "Linear" in best_fit else "quadratic"
                 
                 html += f"""
                     <tr>
                         <td class="highlight">{unit_type}</td>
-                        <td class="font-mono">{linear_r2:.4f}</td>
-                        <td class="font-mono">{quad_r2:.4f}</td>
+                        <td class="font-mono">{slope:.4f}</td>
+                        <td class="font-mono">{r2:.4f}</td>
+                        <td class="font-mono">{theoretical_linear:.2f}</td>
+                        <td class="font-mono">{theoretical_square:.2f}</td>
                         <td><span class="badge-{badge_class}">{best_fit}</span></td>
-                        <td>{conclusion}</td>
                     </tr>
                 """
             
@@ -852,24 +857,22 @@ class PlotReportGenerator:
             'Knight': """
                 <p class="mt-1" style="color: var(--text-light);">
                     <strong>Theory:</strong> Knights are melee units. According to Lanchester's <strong>Linear Law</strong>,
-                    in melee combat each soldier can only engage one enemy at a time, so casualties 
-                    should scale <em>linearly</em> with N.
+                    in 1v1 combat each Team A soldier kills one Team B soldier. Expected slope ≈ 1.0.
                 </p>""",
             'Crossbowman': """
                 <p class="mt-1" style="color: var(--text-light);">
                     <strong>Theory:</strong> Crossbowmen are ranged units. According to Lanchester's <strong>Square Law</strong>,
-                    in ranged combat multiple soldiers can focus fire on the same target, so casualties
-                    should scale <em>quadratically</em> with N.
+                    focus fire allows Team B to win with fewer casualties. Expected slope ≈ 0.27.
                 </p>""",
             'Pikeman': """
                 <p class="mt-1" style="color: var(--text-light);">
-                    <strong>Theory:</strong> Pikemen are melee units with extended reach. They should follow
-                    Lanchester's <strong>Linear Law</strong>, though formation mechanics may introduce variation.
+                    <strong>Theory:</strong> Pikemen are melee units. They should follow
+                    Lanchester's <strong>Linear Law</strong> with expected slope ≈ 1.0.
                 </p>""",
             'Archer': """
                 <p class="mt-1" style="color: var(--text-light);">
                     <strong>Theory:</strong> Archers are ranged units. According to Lanchester's <strong>Square Law</strong>,
-                    ranged combat allows focus fire, so casualties should scale <em>quadratically</em>.
+                    they should have expected slope ≈ 0.27.
                 </p>""",
         }
         return texts.get(unit_type, f'<p class="mt-1" style="color: var(--text-light);">Analysis for {unit_type}.</p>')
@@ -887,13 +890,17 @@ class PlotReportGenerator:
             <div class="result-card confirmed">
                 <h4>Melee vs Ranged Combat Comparison</h4>
                 <p>This analysis compares how different unit types scale in the N vs 2N scenario.
-                If Lanchester's Laws apply correctly:</p>
+                Lanchester's Laws predict different slopes:</p>
                 <ul style="margin-top: 0.75rem; padding-left: 1.25rem; color: var(--text-light);">
-                    <li><strong>Knights (Melee):</strong> Should show linear scaling — the larger side wins 
-                    with casualties proportional to N.</li>
-                    <li><strong>Crossbowmen (Ranged):</strong> Should show quadratic scaling — the larger side 
-                    dominates more decisively, with the smaller side suffering disproportionate losses.</li>
+                    <li><strong>Knights (Melee):</strong> Linear Law — slope ≈ 1.0 
+                    (each Team A unit kills one Team B unit before dying).</li>
+                    <li><strong>Crossbowmen (Ranged):</strong> Square Law — slope ≈ 0.27 
+                    (focus fire allows Team B to win with fewer casualties).</li>
                 </ul>
+                <p style="margin-top: 0.75rem; font-style: italic; color: var(--text-light);">
+                    <strong>Note:</strong> With a 2:1 advantage, Team B (2N) always wins. 
+                    Observed slopes near 0 indicate the advantage is too dominant for meaningful analysis.
+                </p>
             </div>
             """
         
@@ -927,13 +934,12 @@ class PlotReportGenerator:
                 <span class="card-title">Methodology Notes</span>
             </div>
             <p style="color: var(--text-light);">
-                This analysis uses <strong>polynomial regression</strong> to fit the relationship between initial army size (N)
-                and winner casualties. The <strong>R² coefficient</strong> indicates how well each model (linear vs quadratic) 
-                explains the variance in the data.
+                This analysis uses <strong>linear regression</strong> to fit the relationship between initial army size (N)
+                and Team B casualties. The <strong>slope</strong> of this regression is compared to theoretical predictions.
             </p>
             <p style="color: var(--text-light); margin-top: 0.5rem;">
-                A higher R² for the <span class="badge-linear">Linear</span> model suggests Lanchester's Linear Law applies (melee behavior),
-                while a higher R² for the <span class="badge-quadratic">Quadratic</span> model suggests Lanchester's Square Law applies (ranged behavior).
+                <span class="badge-linear">Linear Law</span> predicts slope ≈ 1.0 (melee: each Team A unit kills one Team B unit).<br>
+                <span class="badge-quadratic">Square Law</span> predicts slope ≈ 0.27 (ranged: focus fire reduces Team B casualties).
             </p>
         </div>
         """

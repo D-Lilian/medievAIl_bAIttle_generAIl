@@ -20,12 +20,12 @@ import pandas as pd
 
 from plotnine import (
     ggplot, aes, 
-    geom_line, geom_point, geom_bar,
+    geom_line, geom_point, geom_bar, geom_col,
     geom_boxplot, geom_tile, geom_text,
     geom_smooth,
     labs, theme_minimal, theme, element_text, element_blank,
     element_line, element_rect, facet_wrap,
-    scale_fill_manual, scale_color_manual, scale_fill_gradient2,
+    scale_fill_manual, scale_color_manual, scale_fill_gradient2, scale_fill_gradient,
     ggsave,
 )
 
@@ -200,7 +200,7 @@ class PlotLanchester(BasePlotter):
                         records.append({
                             'unit_type': unit_type,
                             'n_value': n,
-                            'mean_winner_casualties': plot_data.avg_team_b_casualties[i],
+                            'mean_team_b_casualties': plot_data.avg_team_b_casualties[i],
                         })
         return pd.DataFrame(records)
     
@@ -209,9 +209,9 @@ class PlotLanchester(BasePlotter):
         import numpy as np
         from plotnine import scale_linetype_identity
         
-        # Column names
+        # Column names - use Team B casualties (2N side) for Lanchester analysis
         n_col = 'n_value' if 'n_value' in df.columns else 'n'
-        cas_col = 'mean_winner_casualties' if 'mean_winner_casualties' in df.columns else 'winner_casualties'
+        cas_col = 'mean_team_b_casualties' if 'mean_team_b_casualties' in df.columns else 'mean_winner_casualties'
         
         # Clean data
         df = df.copy()
@@ -223,65 +223,23 @@ class PlotLanchester(BasePlotter):
         unit_types = df['unit_type'].unique().tolist()
         colors = {ut: PALETTE_UNITS.get(ut, '#666666') for ut in unit_types}
         
-        # Theoretical curves for each unit type
-        n_values = sorted(df[n_col].unique())
-        n_min, n_max = min(n_values), max(n_values)
-        n_theory = np.linspace(n_min, n_max, 50)
-        
-        theory_records = []
-        for ut in unit_types:
-            ut_data = df[df['unit_type'] == ut]
-            empirical_max = ut_data[cas_col].max()
-            
-            if empirical_max == 0:
-                continue
-            
-            # Determine combat type for this unit
-            combat_type = UNIT_TYPES.get(ut, 'Unknown')
-            
-            if combat_type == 'Melee':
-                # Linear Law: casualties ∝ N
-                scale = empirical_max / n_max if n_max > 0 else 1
-                theory_cas = scale * n_theory
-            else:
-                # Square Law: casualties ∝ √N
-                scale = empirical_max / np.sqrt(n_max) if n_max > 0 else 1
-                theory_cas = scale * np.sqrt(n_theory)
-            
-            for i, n in enumerate(n_theory):
-                theory_records.append({
-                    'unit_type': ut,
-                    n_col: n,
-                    cas_col: theory_cas[i],
-                })
-        
-        theory_df = pd.DataFrame(theory_records)
-        
-        # Mark data type
-        df['data_type'] = 'solid'        # Empirical = solid
-        theory_df['data_type'] = 'dashed'  # Theory = dashed
-        
-        # Combine
-        combined = pd.concat([df[[n_col, cas_col, 'unit_type', 'data_type']], 
-                             theory_df], ignore_index=True)
-        
-        # Build plot
+        # Build plot with empirical data only
         plot = (
-            ggplot(combined, aes(x=n_col, y=cas_col, color='unit_type', linetype='data_type'))
+            ggplot(df, aes(x=n_col, y=cas_col, color='unit_type'))
             + geom_line(size=1.2)
-            + geom_point(data=df, mapping=aes(x=n_col, y=cas_col, color='unit_type'), 
-                        size=3, inherit_aes=False)
+            + geom_point(size=3)
             + scale_color_manual(values=colors)
-            + scale_linetype_identity()
             + labs(
                 title=f"Lanchester's Laws — {ai_name}",
-                x="Initial Force Size (N)",
-                y="Winner Casualties (2N side)",
+                subtitle="Team B Casualties (2N side) vs Initial Force Size N",
+                x="Initial Force Size N (Team A)",
+                y="Team B Casualties",
                 color="Unit Type"
             )
             + theme_minimal()
             + theme(
                 plot_title=element_text(size=14, weight='bold'),
+                plot_subtitle=element_text(size=10, color='#666666'),
                 axis_title=element_text(size=11),
                 legend_position='right',
                 legend_title=element_text(size=10, weight='bold'),
