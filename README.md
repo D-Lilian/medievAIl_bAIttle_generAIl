@@ -99,7 +99,7 @@ Loads a `.pkl` save file from `save/` directory. You have to specify the full fi
 
 **Output:**
 
-- `Reports/lanchester_data.csv` - Raw data
+- `Reports/data.csv` - Raw data
 - `Reports/<plotter>_*.png` - Plot
 - `Reports/lanchester_report_*.html` - Full report (PlotLanchester only)
 

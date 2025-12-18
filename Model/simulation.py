@@ -23,7 +23,7 @@ DEFAULT_NUMBER_OF_TICKS_PER_SECOND_FOR_ATTACK = 5
 
 class Simulation:
 
-    def __init__(self, scenario, tick_speed=10, paused=False, unlocked=False):
+    def __init__(self, scenario, tick_speed=10, paused=False, unlocked=False, max_ticks=None):
         self.scenario = scenario
         self.reload_units = []
         self.log = logger.bind(simulation=str(self))
@@ -32,6 +32,9 @@ class Simulation:
         self.tick = 0
         self.paused = paused
         self.unlocked = unlocked
+        # max_ticks=None means no time limit (for Lanchester analysis)
+        # Default: 240 seconds (2400 ticks at 10 ticks/s)
+        self.max_ticks = max_ticks if max_ticks is not None else DEFAULT_NUMBER_OF_TICKS_PER_SECOND * 240
 
         self.as_unit_moved = False
         self.as_unit_attacked = False
@@ -118,7 +121,10 @@ class Simulation:
         if not has_alive_a or not has_alive_b:
             return True
 
-        return self.tick >= DEFAULT_NUMBER_OF_TICKS_PER_SECOND * 240
+        # max_ticks=0 means no time limit (infinite)
+        if self.max_ticks == 0:
+            return False
+        return self.tick >= self.max_ticks
 
     ## ----------- Movement functions -------------
 
