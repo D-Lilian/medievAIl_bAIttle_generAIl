@@ -1,6 +1,17 @@
+# -*- coding: utf-8 -*-
+"""
+@file save_load.py
+@brief Save and load a game
+
+@details
+Serialize the scenario object using Pickle.
+
+"""
+
 import os, pickle
 from datetime import datetime
-from Model.scenario import Scenario 
+from Model.scenario import Scenario
+from Model.general_factory import create_general
 
 class SaveLoad:
     def __init__(self, scenario: Scenario) -> None:
@@ -9,6 +20,9 @@ class SaveLoad:
     def save_game(self) -> str | None:
             """Save the current game state"""
             try:
+                general_a_name = getattr(getattr(self.scenario, 'general_a', None), 'name', None)
+                general_b_name = getattr(getattr(self.scenario, 'general_b', None), 'name', None)
+
                 data = {
                     'scenario': {
                         'units': self.scenario.units,
@@ -16,8 +30,8 @@ class SaveLoad:
                         'units_b': self.scenario.units_b,
                         'size_x': self.scenario.size_x,
                         'size_y': self.scenario.size_y,
-                        'general_a': self.scenario.general_a,
-                        'general_b': self.scenario.general_b
+                        'general_a_name': general_a_name,
+                        'general_b_name': general_b_name,
                     }
                 }
 
@@ -29,8 +43,9 @@ class SaveLoad:
                 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                 filename = os.path.join(save_dir, f"{timestamp}.pkl")
 
-                with open(filename, 'wb') as file:
+                with open(filename, "wb") as file:
                     pickle.dump(data, file)
+
                 print(f"Game successfully saved to {filename}.")
                 return filename
 
@@ -43,6 +58,13 @@ class SaveLoad:
         try:
             if not file_path.endswith(".pkl"):
                 file_path += ".pkl"
+
+            # Ensure file exists and is not empty
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(file_path)
+
+            if os.path.getsize(file_path) == 0:
+                raise ValueError("Empty save file (previous save failed).")
 
             with open(file_path, "rb") as file:
                 data = pickle.load(file)
@@ -58,12 +80,21 @@ class SaveLoad:
             if size_x is None or size_y is None or units is None:
                 raise ValueError("Corrupted save file.")
 
+
+            units_a = scenario_data.get("units_a")
+            units_b = scenario_data.get("units_b")
+            gen_a_name = scenario_data.get("general_a_name")
+            gen_b_name = scenario_data.get("general_b_name")
+
+            general_a = create_general(gen_a_name, units_a, units_b) if gen_a_name else None
+            general_b = create_general(gen_b_name, units_b, units_a) if gen_b_name else None
+
             scenario = Scenario(
                 units=units,
-                units_a=scenario_data.get("units_a"),
-                units_b=scenario_data.get("units_b"),
-                general_a=scenario_data.get("general_a"),
-                general_b=scenario_data.get("general_b"),
+                units_a=units_a,
+                units_b=units_b,
+                general_a=general_a,
+                general_b=general_b,
                 size_x=size_x,
                 size_y=size_y,
             )
