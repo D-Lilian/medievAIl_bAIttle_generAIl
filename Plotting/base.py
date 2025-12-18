@@ -200,7 +200,7 @@ class PlotLanchester(BasePlotter):
                         records.append({
                             'unit_type': unit_type,
                             'n_value': n,
-                            'mean_winner_casualties': plot_data.avg_team_b_casualties[i],
+                            'mean_team_b_casualties': plot_data.avg_team_b_casualties[i],
                         })
         return pd.DataFrame(records)
     
@@ -211,7 +211,8 @@ class PlotLanchester(BasePlotter):
         
         # Column names
         n_col = 'n_value' if 'n_value' in df.columns else 'n'
-        cas_col = 'mean_winner_casualties' if 'mean_winner_casualties' in df.columns else 'winner_casualties'
+        # Use Team B casualties (the 2N army) - this is what Lanchester's Laws predict
+        cas_col = 'mean_team_b_casualties' if 'mean_team_b_casualties' in df.columns else 'mean_winner_casualties'
         
         # Clean data
         df = df.copy()

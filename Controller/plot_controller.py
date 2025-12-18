@@ -159,6 +159,10 @@ class PlotController:
         results['raw_df_summary'] = summary.to_dict(orient='records')
         
         # Test Lanchester laws for each unit type
+        # According to Lanchester's Laws (N vs 2N scenario):
+        # - Linear Law (Melee): casualties_B ∝ N (larger army loses proportionally to smaller army size)
+        # - Square Law (Ranged): casualties_B ∝ √N or less (concentration of fire reduces losses)
+        # We measure Team B casualties (the larger army) as a function of N
         for unit_type in data.unit_types:
             type_data = summary[summary['unit_type'] == unit_type]
             
@@ -166,7 +170,8 @@ class PlotController:
                 continue
             
             n_values = type_data['n_value'].values
-            casualties = type_data['mean_winner_casualties'].values
+            # Use Team B casualties (the 2N army) - this is what Lanchester's Laws predict
+            casualties = type_data['mean_team_b_casualties'].values
             
             # Skip if all casualties are zero or constant (no variance)
             if np.std(casualties) == 0:
