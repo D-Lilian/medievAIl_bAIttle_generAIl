@@ -72,6 +72,18 @@ def run(args):
     # Run view loop (blocking) - handles view switching internally
     controller.run()
 
+    sim_controller.stop_simulation()
+
+    has_alive_a = any(u.hp > 0 for u in game.units_a)
+    has_alive_b = any(u.hp > 0 for u in game.units_b)
+
+    if (not has_alive_a and not has_alive_b) or (has_alive_a and has_alive_b):
+        print("Simulation finished. Result: Draw!")
+    elif has_alive_a:
+        print(f"Simulation finished. General 1: {args.ai1} wins!")
+    else:
+        print(f"Simulation finished. General 2: {args.ai2} wins!")
+
 
 def tourney(args):
     """Run a tournament between AI generals."""

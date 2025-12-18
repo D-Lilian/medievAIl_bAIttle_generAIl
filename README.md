@@ -53,7 +53,7 @@ Press **F9** to switch from Terminal to 2.5D view during battle.
 ./battle load <savefile>
 ```
 
-Loads a `.pkl` save file from `save/` directory.
+Loads a `.pkl` save file from `save/` directory. You have to specify the full filename (e.g., `save/game1.pkl`).
 
 ### tourney
 

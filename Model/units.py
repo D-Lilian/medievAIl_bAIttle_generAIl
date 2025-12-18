@@ -42,7 +42,7 @@ class Unit:
                  armor: dict,
                  attack: dict,
                  range: int,
-                 size: int,
+                 size: float,
                  sight: int,
                  speed: float,
                  accuracy: float,
@@ -93,7 +93,7 @@ class Unit:
 
 class Crossbowman(Unit):
     def __init__(self, team, x, y):
-        super().__init__(unit_type=UnitType.CROSSBOWMAN, name="Crossbowman", team=team, hp=35, range=5, size=1, sight=5,
+        super().__init__(unit_type=UnitType.CROSSBOWMAN, name="Crossbowman", team=team, hp=35, range=5, size=0.4, sight=5,
                          speed=0.96, accuracy=0.85, reload_time=2.0, x=x, y=y,  reload=0,
                          attack={
                              "Base Pierce": 5,
@@ -112,7 +112,7 @@ class Crossbowman(Unit):
 
 class Knight(Unit):
     def __init__(self, team, x, y):
-        super().__init__(unit_type=UnitType.KNIGHT, name="Knight", team=team, hp=100, range=0, size=1, sight=4,
+        super().__init__(unit_type=UnitType.KNIGHT, name="Knight", team=team, hp=100, range=0, size=0.4, sight=4,
                          speed=1.35, accuracy=1.0, reload_time=1.8, x=x, y=y,  reload=0,
                          attack={
                              "Base Melee": 10,
@@ -132,7 +132,7 @@ class Knight(Unit):
 
 class Pikeman(Unit):
     def __init__(self, team, x, y):
-        super().__init__(unit_type=UnitType.PIKEMAN, name="Pikeman", team=team, hp=55, range=0, size=1, sight=4,
+        super().__init__(unit_type=UnitType.PIKEMAN, name="Pikeman", team=team, hp=55, range=0, size=0.4, sight=4,
                          speed=1.0, accuracy=1.0, reload_time=3.0, x=x, y=y,  reload=0,
                          attack={
                              "Base Melee": 4,

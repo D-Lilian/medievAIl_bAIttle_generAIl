@@ -49,6 +49,9 @@ class Simulation:
         self.scenario.general_b.CreateOrders()
 
         while not self.finished():
+            if hasattr(self, '_stop_check') and self._stop_check():
+                break
+
             # Reconstruire la grille spatiale chaque tick
             self.spatial_grid.clear()
             for unit in self.scenario.units:

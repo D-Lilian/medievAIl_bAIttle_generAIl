@@ -46,6 +46,8 @@ class SimulationController:
         self.simulation = None
         self.isSimulationRunning = False
         self.result = None
+        self.simulation_thread = None
+        self._stop_requested = False
 
     def initialize_simulation(self, scenario, tick_speed=10, paused=False, unlocked=False):
         """
@@ -63,14 +65,35 @@ class SimulationController:
             unlocked=unlocked
         )
 
+    def _run_simulation_thread(self):
+        """Exécute la simulation avec vérification d'arrêt."""
+
+        def check_stop():
+            return self._stop_requested
+
+        self.simulation._stop_check = check_stop
+        self.result = self.simulation.simulate(on_end=self.on_simulation_end)
+        self.isSimulationRunning = False
+
     def start_simulation(self):
         """
         @brief Starts the simulation in a separate thread.
         """
-        thread = threading.Thread(target=self.simulation.simulate, args=(self.on_simulation_end,))
-        thread.start()
+        self._stop_requested = False
+        self.simulation_thread = threading.Thread(
+            target=self._run_simulation_thread,
+            daemon=True
+        )
+        self.simulation_thread.start()
         self.isSimulationRunning = True
-        return
+
+    def stop_simulation(self):
+        """Arrête la simulation en cours."""
+        if self.isSimulationRunning:
+            self._stop_requested = True
+            if self.simulation_thread:
+                self.simulation_thread.join(timeout=0.5)
+            self.isSimulationRunning = False
 
     def toggle_pause(self):
         """

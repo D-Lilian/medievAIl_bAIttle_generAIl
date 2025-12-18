@@ -400,6 +400,7 @@ class OrderManager:
 
 
         if priority in self._by_priority:
+            return
             raise ValueError(f"Priority already used {priority} by order {self._by_priority[priority].order}")
 
         node = _Node(order)

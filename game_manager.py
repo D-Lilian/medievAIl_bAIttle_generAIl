@@ -21,12 +21,12 @@ if __name__ == "__main__":
         rand = random.randint(0, 2)
         temp = None
         if (rand == 0):
-            temp = Knight("A", 10 + i % 20, 10 + i % 5)
+            temp = Knight(Team.A, 10 + i % 20, 10 + i % 5)
         elif (rand == 1):
-            temp = Pikeman("A", 10 + i % 20, 10 + i % 5)
+            temp = Pikeman(Team.A, 10 + i % 20, 10 + i % 5)
             temp.range = 0.1
         else:
-            temp = Crossbowman("A", 10 + i % 20, 10 + i % 5)
+            temp = Crossbowman(Team.A, 10 + i % 20, 10 + i % 5)
         #temp.order_manager= OrderManager()
         temp.size = 0.4
         units_a.append(temp)
@@ -34,12 +34,12 @@ if __name__ == "__main__":
 
 
         if (rand == 0):
-            temp = Knight("B", 10 + i % 20, 50 + i % 5)
+            temp = Knight(Team.B, 10 + i % 20, 50 + i % 5)
         elif (rand == 1):
-            temp = Pikeman("B", 10 + i % 20, 50 + i % 5)
+            temp = Pikeman(Team.B, 10 + i % 20, 50 + i % 5)
             temp.range = 0.1
         else:
-            temp = Crossbowman("B", 10 + i % 20, 50 + i % 5)
+            temp = Crossbowman(Team.B, 10 + i % 20, 50 + i % 5)
         #temp.order_manager= OrderManager()
         temp.size = 0.4
         units_b.append(temp)

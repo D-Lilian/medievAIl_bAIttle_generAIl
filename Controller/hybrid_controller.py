@@ -66,16 +66,24 @@ class HybridController:
             if self.current_mode == ViewMode.TERMINAL:
                 result = self._run_terminal_view()
                 if result == "SWITCH":
-                    self._switch_to_pygame()
+                    self._switch_view()
                 else:
                     self.running = False
             else:
-                # Pygame view - no switch back, just run until quit
-                self._run_pygame_view()
-                self.running = False
+                result = self._run_pygame_view()
+                if result == "SWITCH":
+                    self._switch_view()
+                else:
+                    self.running = False
+
+        return None
                 
-    def _switch_to_pygame(self):
-        self.current_mode = ViewMode.PYGAME
+    def _switch_view(self):
+        """Switch between Terminal and Pygame views."""
+        if self.current_mode == ViewMode.PYGAME:
+            self.current_mode = ViewMode.TERMINAL
+        else:
+            self.current_mode = ViewMode.PYGAME
         
     def _run_terminal_view(self) -> str:
         """
@@ -159,36 +167,18 @@ class HybridController:
         @return "SWITCH", "QUIT", or False
         """
         # Lazy imports to avoid import errors when pygame not available
-        import pygame
         from View.pygame_view import PygameView
         
         # Initialize pygame
         pygame_view = PygameView(self.scenario, self.sim_controller)
         pygame_view.paused = self.sim_controller.simulation.paused
-        
-        clock = pygame.time.Clock()
-        running = True
-        switch_requested = False
-        
-        while running:
-            # Handle input
-            result = pygame_view.handle_input()
-            
-            if result == "SWITCH":
-                switch_requested = True
-                running = False
-            elif result is False:
-                running = False
-            
-            # Update view
-            if running:
-                dt = clock.tick(60) / 1000.0
-                pygame_view._update_camera_movement(dt)
-                pygame_view.update()
-                
+
+        result = pygame_view.run()
+        print(result)
+
         # Cleanup pygame
-        pygame.quit()
-        
-        if switch_requested:
+        pygame_view.cleanup()
+
+        if result == "SWITCH":
             return "SWITCH"
         return "QUIT"

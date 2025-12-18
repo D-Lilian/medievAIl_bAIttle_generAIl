@@ -38,15 +38,13 @@ class SaveLoad:
                 print(f"Error saving game: {e}")
 
     @staticmethod
-    def load_game(filename: str) -> Scenario | None:
+    def load_game(file_path: str) -> Scenario | None:
         """Load a saved game state and return a Scenario."""
         try:
-            if not filename.endswith(".pkl"):
-                filename += ".pkl"
+            if not file_path.endswith(".pkl"):
+                file_path += ".pkl"
 
-            filepath = os.path.join("save", filename)
-
-            with open(filepath, "rb") as file:
+            with open(file_path, "rb") as file:
                 data = pickle.load(file)
 
             scenario_data = data.get("scenario")
@@ -70,7 +68,7 @@ class SaveLoad:
                 size_y=size_y,
             )
 
-            print(f"Game successfully loaded from {filepath}.")
+            print(f"Game successfully loaded from {file_path}.")
             return scenario
         except FileNotFoundError:
             print("Save file not found.")

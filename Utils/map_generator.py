@@ -10,7 +10,7 @@ Used to create balanced and interesting initial states for simulations.
 """
 
 from Model.scenario import Scenario
-from Model.units import Crossbowman, Knight, Pikeman
+from Model.units import Crossbowman, Knight, Pikeman, Team
 import math
 
 
@@ -60,31 +60,31 @@ class MapGenerator:
         # Generate formations for Team A
         if formation == 'classic':
             units_a = MapGenerator._create_classic_formation_v2(
-                'A', team_a_x, center_y, usable_y, margin, units_per_team
+                Team.A, team_a_x, center_y, usable_y, margin, units_per_team
             )
         elif formation == 'defensive':
             units_a = MapGenerator._create_defensive_formation_v2(
-                'A', team_a_x, center_y, usable_y, margin, units_per_team
+                Team.A, team_a_x, center_y, usable_y, margin, units_per_team
             )
         elif formation == 'offensive':
             units_a = MapGenerator._create_offensive_formation_v2(
-                'A', team_a_x, center_y, usable_y, margin, units_per_team
+                Team.A, team_a_x, center_y, usable_y, margin, units_per_team
             )
         elif formation == 'hammer_anvil':
             units_a = MapGenerator._create_hammer_anvil_v2(
-                'A', team_a_x, center_y, usable_y, margin, units_per_team
+                Team.A, team_a_x, center_y, usable_y, margin, units_per_team
             )
         elif formation == 'testudo':
             units_a = MapGenerator._create_testudo_v2(
-                'A', team_a_x, center_y, usable_y, margin, units_per_team
+                Team.A, team_a_x, center_y, usable_y, margin, units_per_team
             )
         elif formation == 'hollow_square':
             units_a = MapGenerator._create_hollow_square_v2(
-                'A', team_a_x, center_y, usable_y, margin, units_per_team
+                Team.A, team_a_x, center_y, usable_y, margin, units_per_team
             )
         else:
             units_a = MapGenerator._create_classic_formation_v2(
-                'A', team_a_x, center_y, usable_y, margin, units_per_team
+                Team.A, team_a_x, center_y, usable_y, margin, units_per_team
             )
         
         # Mirror Team A to create Team B
@@ -118,20 +118,20 @@ class MapGenerator:
             mirrored_x = size_x - unit.x
             # Create same unit type for team B
             if isinstance(unit, Knight):
-                new_unit = Knight(team='B', x=mirrored_x, y=unit.y)
+                new_unit = Knight(team=Team.B, x=mirrored_x, y=unit.y)
             elif isinstance(unit, Pikeman):
-                new_unit = Pikeman(team='B', x=mirrored_x, y=unit.y)
+                new_unit = Pikeman(team=Team.B, x=mirrored_x, y=unit.y)
             elif isinstance(unit, Crossbowman):
-                new_unit = Crossbowman(team='B', x=mirrored_x, y=unit.y)
+                new_unit = Crossbowman(team=Team.B, x=mirrored_x, y=unit.y)
             else:
-                new_unit = Knight(team='B', x=mirrored_x, y=unit.y)
+                new_unit = Knight(team=Team.B, x=mirrored_x, y=unit.y)
             units_b.append(new_unit)
         return units_b
 
     # ============ FORMATION V2 (Tactical formations within map bounds) ============
 
     @staticmethod
-    def _create_classic_formation_v2(team: str, spawn_x: float, center_y: float,
+    def _create_classic_formation_v2(team: Team, spawn_x: float, center_y: float,
                                      usable_height: float, margin: float, 
                                      num_units: int) -> list:
         """
@@ -199,7 +199,7 @@ class MapGenerator:
         return MapGenerator._place_line(unit_class, team, x, start_y, count, spacing)
 
     @staticmethod
-    def _create_defensive_formation_v2(team: str, spawn_x: float, center_y: float,
+    def _create_defensive_formation_v2(team: Team, spawn_x: float, center_y: float,
                                        usable_height: float, margin: float,
                                        num_units: int) -> list:
         """
@@ -257,7 +257,7 @@ class MapGenerator:
         return units
 
     @staticmethod
-    def _create_offensive_formation_v2(team: str, spawn_x: float, center_y: float,
+    def _create_offensive_formation_v2(team: Team, spawn_x: float, center_y: float,
                                        usable_height: float, margin: float,
                                        num_units: int) -> list:
         """
@@ -323,7 +323,7 @@ class MapGenerator:
         return units
 
     @staticmethod
-    def _create_hammer_anvil_v2(team: str, spawn_x: float, center_y: float,
+    def _create_hammer_anvil_v2(team: Team, spawn_x: float, center_y: float,
                                 usable_height: float, margin: float,
                                 num_units: int) -> list:
         """
@@ -386,7 +386,7 @@ class MapGenerator:
         return units
 
     @staticmethod
-    def _create_testudo_v2(team: str, spawn_x: float, center_y: float,
+    def _create_testudo_v2(team: Team, spawn_x: float, center_y: float,
                            usable_height: float, margin: float,
                            num_units: int) -> list:
         """
@@ -478,7 +478,7 @@ class MapGenerator:
         return units
 
     @staticmethod
-    def _create_hollow_square_v2(team: str, spawn_x: float, center_y: float,
+    def _create_hollow_square_v2(team: Team, spawn_x: float, center_y: float,
                                  usable_height: float, margin: float,
                                  num_units: int) -> list:
         """
@@ -576,7 +576,7 @@ class MapGenerator:
         return units
 
     @staticmethod
-    def _place_unit_block(unit_class, team: str, start_x: float, start_y: float,
+    def _place_unit_block(unit_class, team: Team, start_x: float, start_y: float,
                           col_spacing: float, row_spacing: float,
                           num_units: int, units_per_row: int, 
                           direction: int = 1) -> list:
@@ -609,7 +609,7 @@ class MapGenerator:
         return comp
 
     @staticmethod
-    def _create_classic_formation(team: str, spawn_x: float, center_y: float,
+    def _create_classic_formation(team: Team, spawn_x: float, center_y: float,
                                   map_height: int, num_units: int) -> list:
         """
         CLASSIC MEDIEVAL FORMATION (Battle of Agincourt style)
@@ -640,7 +640,7 @@ class MapGenerator:
             y_offset += spacing
 
         # SECOND LINE: Knights
-        knight_x = spawn_x + (5 if team == 'A' else -5)
+        knight_x = spawn_x + (5 if team == Team.A else -5)
         for i in range(num_knights):
             y = start_y + y_offset
             unit = Knight(team=team, x=knight_x, y=y)
@@ -648,7 +648,7 @@ class MapGenerator:
             y_offset += spacing
 
         # BACK LINE: Crossbowmen
-        archer_x = spawn_x + (8 if team == 'A' else -8)
+        archer_x = spawn_x + (8 if team == Team.A else -8)
         for i in range(num_crossbowmen):
             y = start_y + y_offset
             unit = Crossbowman(team=team, x=archer_x, y=y)
@@ -658,7 +658,7 @@ class MapGenerator:
         return units
 
     @staticmethod
-    def _create_defensive_formation(team: str, spawn_x: float, center_y: float,
+    def _create_defensive_formation(team: Team, spawn_x: float, center_y: float,
                                     map_height: int, num_units: int) -> list:
         """
         DEFENSIVE FORMATION
@@ -687,7 +687,7 @@ class MapGenerator:
         # Knights in reserve (behind center)
         knight_spacing = max(3.0, (map_height - 40) / num_knights)
         knight_start_y = center_y - (num_knights * knight_spacing) / 2
-        knight_x = spawn_x + (6 if team == 'A' else -6)
+        knight_x = spawn_x + (6 if team == Team.A else -6)
 
         for i in range(num_knights):
             y = knight_start_y + (i * knight_spacing)
@@ -697,7 +697,7 @@ class MapGenerator:
         # Crossbowmen behind (covering entire line)
         archer_spacing = max(2.5, (map_height - 20) / num_crossbowmen)
         archer_start_y = max(10.0, center_y - (num_crossbowmen * archer_spacing) / 2)
-        archer_x = spawn_x + (10 if team == 'A' else -10)
+        archer_x = spawn_x + (10 if team == Team.A else -10)
 
         for i in range(num_crossbowmen):
             y = archer_start_y + (i * archer_spacing)
@@ -707,7 +707,7 @@ class MapGenerator:
         return units
 
     @staticmethod
-    def _create_offensive_formation(team: str, spawn_x: float, center_y: float,
+    def _create_offensive_formation(team: Team, spawn_x: float, center_y: float,
                                     map_height: int, num_units: int, mirror: bool = False) -> list:
         """
         OFFENSIVE WEDGE FORMATION (Cavalry Charge)
@@ -776,7 +776,7 @@ class MapGenerator:
         return units
 
     @staticmethod
-    def _create_hammer_anvil_formation(team: str, spawn_x: float, center_y: float,
+    def _create_hammer_anvil_formation(team: Team, spawn_x: float, center_y: float,
                                        map_height: int, num_units: int, mirror: bool = False) -> list:
         """
         HAMMER AND ANVIL (Hannibal at Cannae)
@@ -834,7 +834,7 @@ class MapGenerator:
         return units
 
     @staticmethod
-    def _create_testudo_formation(team: str, spawn_x: float, center_y: float,
+    def _create_testudo_formation(team: Team, spawn_x: float, center_y: float,
                                   num_units: int) -> list:
         """
         TESTUDO / TURTLE FORMATION (Roman Legion)
@@ -908,7 +908,7 @@ class MapGenerator:
         return units
 
     @staticmethod
-    def _create_hollow_square_formation(team: str, spawn_x: float, center_y: float,
+    def _create_hollow_square_formation(team: Team, spawn_x: float, center_y: float,
                                         num_units: int) -> list:
         """
         HOLLOW SQUARE (British Infantry vs Cavalry)
