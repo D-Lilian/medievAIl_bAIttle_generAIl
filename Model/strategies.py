@@ -129,10 +129,10 @@ class StrategiePikemanSomeIQ(StrategyTroup):
     def apply_order(self, general, unit):
         #priorité 1 Tuer les chevaux
         #on ne reste plus passif à attendre on va les chercher
-        unit.order_manager.AddMaxPriority(AttackNearestTroupOmniscient(unit, UnitType.KNIGHT), 0)
+        unit.order_manager.AddMaxPriority(AttackNearestTroupOmniscient(unit, UnitType.KNIGHT))
 
         #priorité 2 Tuer le reste
-        unit.order_manager.AddMaxPriority(AttackNearestTroupOmniscient(unit, UnitType.ALL), 1)
+        unit.order_manager.AddMaxPriority(AttackNearestTroupOmniscient(unit, UnitType.ALL))
 
 
 #############################################################################################################
@@ -216,19 +216,23 @@ class StrategieRandomIQ(StrategyStart):
                     unit,
                     random.choice([UnitType.PIKEMAN,
                                    UnitType.CROSSBOWMAN,
+                                   UnitType.NONE,
                                    UnitType.KNIGHT])
                 ),
                 StayInFriendlySpaceOrder(
                     unit,
                     random.choice([UnitType.PIKEMAN,
                                    UnitType.CROSSBOWMAN,
-                                   UnitType.KNIGHT])
+                                   UnitType.KNIGHT,
+                                   UnitType.NONE,
+                                   ])
                 ),
                 AvoidOrder(
                     unit,
                     random.choice([UnitType.PIKEMAN,
                                    UnitType.CROSSBOWMAN,
-                                   UnitType.KNIGHT])
+                                   UnitType.KNIGHT
+                                   UnitType.NONE])
                 ),
             ]
 
@@ -236,6 +240,8 @@ class StrategieRandomIQ(StrategyStart):
 
             for order in orders:
                 unit.order_manager.AddMaxPriority(order)
+
+            unit.order_manager.AddMaxPriority(AttackNearestTroupOmniscient(unit, UnitType.ALL))
 
 
 
