@@ -102,7 +102,8 @@ class StrategieSimpleAttackBestAvoidWorst(StrategyTroup): #focus Pikeman (faible
     def apply_order(self, general, unit):
         unit.order_manager.AddMaxPriority(AttackNearestTroupOmniscient(unit,self.favoriteTroup))
         unit.order_manager.AddMaxPriority(AttackNearestTroupOmniscient(unit,UnitType.ALL))
-        #unit.order_manager.Add(AvoidOrder(unit,self.hatedTroup),2)
+        if(self.hatedTroup != UnitType.NONE):
+            unit.order_manager.AddMaxPriority(AvoidOrder(unit,self.hatedTroup))
 
 
 
