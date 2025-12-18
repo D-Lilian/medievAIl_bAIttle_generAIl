@@ -52,8 +52,9 @@ def _run_single_simulation(args: Tuple[str, str, int, int, int]) -> Dict[str, An
         scenario.general_a = create_general(ai_name, scenario.units_a, scenario.units_b)
         scenario.general_b = create_general(ai_name, scenario.units_b, scenario.units_a)
         
-        # Run simulation (fast mode, no time limit for Lanchester accuracy)
-        simulation = Simulation(scenario, tick_speed=100, paused=False, unlocked=True, max_ticks=0)
+        # Run simulation (fast mode, extended time limit for Lanchester accuracy)
+        # 10000 ticks is ~4x the default (2400), enough for large N battles
+        simulation = Simulation(scenario, tick_speed=100, paused=False, unlocked=True, max_ticks=10000)
         output = simulation.simulate()
         
         # Collect results using BattleDataCollector
@@ -113,7 +114,7 @@ def _run_symmetric_simulation(args: Tuple[str, str, int, int, int, bool]) -> Dic
         scenario.general_b = create_general(ai_name, scenario.units_b, scenario.units_a)
         
         # Run simulation (no time limit for Lanchester accuracy)
-        simulation = Simulation(scenario, tick_speed=100, paused=False, unlocked=True, max_ticks=0)
+        simulation = Simulation(scenario, tick_speed=100, paused=False, unlocked=True, max_ticks=10000)
         output = simulation.simulate()
         
         result = BattleDataCollector.collect_from_scenario(scenario, output)
