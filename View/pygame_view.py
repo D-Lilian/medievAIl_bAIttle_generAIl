@@ -579,10 +579,10 @@ class PygameView:
 
         # Vérifier si la bataille est terminée
         if alive_team_a == 0 and alive_team_b > 0:
-            victory_text = f"VICTOIRE - Team 2 a gagné {self.scenario.general_b.name}!"
+            victory_text = f"VICTOIRE - Team 2 a gagné : {self.scenario.general_b.name} !"
             victory_color = (50, 100, 255)
         elif alive_team_b == 0 and alive_team_a > 0:
-            victory_text = f"VICTOIRE - Team 1 a gagné {self.scenario.general_a.name}!"
+            victory_text = f"VICTOIRE - Team 1 a gagné : {self.scenario.general_a.name} !"
             victory_color = (255, 50, 50)
         else:
             victory_text = None
