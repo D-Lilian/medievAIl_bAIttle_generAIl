@@ -127,6 +127,9 @@ class HybridController:
                 return original_process()
             
             terminal_view.input_handler.process = process_with_switch
+
+            if terminal_view.paused != self.sim_controller.simulation.paused:
+                terminal_view.paused = not terminal_view.paused
             
             running = True
             while running:
