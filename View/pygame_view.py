@@ -509,12 +509,32 @@ class PygameView:
 
     def _draw_hud(self):
         """Dessine l'interface utilisateur"""
+        from Model.units import UnitType
+
         fps = int(self.clock.get_fps())
 
+        # Comptage des unités par équipe
         alive_team_a = sum(1 for u in self.scenario.units if u.hp > 0 and u.team == Team.A)
         alive_team_b = sum(1 for u in self.scenario.units if u.hp > 0 and u.team == Team.B)
         total_alive = alive_team_a + alive_team_b
 
+        # Comptage par type pour Team A
+        knights_a = sum(
+            1 for u in self.scenario.units if u.hp > 0 and u.team == Team.A and u.unit_type == UnitType.KNIGHT)
+        pikemen_a = sum(
+            1 for u in self.scenario.units if u.hp > 0 and u.team == Team.A and u.unit_type == UnitType.PIKEMAN)
+        crossbow_a = sum(
+            1 for u in self.scenario.units if u.hp > 0 and u.team == Team.A and u.unit_type == UnitType.CROSSBOWMAN)
+
+        # Comptage par type pour Team B
+        knights_b = sum(
+            1 for u in self.scenario.units if u.hp > 0 and u.team == Team.B and u.unit_type == UnitType.KNIGHT)
+        pikemen_b = sum(
+            1 for u in self.scenario.units if u.hp > 0 and u.team == Team.B and u.unit_type == UnitType.PIKEMAN)
+        crossbow_b = sum(
+            1 for u in self.scenario.units if u.hp > 0 and u.team == Team.B and u.unit_type == UnitType.CROSSBOWMAN)
+
+        # Ligne 1: Stats générales
         hud_text = (
             f"FPS: {fps} | "
             f"Zoom: {int(self.zoom_level * 100)}% | "
@@ -526,26 +546,51 @@ class PygameView:
         text_surf = self.font.render(hud_text, True, TEXT_COLOR)
         self.screen.blit(text_surf, (10, 10))
 
+        # Ligne 2: Détail des unités Team A
+        detail_a = f"Team A - Knights: {knights_a} | Pikemen: {pikemen_a} | Crossbowmen: {crossbow_a}"
+        detail_a_surf = self.font.render(detail_a, True, (255, 50, 50))
+        self.screen.blit(detail_a_surf, (10, 30))
+
+        # Ligne 3: Détail des unités Team B
+        detail_b = f"Team B - Knights: {knights_b} | Pikemen: {pikemen_b} | Crossbowmen: {crossbow_b}"
+        detail_b_surf = self.font.render(detail_b, True, (50, 100, 255))
+        self.screen.blit(detail_b_surf, (10, 50))
+
+        screen_w = self.screen.get_size()[0]
+
         if self.paused:
             pause_surf = self.font.render(
                 "PAUSED - Appuyez sur 'P' pour reprendre",
                 True,
                 PAUSE_TEXT_COLOR
             )
-            screen_w = self.screen.get_size()[0]
             pause_x = screen_w // 2 - pause_surf.get_width() // 2
             self.screen.blit(pause_surf, (pause_x, 10))
 
         if self.as_save >= 0:
-            pause_surf = self.font.render(
+            save_surf = self.font.render(
                 "La partie a été enregistrée",
                 True,
                 PAUSE_TEXT_COLOR
             )
-            screen_w = self.screen.get_size()[0]
-            pause_x = screen_w // 2 - pause_surf.get_width() // 2
-            self.screen.blit(pause_surf, (pause_x, 10))
+            save_x = screen_w // 2 - save_surf.get_width() // 2
+            self.screen.blit(save_surf, (save_x, 30))
             self.as_save -= 1
+
+        # Vérifier si la bataille est terminée
+        if alive_team_a == 0 and alive_team_b > 0:
+            victory_text = f"VICTOIRE - Team 2 a gagné {self.scenario.general_b.name}!"
+            victory_color = (50, 100, 255)
+        elif alive_team_b == 0 and alive_team_a > 0:
+            victory_text = f"VICTOIRE - Team 1 a gagné {self.scenario.general_a.name}!"
+            victory_color = (255, 50, 50)
+        else:
+            victory_text = None
+
+        if victory_text:
+            victory_surf = self.font.render(victory_text, True, victory_color)
+            victory_x = screen_w // 2 - victory_surf.get_width() // 2
+            self.screen.blit(victory_surf, (victory_x, 50))
 
     def _draw_controls(self):
         """Affiche les instructions de contrôle en bas de l'écran"""
