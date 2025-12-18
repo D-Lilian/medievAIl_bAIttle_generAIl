@@ -231,7 +231,7 @@ class StrategieRandomIQ(StrategyStart):
                     unit,
                     random.choice([UnitType.PIKEMAN,
                                    UnitType.CROSSBOWMAN,
-                                   UnitType.KNIGHT
+                                   UnitType.KNIGHT,
                                    UnitType.NONE])
                 ),
             ]
